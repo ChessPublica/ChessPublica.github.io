@@ -396,7 +396,7 @@ Add a button to reset progress:
 
 ## 7. Layout Utilities
 
-### Two-Column PGN Layout
+### Two-Column Layouts
 
 Display two `<pgn>` elements side by side:
 
@@ -417,8 +417,6 @@ Display two `<pgn>` elements side by side:
   </pgn>
 </div>
 ```
-
-### Two-Column Puzzle Layout
 
 Display two `<puzzle-block>` elements side by side:
 
@@ -460,35 +458,6 @@ Load these **before** `jekyllchess.js`:
 <!-- JekyllChess JS (all-in-one) -->
 <script src="jekyllchess.js"></script>
 ```
-
-### Programmatic API
-
-JekyllChess exposes a global `window.JekyllChess` object for advanced use:
-
-```javascript
-// Render PGN into a container
-JekyllChess.renderFullPGN(pgnString, containerElement);
-
-// Render interactive reader
-JekyllChess.renderPGNReader(pgnString, containerElement);
-
-// Create a static board with annotations
-JekyllChess.createBoard(containerElement, fenString, moveNode);
-
-// Parse PGN headers
-var headers = JekyllChess.parseHeaders(pgnString);
-
-// Build move tree for custom rendering
-var tree = JekyllChess.buildMoveTree(pgnString);
-
-// Convert SAN to figurine notation
-var figurine = JekyllChess.toFigurine("Nf3"); // → "♘f3"
-
-// Re-initialize all elements (e.g., after dynamic content load)
-JekyllChess.initAll();
-```
-
----
 
 ## Quick Reference
 
