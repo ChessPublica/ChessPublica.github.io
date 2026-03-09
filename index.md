@@ -31,12 +31,14 @@ Renders a non-interactive chessboard from a FEN position string.
 ```html
 <fen>rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</fen>
 ```
+<fen>rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</fen>
 
 ### With Caption
 
 ```html
 <fen caption="Starting Position">rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</fen>
 ```
+<fen caption="Starting Position">rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</fen>
 
 ### Famous Positions
 
@@ -50,6 +52,9 @@ Renders a non-interactive chessboard from a FEN position string.
 <!-- Sicilian Dragon -->
 <fen caption="Sicilian Dragon — Yugoslav Attack">r1bq1rk1/pp2ppbp/2np1np1/8/3NP3/2N1BP2/PPPQ2PP/R3KB1R w KQ - 0 9</fen>
 ```
+<fen caption="Lucena Position — White to play and win">1K1k4/1P6/8/8/8/8/r7/2R5 w - - 0 1</fen>
+<fen caption="Philidor Position — Black draws">8/8/8/4k3/R7/4K3/4P3/3r4 w - - 0 1</fen>
+<fen caption="Sicilian Dragon — Yugoslav Attack">r1bq1rk1/pp2ppbp/2np1np1/8/3NP3/2N1BP2/PPPQ2PP/R3KB1R w KQ - 0 9</fen>
 
 ### Attributes
 
@@ -92,12 +97,38 @@ exf5 27. Rxf5 Nh7 28. Rcf1 Qd8 29. Qg3 Re7 30. h4 Rbb7
 40. Bc4 Kh8 41. Qf4 1-0
 </pgn>
 ```
+<pgn>
+[Event "World Championship"]
+[Site "Reykjavik"]
+[Date "1972.07.23"]
+[White "Fischer, Robert J."]
+[Black "Spassky, Boris V."]
+[Result "1-0"]
+
+1. c4 {The English Opening — a surprise from Fischer.} e6 2. Nf3 d5
+3. d4 Nf6 4. Nc3 Be7 5. Bg5 O-O 6. e3 h6 7. Bh4 b6
+{[%cal Gc8b7] Black prepares to fianchetto the bishop.}
+8. cxd5 Nxd5 9. Bxe7 Qxe7 10. Nxd5 exd5 11. Rc1 Be6
+12. Qa4 c5 {[%csl Gc5,Gd5] Black has a strong pawn center.}
+13. Qa3 Rc8 14. Bb5 $1 {A strong move.}
+(14. Be2 {was the safe alternative.})
+a6 15. dxc5 bxc5 16. O-O Ra7 17. Be2 Nd7 18. Nd4 Qf8
+19. Nxe6 fxe6 20. e4 d4 21. f4 Qe7 22. e5 Rb8 23. Bc4 Kh8
+24. Qh3 Nf8 25. b3 a5
+26. f5 $3 {[%cal Rf5e6,Rf5f6] A brilliant pawn sacrifice!}
+exf5 27. Rxf5 Nh7 28. Rcf1 Qd8 29. Qg3 Re7 30. h4 Rbb7
+31. e6 Rbc7 32. Qe5 Qe8 33. a4 Qd8 34. R1f2 Qe8 35. R2f3 Qd8
+36. Bd3 Qe8 37. Qe4 Nf6 38. Rxf6 gxf6 39. Rxf6 Kg8
+40. Bc4 Kh8 41. Qf4 1-0
+</pgn>
 
 ### Load from File
 
 ```html
 <pgn src="./data/sample-game.pgn"></pgn>
 ```
+
+<pgn src="./assets/pgn/sample-game.pgn"></pgn>
 
 ### Supported PGN Features
 
@@ -158,6 +189,23 @@ Renders a two-panel layout: interactive chessboard on the left, clickable move l
 </pgn-reader>
 ```
 
+<pgn-reader>
+[Event "Immortal Game"]
+[Site "London"]
+[Date "1851.06.21"]
+[White "Anderssen, Adolf"]
+[Black "Kieseritzky, Lionel"]
+[Result "1-0"]
+
+1. e4 e5 2. f4 {The King's Gambit!} exf4 3. Bc4 Qh4+ 4. Kf1 b5
+5. Bxb5 Nf6 6. Nf3 {Pinning the knight to the queen.} Qh6
+7. d3 Nh5 8. Nh4 Qg5 9. Nf5 c6 10. g4 Nf6 11. Rg1 cxb5
+12. h4 Qg6 13. h5 Qg5 14. Qf3 Ng8 15. Bxf4 Qf6 16. Nc3 Bc5
+17. Nd5 {Attacking both b7 and f7.} Qxb2 18. Bd6 Bxg1
+19. e5 Qxa1+ 20. Ke2 Na6 21. Nxg7+ Kd8 22. Qf6+ Nxf6
+23. Be7# {A spectacular checkmate — the Immortal Game!} 1-0
+</pgn-reader>
+
 ### Load from File
 
 ```html
@@ -187,6 +235,12 @@ Renders a drag-and-drop puzzle. The user must find the correct sequence of moves
 1. Qxf7#
 </puzzle>
 ```
+<puzzle>
+[FEN "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 0 1"]
+[FirstMoveAuto "false"]
+
+1. Qxf7#
+</puzzle>
 
 ### With Auto First Move
 
@@ -211,15 +265,6 @@ Force the board to show from Black's perspective:
 [Orientation "black"]
 
 2... Qh4#
-</puzzle>
-```
-
-### Colon Format (Alternative Syntax)
-
-```html
-<puzzle>
-FEN: r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 0 1
-Moves: Qxf7#
 </puzzle>
 ```
 
@@ -269,11 +314,27 @@ Renders multiple puzzles from a multi-game PGN source. Each puzzle gets its own 
 </puzzle-block>
 ```
 
+<puzzle-block>
+[Event "Pin and Win"]
+[White "?"]
+[Black "?"]
+[FEN "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 0 1"]
+
+{Find the winning move!} 1. Qxf7# {Scholar's Mate!}
+
+[Event "Back Rank Mate"]
+[White "?"]
+[Black "?"]
+[FEN "6k1/5ppp/8/8/8/8/5PPP/4R1K1 w - - 0 1"]
+
+{Deliver checkmate in one.} 1. Re8# {Back rank mate!}
+</puzzle-block>
+
 ### PGN Text Reference (in body)
 
 ```html
 <puzzle-block>
-PGN: ./data/sample-puzzles.pgn
+PGN: ./assets/pgn/sample-puzzles.pgn
 </puzzle-block>
 ```
 
@@ -398,51 +459,6 @@ Load these **before** `jekyllchess.js`:
 
 <!-- JekyllChess JS (all-in-one) -->
 <script src="jekyllchess.js"></script>
-```
-
-### Minimal HTML Template
-
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>My Chess Blog</title>
-
-  <!-- Dependencies -->
-  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-  <link rel="stylesheet" href="https://unpkg.com/chessboard-element@1.0.0/lib/chessboard-element.css" />
-  <script src="https://chessboardjs.com/js/chessboard-1.0.0.js"></script>
-
-  <!-- JekyllChess -->
-  <link rel="stylesheet" href="jekyllchess.css" />
-  <script src="jekyllchess.js"></script>
-</head>
-<body>
-
-  <h1>My Chess Post</h1>
-
-  <fen caption="Starting Position">rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</fen>
-
-  <pgn src="./my-game.pgn"></pgn>
-
-  <pgn-reader src="./my-game.pgn"></pgn-reader>
-
-  <puzzle>
-  [FEN "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 0 1"]
-  1. Qxf7#
-  </puzzle>
-
-  <puzzle-block src="./my-puzzles.pgn"></puzzle-block>
-
-  <puzzle-rush>
-  PGN: ./my-rush-puzzles.pgn
-  </puzzle-rush>
-
-</body>
-</html>
 ```
 
 ### Programmatic API
