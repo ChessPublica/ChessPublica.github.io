@@ -469,3 +469,13 @@ Load these **before** `jekyllchess.js`:
 | `<puzzle>` | Single puzzle | ✅ Drag & drop | Inline PGN |
 | `<puzzle-block>` | Multiple puzzles | ✅ Drag & drop | Inline or `src` |
 | `<puzzle-rush>` | Puzzle sequence | ✅ Drag & drop | `PGN:` reference |
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/@chessboard-element/chessboard-element@1.0.0/lib/chessboard-element.css" />
+<script src="https://chessboardjs.com/js/chessboard-1.0.0.js"></script>
+<script src="jekyllchess.js"></script>
+
+<!-- JekyllChess CSS (required)
+<link rel="stylesheet" href="jekyllchess.css" />
+-->
