@@ -31,7 +31,11 @@
   ================================================================ */
 
   const FIGURINES = {
-    K: "♔", Q: "♕", R: "♖", B: "♗", N: "♘"
+    K: "♔",
+    Q: "♕",
+    R: "♖",
+    B: "♗",
+    N: "♘",
   };
 
   function toFigurine(san) {
@@ -64,7 +68,7 @@
     requestAnimationFrame(function () {
       Chessboard(boardDiv, {
         position: fen,
-        pieceTheme: PIECE_THEME
+        pieceTheme: PIECE_THEME,
       });
       initOverlay(wrapper, boardDiv, moveNode);
     });
@@ -98,14 +102,14 @@
 
   function getSquareCenter(boardDiv, square) {
     if (!boardDiv.__squareCache) {
-  boardDiv.__squareCache = {};
-  boardDiv.querySelectorAll("[data-square]").forEach(function (el) {
-    boardDiv.__squareCache[el.dataset.square] = el;
-  });
-}
+      boardDiv.__squareCache = {};
+      boardDiv.querySelectorAll("[data-square]").forEach(function (el) {
+        boardDiv.__squareCache[el.dataset.square] = el;
+      });
+    }
 
-var squareEl = boardDiv.__squareCache[square];
-if (!squareEl) return null;
+    var squareEl = boardDiv.__squareCache[square];
+    if (!squareEl) return null;
 
     var boardRect = boardDiv.getBoundingClientRect();
     var rect = squareEl.getBoundingClientRect();
@@ -113,7 +117,7 @@ if (!squareEl) return null;
     return {
       x: rect.left - boardRect.left + rect.width / 2,
       y: rect.top - boardRect.top + rect.height / 2,
-      size: rect.width
+      size: rect.width,
     };
   }
 
@@ -123,10 +127,12 @@ if (!squareEl) return null;
       R: [255, 0, 0],
       Y: [255, 170, 0],
       G: [0, 170, 0],
-      B: [0, 0, 255]
+      B: [0, 0, 255],
     };
     var rgb = colors[code] || colors.R;
-    return "rgba(" + rgb[0] + ", " + rgb[1] + ", " + rgb[2] + ", " + alpha + ")";
+    return (
+      "rgba(" + rgb[0] + ", " + rgb[1] + ", " + rgb[2] + ", " + alpha + ")"
+    );
   }
 
   function drawCircle(svg, boardDiv, square, color) {
@@ -134,9 +140,12 @@ if (!squareEl) return null;
     if (!center) return;
 
     var strokeWidth = center.size * 0.09;
-    var radius = (center.size / 2) - (strokeWidth / 2);
+    var radius = center.size / 2 - strokeWidth / 2;
 
-    var circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    var circle = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "circle",
+    );
     circle.setAttribute("cx", center.x);
     circle.setAttribute("cy", center.y);
     circle.setAttribute("r", radius);
@@ -191,13 +200,36 @@ if (!squareEl) return null;
     var p5y = end.y;
 
     var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    var d = "M " + p1x + " " + p1y +
-      " L " + p2x + " " + p2y +
-      " L " + p3x + " " + p3y +
-      " L " + p4x + " " + p4y +
-      " L " + p5x + " " + p5y +
-      " L " + p6x + " " + p6y +
-      " L " + p7x + " " + p7y + " Z";
+    var d =
+      "M " +
+      p1x +
+      " " +
+      p1y +
+      " L " +
+      p2x +
+      " " +
+      p2y +
+      " L " +
+      p3x +
+      " " +
+      p3y +
+      " L " +
+      p4x +
+      " " +
+      p4y +
+      " L " +
+      p5x +
+      " " +
+      p5y +
+      " L " +
+      p6x +
+      " " +
+      p6y +
+      " L " +
+      p7x +
+      " " +
+      p7y +
+      " Z";
 
     path.setAttribute("d", d);
     path.setAttribute("fill", lichessColor(color));
@@ -228,7 +260,10 @@ if (!squareEl) return null;
           if (text[j] === "}") depth--;
           j++;
         }
-        tokens.push({ type: "comment", value: text.slice(i + 1, j - 1).trim() });
+        tokens.push({
+          type: "comment",
+          value: text.slice(i + 1, j - 1).trim(),
+        });
         i = j;
         continue;
       }
@@ -242,7 +277,10 @@ if (!squareEl) return null;
           if (text[j2] === ")") depth2--;
           j2++;
         }
-        tokens.push({ type: "variation", value: tokenize(text.slice(i + 1, j2 - 1)) });
+        tokens.push({
+          type: "variation",
+          value: tokenize(text.slice(i + 1, j2 - 1)),
+        });
         i = j2;
         continue;
       }
@@ -270,8 +308,10 @@ if (!squareEl) return null;
       }
 
       var moveMatch = text
-  .slice(i)
-  .match(/^(?:O-O-O|O-O|[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](?:=[QRBN])?|[a-h][1-8])[\+#]?/);
+        .slice(i)
+        .match(
+          /^(?:O-O-O|O-O|[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](?:=[QRBN])?|[a-h][1-8])[\+#]?/,
+        );
       if (moveMatch) {
         tokens.push({ type: "move", value: moveMatch[0] });
         i += moveMatch[0].length;
@@ -324,7 +364,9 @@ if (!squareEl) return null;
         if (!move) {
           var currentFen = chess.fen();
           var currentMoveNum = getMoveNumber(currentFen);
-          var error = new Error("Invalid move: " + token.value + "\nMove number: " + currentMoveNum);
+          var error = new Error(
+            "Invalid move: " + token.value + "\nMove number: " + currentMoveNum,
+          );
           error.pgnIndex = findTokenIndex(originalPgn, token.value);
           throw error;
         }
@@ -344,7 +386,7 @@ if (!squareEl) return null;
           comment: null,
           nags: [],
           arrows: [],
-          squareMarks: []
+          squareMarks: [],
         };
 
         node.parent = current;
@@ -381,18 +423,28 @@ if (!squareEl) return null;
             .trim();
 
           try {
-            var fakePGN = '[Event "?"]\n\n1. ' + variationText.replace(/\[D\]/g, "");
+            var fakePGN =
+              '[Event "?"]\n\n1. ' + variationText.replace(/\[D\]/g, "");
             var variationTokens = parsePGN(fakePGN);
 
             if (hasDiagram) {
               variationTokens.push({ type: "comment", value: "[D]" });
             }
 
-            var branchFen = determineBranchFen(variationTokens, current, parentNode);
+            var branchFen = determineBranchFen(
+              variationTokens,
+              current,
+              parentNode,
+            );
             var snapshot = new Chess(branchFen);
             var variationRoot = { next: null, fen: branchFen };
 
-            parseSequence(variationTokens, snapshot, variationRoot, originalPgn);
+            parseSequence(
+              variationTokens,
+              snapshot,
+              variationRoot,
+              originalPgn,
+            );
 
             if (current && variationRoot.next) {
               current.variations.push(variationRoot.next);
@@ -412,7 +464,9 @@ if (!squareEl) return null;
           if (cslMatches.length) {
             lastMoveNode.squareMarks = [];
             cslMatches.forEach(function (m) {
-              lastMoveNode.squareMarks = lastMoveNode.squareMarks.concat(parseCSL(m[1]));
+              lastMoveNode.squareMarks = lastMoveNode.squareMarks.concat(
+                parseCSL(m[1]),
+              );
             });
           }
 
@@ -502,7 +556,9 @@ if (!squareEl) return null;
     if (variationColor === nextToMove) {
       return current.fen;
     } else {
-      return (current.parent && current.parent.fen) ? current.parent.fen : parentNode.fen;
+      return current.parent && current.parent.fen
+        ? current.parent.fen
+        : parentNode.fen;
     }
   }
 
@@ -516,7 +572,11 @@ if (!squareEl) return null;
 
   function parseCAL(data) {
     return data.split(",").map(function (entry) {
-      return { color: entry[0], from: entry.slice(1, 3), to: entry.slice(3, 5) };
+      return {
+        color: entry[0],
+        from: entry.slice(1, 3),
+        to: entry.slice(3, 5),
+      };
     });
   }
 
@@ -663,10 +723,18 @@ if (!squareEl) return null;
   function renderNAG(nags) {
     if (!nags || nags.length === 0) return "";
     var map = {
-      "$1": "!", "$2": "?", "$3": "!!",
-      "$4": "??", "$5": "!?", "$6": "?!"
+      $1: "!",
+      $2: "?",
+      $3: "!!",
+      $4: "??",
+      $5: "!?",
+      $6: "?!",
     };
-    return nags.map(function (n) { return map[n] || ""; }).join("");
+    return nags
+      .map(function (n) {
+        return map[n] || "";
+      })
+      .join("");
   }
 
   function flushBuffer(parent, text, isVariation) {
@@ -782,7 +850,9 @@ if (!squareEl) return null;
       moveSpan.className = "pgn-reader-move";
       moveSpan.textContent = toFigurine(node.san) + " ";
       moveSpan.dataset.index = idx;
-      moveSpan.addEventListener("click", function () { goToMove(idx); });
+      moveSpan.addEventListener("click", function () {
+        goToMove(idx);
+      });
       movesPanel.appendChild(moveSpan);
       moveSpans.push(moveSpan);
 
@@ -805,7 +875,7 @@ if (!squareEl) return null;
     var board = Chessboard(boardDiv, {
       position: startFen,
       pieceTheme: PIECE_THEME,
-      orientation: orientation
+      orientation: orientation,
     });
 
     var currentIndex = -1;
@@ -825,7 +895,10 @@ if (!squareEl) return null;
       });
 
       commentSpans.forEach(function (item) {
-        item.el.classList.toggle("pgn-reader-inline-comment-active", item.idx === idx);
+        item.el.classList.toggle(
+          "pgn-reader-inline-comment-active",
+          item.idx === idx,
+        );
       });
 
       if (idx >= 0 && moveSpans[idx]) {
@@ -833,38 +906,47 @@ if (!squareEl) return null;
       }
     }
 
-    btnFirst.addEventListener("click", function () { goToMove(-1); });
-    btnPrev.addEventListener("click", function () { goToMove(currentIndex - 1); });
-    btnNext.addEventListener("click", function () { goToMove(currentIndex + 1); });
-    btnLast.addEventListener("click", function () { goToMove(allNodes.length - 1); });
+    btnFirst.addEventListener("click", function () {
+      goToMove(-1);
+    });
+    btnPrev.addEventListener("click", function () {
+      goToMove(currentIndex - 1);
+    });
+    btnNext.addEventListener("click", function () {
+      goToMove(currentIndex + 1);
+    });
+    btnLast.addEventListener("click", function () {
+      goToMove(allNodes.length - 1);
+    });
 
     if (!window.__jcKeyHandler) {
-  window.__jcKeyHandler = true;
+      window.__jcKeyHandler = true;
 
-  document.addEventListener("keydown", function (e) {
-    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+      document.addEventListener("keydown", function (e) {
+        if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")
+          return;
 
-    if (e.key === "ArrowLeft") {
-      e.preventDefault();
-      goToMove(currentIndex - 1);
+        if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          goToMove(currentIndex - 1);
+        }
+
+        if (e.key === "ArrowRight") {
+          e.preventDefault();
+          goToMove(currentIndex + 1);
+        }
+
+        if (e.key === "Home") {
+          e.preventDefault();
+          goToMove(-1);
+        }
+
+        if (e.key === "End") {
+          e.preventDefault();
+          goToMove(allNodes.length - 1);
+        }
+      });
     }
-
-    if (e.key === "ArrowRight") {
-      e.preventDefault();
-      goToMove(currentIndex + 1);
-    }
-
-    if (e.key === "Home") {
-      e.preventDefault();
-      goToMove(-1);
-    }
-
-    if (e.key === "End") {
-      e.preventDefault();
-      goToMove(allNodes.length - 1);
-    }
-  });
-}
 
     goToMove(-1);
   }
@@ -923,21 +1005,28 @@ if (!squareEl) return null;
 
     return s
       .split(" ")
-      .map(function (t) { return t.trim(); })
-      .filter(function (t) { return t && !/^(1-0|0-1|1\/2-1\/2|\*)$/.test(t); });
+      .map(function (t) {
+        return t.trim();
+      })
+      .filter(function (t) {
+        return t && !/^(1-0|0-1|1\/2-1\/2|\*)$/.test(t);
+      });
   }
 
   function parseGame(pgn) {
-    var raw = String(pgn || "").replace(/\r/g, "").trim();
+    var raw = String(pgn || "")
+      .replace(/\r/g, "")
+      .trim();
     if (!raw) return { error: true };
 
     function getHeader(name) {
-      var m = raw.match(new RegExp("\\[" + name + "\\s+\"([^\"]+)\"\\]", "i"));
+      var m = raw.match(new RegExp("\\[" + name + '\\s+"([^"]+)"\\]', "i"));
       return m ? m[1] : null;
     }
 
     var fen = getHeader("FEN");
-    var firstMoveAuto = String(getHeader("FirstMoveAuto")).toLowerCase() === "true";
+    var firstMoveAuto =
+      String(getHeader("FirstMoveAuto")).toLowerCase() === "true";
     var orientationHeader = String(getHeader("Orientation")).toLowerCase();
 
     var orientation = null;
@@ -954,7 +1043,12 @@ if (!squareEl) return null;
         fen = fenMatch[1].trim();
         var moves = tokenizeMoves(movesMatch[1]);
         if (!moves.length) return { error: true };
-        return { fen: fen, moves: moves, firstMoveAuto: false, orientation: null };
+        return {
+          fen: fen,
+          moves: moves,
+          firstMoveAuto: false,
+          orientation: null,
+        };
       }
     }
 
@@ -969,7 +1063,12 @@ if (!squareEl) return null;
     if (!moves2.length) return { error: true };
     if (!fen) fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-    return { fen: fen, moves: moves2, firstMoveAuto: firstMoveAuto, orientation: orientation };
+    return {
+      fen: fen,
+      moves: moves2,
+      firstMoveAuto: firstMoveAuto,
+      orientation: orientation,
+    };
   }
 
   /* ================================================================
@@ -978,7 +1077,17 @@ if (!squareEl) return null;
 
   var ANIM_MS = 250;
 
-  function renderLocalPuzzle(container, fen, moves, autoFirstMove, forceBlack, onSolved, forcedOrientation, orientationFromPGN, isRush) {
+  function renderLocalPuzzle(
+    container,
+    fen,
+    moves,
+    autoFirstMove,
+    forceBlack,
+    onSolved,
+    forcedOrientation,
+    orientationFromPGN,
+    isRush,
+  ) {
     function createPuzzleBoard() {
       container.innerHTML = "";
 
@@ -989,9 +1098,12 @@ if (!squareEl) return null;
       var game = new Chess(fen);
 
       var state = {
-        game: game, moves: moves, index: 0,
+        game: game,
+        moves: moves,
+        index: 0,
         solverSide: game.turn(),
-        locked: false, solved: false
+        locked: false,
+        solved: false,
       };
 
       boardDiv.__state = state;
@@ -1006,8 +1118,9 @@ if (!squareEl) return null;
       function dispatchMoveEvent(index) {
         boardDiv.dispatchEvent(
           new CustomEvent("jc-puzzle-move", {
-            detail: { index: index }, bubbles: true
-          })
+            detail: { index: index },
+            bubbles: true,
+          }),
         );
       }
 
@@ -1017,9 +1130,13 @@ if (!squareEl) return null;
         boardDiv.classList.remove("jc-fire-once");
         boardDiv.classList.add("jc-fire-solved");
 
-        boardDiv.addEventListener("mousedown", function () {
-          if (container.reset) container.reset();
-        }, { once: true, capture: true });
+        boardDiv.addEventListener(
+          "mousedown",
+          function () {
+            if (container.reset) container.reset();
+          },
+          { once: true, capture: true },
+        );
 
         if (onSolved) onSolved();
       }
@@ -1029,27 +1146,35 @@ if (!squareEl) return null;
 
         var mv = state.game.move(state.moves[state.index], { sloppy: true });
 
-if (!mv) {
-  console.error("Invalid puzzle move:", state.moves[state.index]);
-  return;
-}
+        if (!mv) {
+          console.error("Invalid puzzle move:", state.moves[state.index]);
+          return;
+        }
 
         state.index++;
         board.position(state.game.fen(), true);
         dispatchMoveEvent(state.index);
 
-        setTimeout(function () { state.locked = false; }, ANIM_MS);
+        setTimeout(function () {
+          state.locked = false;
+        }, ANIM_MS);
       }
 
       function onDrop(from, to) {
-        if (state.locked || state.solved || state.game.turn() !== state.solverSide)
+        if (
+          state.locked ||
+          state.solved ||
+          state.game.turn() !== state.solverSide
+        )
           return "snapback";
 
         var expectedSAN = String(state.moves[state.index] || "").trim();
         var move = state.game.move({ from: from, to: to, promotion: "q" });
         if (!move) return "snapback";
 
-        if (normalizeSAN(move.san).trim() !== normalizeSAN(expectedSAN).trim()) {
+        if (
+          normalizeSAN(move.san).trim() !== normalizeSAN(expectedSAN).trim()
+        ) {
           state.game.undo();
           board.position(state.game.fen(), false);
           boardDiv.classList.remove("jc-shake");
@@ -1063,9 +1188,9 @@ if (!mv) {
         dispatchMoveEvent(state.index);
 
         boardDiv.classList.remove("jc-fire-once");
-requestAnimationFrame(function () {
-  boardDiv.classList.add("jc-fire-once");
-});
+        requestAnimationFrame(function () {
+          boardDiv.classList.add("jc-fire-once");
+        });
 
         setTimeout(function () {
           if (!state.solved) boardDiv.classList.remove("jc-fire-once");
@@ -1084,7 +1209,9 @@ requestAnimationFrame(function () {
         orientation: getOrientation(),
         pieceTheme: PIECE_THEME,
         onDrop: onDrop,
-        onSnapEnd: function () { board.position(state.game.fen(), false); }
+        onSnapEnd: function () {
+          board.position(state.game.fen(), false);
+        },
       });
 
       boardDiv.__board = board;
@@ -1104,7 +1231,7 @@ requestAnimationFrame(function () {
     container.reset = function () {
       createPuzzleBoard();
       container.dispatchEvent(
-        new CustomEvent("jc-puzzle-reset", { bubbles: true })
+        new CustomEvent("jc-puzzle-reset", { bubbles: true }),
       );
     };
   }
@@ -1119,9 +1246,14 @@ requestAnimationFrame(function () {
     if (parsed.error) return;
 
     renderLocalPuzzle(
-      el, parsed.fen, parsed.moves,
+      el,
+      parsed.fen,
+      parsed.moves,
       parsed.firstMoveAuto === true,
-      false, null, null, parsed.orientation
+      false,
+      null,
+      null,
+      parsed.orientation,
     );
   }
 
@@ -1130,8 +1262,11 @@ requestAnimationFrame(function () {
   ================================================================ */
 
   function splitIntoPgnBlocks(text) {
-    return String(text || "").replace(/\r/g, "").trim()
-      .split(/\n\s*\n(?=\[)/).filter(Boolean);
+    return String(text || "")
+      .replace(/\r/g, "")
+      .trim()
+      .split(/\n\s*\n(?=\[)/)
+      .filter(Boolean);
   }
 
   function stripPgnHeaders(pgn) {
@@ -1151,7 +1286,9 @@ requestAnimationFrame(function () {
   function extractAllComments(pgn) {
     var body = stripPgnHeaders(pgn);
     var matches = body.match(/\{([\s\S]*?)\}/g) || [];
-    return matches.map(function (c) { return c.replace(/^\{|\}$/g, "").trim(); });
+    return matches.map(function (c) {
+      return c.replace(/^\{|\}$/g, "").trim();
+    });
   }
 
   function resolveSource(node) {
@@ -1203,15 +1340,20 @@ requestAnimationFrame(function () {
 
         var white = headers.White || "";
         var black = headers.Black || "";
-        var line1 = white && black ? white + " - " + black : (white || black || "Puzzle");
+        var line1 =
+          white && black ? white + " - " + black : white || black || "Puzzle";
         var line2 = headers.Event || headers.Variant || "";
 
         metaDiv.innerHTML =
           '<div class="jc-puzzle-meta-emoji">🧩</div>' +
           '<div class="jc-puzzle-meta-text">' +
-          '<div class="jc-puzzle-meta-line1">' + line1 + '</div>' +
-          '<div class="jc-puzzle-meta-line2">' + line2 + '</div>' +
-          '</div>';
+          '<div class="jc-puzzle-meta-line1">' +
+          line1 +
+          "</div>" +
+          '<div class="jc-puzzle-meta-line2">' +
+          line2 +
+          "</div>" +
+          "</div>";
         wrap.appendChild(metaDiv);
 
         /* BOARD */
@@ -1246,7 +1388,9 @@ requestAnimationFrame(function () {
 
     if (source.type === "url") {
       fetch(source.value, { cache: "no-store" })
-        .then(function (r) { return r.text(); })
+        .then(function (r) {
+          return r.text();
+        })
         .then(processText)
         .catch(function (err) {
           node.textContent = "Failed to load puzzle file: " + err.message;
@@ -1275,7 +1419,9 @@ requestAnimationFrame(function () {
       .then(function (text) {
         var puzzles = splitIntoPgnGames(text)
           .map(parseGame)
-          .filter(function (p) { return !p.error; });
+          .filter(function (p) {
+            return !p.error;
+          });
 
         var idx = parseInt(localStorage.getItem(RUSH_KEY), 10) || 0;
 
@@ -1289,13 +1435,18 @@ requestAnimationFrame(function () {
         holder.appendChild(counterDiv);
 
         function updateCounter() {
-          counterDiv.textContent = "Puzzle " + Math.min(idx + 1, puzzles.length) + " / " + puzzles.length;
+          counterDiv.textContent =
+            "Puzzle " +
+            Math.min(idx + 1, puzzles.length) +
+            " / " +
+            puzzles.length;
         }
 
         function loadNext() {
           if (!puzzles[idx]) {
             localStorage.removeItem(RUSH_KEY);
-            holder.innerHTML = "<div class='jc-finished'>All puzzles completed ✔</div>";
+            holder.innerHTML =
+              "<div class='jc-finished'>All puzzles completed ✔</div>";
             return;
           }
 
@@ -1306,8 +1457,11 @@ requestAnimationFrame(function () {
           var orientation = solverSide === "w" ? "white" : "black";
 
           renderLocalPuzzle(
-            holder, puzzles[idx].fen, puzzles[idx].moves,
-            true, false,
+            holder,
+            puzzles[idx].fen,
+            puzzles[idx].moves,
+            true,
+            false,
             function () {
               idx++;
               localStorage.setItem(RUSH_KEY, idx);
@@ -1318,7 +1472,9 @@ requestAnimationFrame(function () {
               counterDiv.remove();
               requestAnimationFrame(loadNext);
             },
-            orientation, null, true
+            orientation,
+            null,
+            true,
           );
         }
 
@@ -1347,7 +1503,9 @@ requestAnimationFrame(function () {
 
       if (src) {
         fetch(src, { cache: "no-store" })
-          .then(function (res) { return res.text(); })
+          .then(function (res) {
+            return res.text();
+          })
           .then(function (text) {
             renderFullPGN(text, container);
           })
@@ -1382,7 +1540,9 @@ requestAnimationFrame(function () {
 
       if (src) {
         fetch(src, { cache: "no-store" })
-          .then(function (res) { return res.text(); })
+          .then(function (res) {
+            return res.text();
+          })
           .then(function (text) {
             renderPGNReader(text, wrapper);
           })
@@ -1432,7 +1592,7 @@ requestAnimationFrame(function () {
       requestAnimationFrame(function () {
         Chessboard(boardDiv, {
           position: fenStr,
-          pieceTheme: PIECE_THEME
+          pieceTheme: PIECE_THEME,
         });
       });
     });
@@ -1500,7 +1660,6 @@ requestAnimationFrame(function () {
     renderLocalPuzzle: renderLocalPuzzle,
     renderPuzzleBlock: renderPuzzleBlock,
     renderPuzzleRush: renderPuzzleRush,
-    initAll: initAll
+    initAll: initAll,
   };
-
 })();
