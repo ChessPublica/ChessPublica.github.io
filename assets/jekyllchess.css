@@ -8,7 +8,7 @@
 
 .pgn-headers{}
 .pgn-players{}
-.pgn-container{overflow: hidden;}
+.pgn-container{overflow: hidden;column-count: 2;}
 .pgn-moves{}
 .pgn-mainline {display:inline;margin:0;font-weight:bold;}
 .pgn-mainline::after{content: " ";}
