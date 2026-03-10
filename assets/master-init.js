@@ -34,4 +34,3 @@
     renderPuzzleRush: renderPuzzleRush,
     initAll: initAll,
   };
-})();
