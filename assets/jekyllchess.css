@@ -1,0 +1,317 @@
+/**
+ * JekyllChess — Required CSS
+ * Structural styles needed for all chess elements to render correctly.
+ * This file contains ONLY functional layout/positioning rules.
+ * Add your own colors, fonts, borders, shadows on top of these.
+ *
+ * Dependencies:
+ *   - chessboard.js CSS (chessboard-1.0.0.min.css)
+ */
+
+/* ================================================================
+   PGN HEADERS
+================================================================ */
+
+.pgn-headers {
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+}
+
+.pgn-players {
+  margin-bottom: 4px;
+}
+
+/* ================================================================
+   PGN MOVES — <pgn> element
+================================================================ */
+
+.pgn-container {
+  padding: 32px;
+  overflow: hidden;
+}
+
+.pgn-moves {
+  line-height: 2;
+}
+
+.pgn-mainline {
+  display: inline;
+  margin: 0;
+}
+
+.pgn-mainline::after {
+  content: " ";
+}
+
+.pgn-variation {
+  display: block;
+  margin: 8px 0 8px 16px;
+  padding-left: 12px;
+}
+
+.pgn-variation-line {
+  display: inline;
+  margin: 0;
+}
+
+.pgn-variation-line::after {
+  content: " ";
+}
+
+.pgn-comment {
+  display: block;
+  margin: 8px 0;
+  padding: 8px 12px;
+  line-height: 1.6;
+}
+
+.pgn-error {
+  padding: 12px;
+}
+
+/* ================================================================
+   CHESSBOARD — Board wrapper + SVG overlay
+================================================================ */
+
+.jc-board-wrapper {
+  position: relative;
+  display: inline-block;
+  margin: 16px auto;
+  max-width: 400px;
+  width: 100%;
+}
+
+.jc-board {
+  width: 100%;
+  max-width: 400px;
+}
+
+.jc-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Prevent chessboard.js overflow issues */
+.board-b72b1 {
+  overflow: hidden;
+}
+
+/* ================================================================
+   FEN — <fen> element
+================================================================ */
+
+.fen-container {
+  display: inline-block;
+  margin: 16px auto;
+  max-width: 400px;
+  width: 100%;
+}
+
+.fen-caption {
+  text-align: center;
+  margin-top: 8px;
+  padding: 4px 8px;
+  font-style: italic;
+}
+
+/* ================================================================
+   PGN READER — <pgn-reader> element
+================================================================ */
+
+.pgn-reader-container {
+  padding: 24px;
+  margin: 24px 0;
+}
+
+.pgn-reader-header {
+  margin-bottom: 20px;
+}
+
+.pgn-reader-layout {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.pgn-reader-board-area {
+  flex-shrink: 0;
+  width: 320px;
+}
+
+.pgn-reader-board {
+  width: 320px !important;
+  max-width: 320px !important;
+}
+
+.pgn-reader-controls {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.pgn-reader-btn {
+  padding: 8px 16px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.pgn-reader-moves-panel {
+  flex: 1;
+  max-height: 360px;
+  overflow-y: auto;
+  padding: 12px;
+  line-height: 2.2;
+}
+
+.pgn-reader-move {
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.pgn-reader-inline-comment {
+  display: inline;
+  font-style: italic;
+  opacity: 0.7;
+  font-size: 0.9em;
+}
+
+.pgn-reader-inline-comment-active {
+  opacity: 1;
+  font-weight: 500;
+}
+
+.pgn-reader-comment {
+  margin-top: 16px;
+  padding: 10px 14px;
+  line-height: 1.6;
+  display: none;
+}
+
+/* ================================================================
+   PUZZLE — <puzzle> element
+================================================================ */
+
+.jc-puzzle {
+  max-width: 400px;
+}
+
+/* ================================================================
+   PUZZLE BLOCK — <puzzle-block> element
+================================================================ */
+
+.jc-puzzle-item {
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.jc-puzzle-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.jc-puzzle-move-comment {
+  margin-top: 12px;
+  min-height: 20px;
+  padding: 8px 12px;
+}
+
+.jc-puzzle-move-comment:empty {
+  display: none;
+}
+
+/* ================================================================
+   PUZZLE RUSH — <puzzle-rush> element
+================================================================ */
+
+.puzzle-rush-wrap {
+  padding: 24px;
+}
+
+.puzzle-rush-counter {
+  text-align: center;
+  margin-bottom: 16px;
+  padding: 8px;
+}
+
+.jc-finished {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+/* ================================================================
+   PUZZLE ANIMATIONS — Shake feedback for wrong moves
+================================================================ */
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+.jc-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* ================================================================
+   TWO-COLUMN LAYOUTS (optional utility classes)
+================================================================ */
+
+.pgn-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.puzzle-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+/* ================================================================
+   RESPONSIVE
+================================================================ */
+
+@media (max-width: 768px) {
+  .pgn-reader-layout {
+    flex-direction: column;
+  }
+
+  .pgn-reader-board-area {
+    width: 100%;
+  }
+
+  .pgn-reader-board {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .pgn-reader-moves-panel {
+    max-height: 200px;
+  }
+
+  .jc-board-wrapper {
+    max-width: 100%;
+  }
+
+  .jc-board {
+    max-width: 100%;
+  }
+
+  .pgn-two-col,
+  .puzzle-two-col {
+    grid-template-columns: 1fr;
+  }
+
+  .pgn-container {
+    padding: 20px 16px;
+  }
+}
