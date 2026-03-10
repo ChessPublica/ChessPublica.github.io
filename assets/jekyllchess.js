@@ -23,7 +23,7 @@
   ================================================================ */
 
   const PIECE_THEME =
-    "/images/photo1773059279.jpg";
+    "https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png";
   const NBSP = "\u00A0";
 
   /* ================================================================
