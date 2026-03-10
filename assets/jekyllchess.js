@@ -17,29 +17,29 @@
  */
 
 // -------------------------
-// Import all modular JS files
+// Import all 12 modular files
 // -------------------------
-
-import { initAll } from "./master-init.js";
-import { renderFullPGN } from "./pgn-renderer.js";
-import { renderPGNReader } from "./pgn-reader.js";
-import { buildMoveTree } from "./tree-builder.js";
-import { createBoard } from "./board.js";
-import { toFigurine } from "./figurine.js";
-import { parseGame, renderLocalPuzzle } from "./puzzle.js";
-import { renderPuzzleRush } from "./puzzle-rush.js";
-import { renderPuzzleBlock } from "./element-init.js";
-import { parseHeaders } from "./pgn-reader.js"; // helpers for headers
-import "./configuration.js"; // constants like PIECE_THEME, NBSP
+import "./configuration.js";    // constants like PIECE_THEME, NBSP
+import "./figurine.js";         // toFigurine()
+import "./board.js";            // createBoard()
+import "./tokenizer.js";        // tokenizeMoves(), parseGame()
+import "./tree-builder.js";     // buildMoveTree()
+import "./branch-logic.js";     // determineBranchFen()
+import "./pgn-renderer.js";     // renderFullPGN()
+import "./pgn-reader.js";       // renderPGNReader(), parseHeaders()
+import "./puzzle.js";           // renderLocalPuzzle(), parseGame()
+import "./puzzle-rush.js";      // renderPuzzleRush()
+import "./element-init.js";     // renderPuzzleBlock(), initAll()
+import "./master-init.js";      // initAll()
 
 // -------------------------
 // Auto-init function
 // -------------------------
 function autoInit() {
-  // Initialize all elements automatically
+  // Initialize all JekyllChess elements
   initAll();
 
-  // Optional: expose modules for programmatic use
+  // Expose main modules globally for programmatic use
   window.JekyllChessModules = {
     renderFullPGN,
     renderPGNReader,
@@ -51,11 +51,12 @@ function autoInit() {
     renderPuzzleRush,
     renderPuzzleBlock,
     parseHeaders,
+    determineBranchFen,
   };
 }
 
 // -------------------------
-// Run on DOMContentLoaded
+// Run auto-init on DOMContentLoaded
 // -------------------------
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", autoInit, { once: true });
