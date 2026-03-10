@@ -15,8 +15,8 @@
  *   <puzzle-block>  — Multiple puzzles from PGN file
  *   <puzzle-rush>   — Sequential puzzle rush mode
  */
-(function () {
-  "use strict";
+
+"use strict";
 
 import "./configuration.js";
 import "./figurine.js";
