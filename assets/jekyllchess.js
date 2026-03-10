@@ -18,15 +18,15 @@
 
 "use strict";
 
-import "./configuration.js";
-import "./figurine.js";
-import "./board.js";
-import "./tokenizer.js";
-import "./tree-builder.js";
-import "./branch-logic.js";
-import "./pgn-renderer.js";
-import "./pgn-reader.js";
-import "./puzzle.js";
-import "./puzzle-rush.js";
-import "./element-init.js";
-import "./master-init.js";
+import "assets/configuration.js";
+import "assets/figurine.js";
+import "assets/board.js";
+import "assets/tokenizer.js";
+import "assets/tree-builder.js";
+import "assets/branch-logic.js";
+import "assets/pgn-renderer.js";
+import "assets/pgn-reader.js";
+import "assets/puzzle.js";
+import "assets/puzzle-rush.js";
+import "assets/element-init.js";
+import "assets/master-init.js";
