@@ -19,47 +19,105 @@
 // -------------------------
 // Import all 12 modular files
 // -------------------------
-import "./configuration.js";    // constants like PIECE_THEME, NBSP
-import "./figurine.js";         // toFigurine()
-import "./board.js";            // createBoard()
-import "./tokenizer.js";        // tokenizeMoves(), parseGame()
-import "./tree-builder.js";     // buildMoveTree()
-import "./branch-logic.js";     // determineBranchFen()
-import "./pgn-renderer.js";     // renderFullPGN()
-import "./pgn-reader.js";       // renderPGNReader(), parseHeaders()
-import "./puzzle.js";           // renderLocalPuzzle(), parseGame()
-import "./puzzle-rush.js";      // renderPuzzleRush()
-import "./element-init.js";     // renderPuzzleBlock(), initAll()
-import "./master-init.js";      // initAll()
+/* ================================================================
+   JEKYLLCHESS — MAIN ENTRY (FULLY PRE-WIRED)
+   Loads all modules and initializes everything automatically
+================================================================ */
 
-// -------------------------
-// Auto-init function
-// -------------------------
-function autoInit() {
-  // Initialize all JekyllChess elements
-  initAll();
+/* -------------------------------
+   Core configuration
+-------------------------------- */
 
-  // Expose main modules globally for programmatic use
-  window.JekyllChessModules = {
+import "./configuration.js";
+
+/* -------------------------------
+   Core utilities
+-------------------------------- */
+
+import "./figurine.js";
+import "./board.js";
+import "./tokenizer.js";
+
+/* -------------------------------
+   PGN system
+-------------------------------- */
+
+import { buildMoveTree } from "./tree-builder.js";
+import "./branch-logic.js";
+import { renderFullPGN } from "./pgn-renderer.js";
+import { renderPGNReader, parseHeaders } from "./pgn-reader.js";
+
+/* -------------------------------
+   Puzzle system
+-------------------------------- */
+
+import {
+  parseGame,
+  stripFigurines,
+  normalizePuzzleText,
+  normalizeSAN,
+  splitIntoPgnGames
+} from "./puzzle-helpers.js";
+
+import {
+  renderLocalPuzzle,
+  jcPuzzleCreate
+} from "./puzzle.js";
+
+import { renderPuzzleBlock } from "./puzzle-block.js";
+import { renderPuzzleRush } from "./puzzle-rush.js";
+
+/* -------------------------------
+   Element initializers
+-------------------------------- */
+
+import { initAll } from "./element-init.js";
+
+/* -------------------------------
+   Optional master exports
+-------------------------------- */
+
+import "./master-init.js";
+
+/* ================================================================
+   AUTO INITIALIZATION
+================================================================ */
+
+function bootJekyllChess() {
+  try {
+    initAll();
+  } catch (err) {
+    console.error("JekyllChess initialization error:", err);
+  }
+
+  /* ------------------------------------------------
+     Public API (optional for developers)
+  ------------------------------------------------ */
+
+  window.JekyllChess = {
     renderFullPGN,
     renderPGNReader,
     buildMoveTree,
-    createBoard,
-    toFigurine,
+    parseHeaders,
+
     parseGame,
     renderLocalPuzzle,
-    renderPuzzleRush,
     renderPuzzleBlock,
-    parseHeaders,
-    determineBranchFen,
+    renderPuzzleRush,
+
+    stripFigurines,
+    normalizePuzzleText,
+    normalizeSAN,
+    splitIntoPgnGames
   };
 }
 
-// -------------------------
-// Run auto-init on DOMContentLoaded
-// -------------------------
+/* ================================================================
+   STARTUP
+================================================================ */
+
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", autoInit, { once: true });
+  document.addEventListener("DOMContentLoaded", bootJekyllChess, { once: true });
 } else {
-  autoInit();
+  bootJekyllChess();
 }
