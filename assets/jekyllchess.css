@@ -21,7 +21,7 @@
 /* CHESSBOARD — Board wrapper + SVG overlay */
 
 .jc-board-wrapper { position: relative; display: block; margin: 16px auto; max-width: 400px; width: 100%;box-sizing:content-box!important; }
-.jc-board { display:block;width:400px;max-width:100%;margin:1rem auto;break-inside:avoid; }
+.jc-board { display:inline-block;width:400px;max-width:100%;margin:1rem auto;break-inside:avoid; }
 .jc-overlay { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 10; }
 .jc-board *,.jc-board *::before,.jc-board *::after,
 .board-wrapper{box-sizing:content-box!important;}
