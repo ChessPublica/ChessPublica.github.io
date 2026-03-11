@@ -21,7 +21,7 @@
 /* CHESSBOARD — Board wrapper + SVG overlay */
 
 .jc-board-wrapper { position: relative; display: block; margin: 16px auto;width:100%;max-width:400px;box-sizing:content-box!important; }
-.jc-board { display:inline-block;width:100%;max-width:400px;margin:1rem auto;break-inside:avoid; }
+.jc-board { display:block;width:100%;max-width:400px;margin:1rem auto;break-inside:avoid; }
 .jc-overlay { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 10; }
 .jc-board *,.jc-board *::before,.jc-board *::after,
 .board-wrapper{box-sizing:content-box!important;}
@@ -34,7 +34,7 @@
 
 /* <fen> element */
 
-.fen-container {display:inline-block;margin: 1rem auto;width:100%;max-width:400px;}
+.fen-container {display:block;margin: 1rem auto;width:100%;max-width:400px;}
 .fen-caption { text-align: center; }
 
 /* <pgn-reader> element */
@@ -54,7 +54,7 @@
 
 /* <puzzle> element */
 
-.jc-puzzle {display:inline-block;vertical-align:top;width:100%;max-width:400px;}
+.jc-puzzle {display:block;vertical-align:top;width:100%;max-width:400px;}
 
 /* <puzzle-block> element */
 
