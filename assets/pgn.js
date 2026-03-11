@@ -543,79 +543,32 @@ export function renderPGNReader(pgnText, container) {
   controls.appendChild(btnNext);
   controls.appendChild(btnLast);
 
-  /* Moves panel */
-  var movesPanel = document.createElement("div");
-  movesPanel.className = "pgn-reader-moves-panel";
-  layout.appendChild(movesPanel);
-
-  var moveSpans = [];
-  var commentSpans = [];
-
-  allNodes.forEach(function (node, idx) {
-    if (node.color === "w") {
-      var numSpan = document.createElement("span");
-      numSpan.className = "pgn-reader-move-number";
-      numSpan.textContent = node.moveNumber + "." + NBSP;
-      movesPanel.appendChild(numSpan);
-    }
-
-    var moveSpan = document.createElement("span");
-    moveSpan.className = "pgn-reader-move";
-    moveSpan.textContent = toFigurine(node.san) + renderNAG(node.nags);
-    movesPanel.appendChild(moveSpan);
-    moveSpans.push(moveSpan);
-
-    var commentSpan = document.createElement("span");
-    commentSpan.className = "pgn-reader-comment";
-    commentSpan.textContent = node.comment || "";
-    movesPanel.appendChild(commentSpan);
-    commentSpans.push(commentSpan);
-  });
-
-  /* Initialize board */
+  var index = 0;
   var chess = new Chess(startFen);
-  var board = Chessboard(boardDiv, {
-    position: startFen,
-    pieceTheme: PIECE_THEME,
-  });
 
-  var curIdx = -1;
-
-  function updateBoard(idx) {
-    if (idx < 0) idx = -1;
-    if (idx >= allNodes.length) idx = allNodes.length - 1;
-
-    curIdx = idx;
-    if (idx === -1) {
-      board.position(startFen, false);
-      return;
-    }
-
-    var node = allNodes[idx];
-    board.position(node.fen, false);
-
-    moveSpans.forEach(function (span, i) {
-      span.classList.toggle("current-move", i === idx);
-    });
-    commentSpans.forEach(function (span, i) {
-      span.classList.toggle("current-comment", i === idx);
-    });
+  function updateBoard() {
+    var fen = index > 0 ? allNodes[index - 1].fen : startFen;
+    Chessboard(boardDiv, { position: fen, pieceTheme: PIECE_THEME });
   }
 
   btnFirst.addEventListener("click", function () {
-    updateBoard(0);
+    index = 0;
+    updateBoard();
   });
   btnPrev.addEventListener("click", function () {
-    updateBoard(curIdx - 1);
+    if (index > 0) index--;
+    updateBoard();
   });
   btnNext.addEventListener("click", function () {
-    updateBoard(curIdx + 1);
+    if (index < allNodes.length) index++;
+    updateBoard();
   });
   btnLast.addEventListener("click", function () {
-    updateBoard(allNodes.length - 1);
+    index = allNodes.length;
+    updateBoard();
   });
 
-  updateBoard(-1);
+  updateBoard();
 }
 
 function createControlBtn(label, title) {
