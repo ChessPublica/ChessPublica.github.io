@@ -556,4 +556,72 @@ export function renderPGNReader(pgnText, container) {
       var numSpan = document.createElement("span");
       numSpan.className = "pgn-reader-move-number";
       numSpan.textContent = node.moveNumber + "." + NBSP;
-      movesPanel
+      movesPanel.appendChild(numSpan);
+    }
+
+    var moveSpan = document.createElement("span");
+    moveSpan.className = "pgn-reader-move";
+    moveSpan.textContent = toFigurine(node.san) + renderNAG(node.nags);
+    movesPanel.appendChild(moveSpan);
+    moveSpans.push(moveSpan);
+
+    var commentSpan = document.createElement("span");
+    commentSpan.className = "pgn-reader-comment";
+    commentSpan.textContent = node.comment || "";
+    movesPanel.appendChild(commentSpan);
+    commentSpans.push(commentSpan);
+  });
+
+  /* Initialize board */
+  var chess = new Chess(startFen);
+  var board = Chessboard(boardDiv, {
+    position: startFen,
+    pieceTheme: PIECE_THEME,
+  });
+
+  var curIdx = -1;
+
+  function updateBoard(idx) {
+    if (idx < 0) idx = -1;
+    if (idx >= allNodes.length) idx = allNodes.length - 1;
+
+    curIdx = idx;
+    if (idx === -1) {
+      board.position(startFen, false);
+      return;
+    }
+
+    var node = allNodes[idx];
+    board.position(node.fen, false);
+
+    moveSpans.forEach(function (span, i) {
+      span.classList.toggle("current-move", i === idx);
+    });
+    commentSpans.forEach(function (span, i) {
+      span.classList.toggle("current-comment", i === idx);
+    });
+  }
+
+  btnFirst.addEventListener("click", function () {
+    updateBoard(0);
+  });
+  btnPrev.addEventListener("click", function () {
+    updateBoard(curIdx - 1);
+  });
+  btnNext.addEventListener("click", function () {
+    updateBoard(curIdx + 1);
+  });
+  btnLast.addEventListener("click", function () {
+    updateBoard(allNodes.length - 1);
+  });
+
+  updateBoard(-1);
+}
+
+function createControlBtn(label, title) {
+  var btn = document.createElement("button");
+  btn.className = "pgn-reader-btn";
+  btn.textContent = label;
+  btn.title = title;
+  return btn;
+}
