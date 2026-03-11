@@ -364,7 +364,11 @@ export function renderHeaders(headers, container) {
 export function renderMoveTree(rootNode, container) {
   var movesDiv = document.createElement("div");
   movesDiv.className = "pgn-moves";
-  renderLine(rootNode, movesDiv, false);
+
+  var frag = document.createDocumentFragment();
+  renderLine(rootNode, frag, false);      
+  movesDiv.appendChild(frag);
+
   container.appendChild(movesDiv);
 }
 
@@ -543,38 +547,149 @@ export function renderPGNReader(pgnText, container) {
   controls.appendChild(btnNext);
   controls.appendChild(btnLast);
 
-  var index = 0;
-  var chess = new Chess(startFen);
+  /* Moves panel */
+  var movesPanel = document.createElement("div");
+  movesPanel.className = "pgn-reader-moves-panel";
+  layout.appendChild(movesPanel);
 
-  function updateBoard() {
-    var fen = index > 0 ? allNodes[index - 1].fen : startFen;
-    Chessboard(boardDiv, { position: fen, pieceTheme: PIECE_THEME });
+  var moveSpans = [];
+  var commentSpans = [];
+
+  allNodes.forEach(function (node, idx) {
+    if (node.color === "w") {
+      var numSpan = document.createElement("span");
+      numSpan.className = "pgn-reader-move-number";
+      numSpan.textContent = node.moveNumber + "." + NBSP;
+      movesPanel.appendChild(numSpan);
+    } else if (idx === 0) {
+      var numSpan2 = document.createElement("span");
+      numSpan2.className = "pgn-reader-move-number";
+      numSpan2.textContent = node.moveNumber + "..." + NBSP;
+      movesPanel.appendChild(numSpan2);
+    }
+
+    var moveSpan = document.createElement("span");
+    moveSpan.className = "pgn-reader-move";
+    moveSpan.textContent = toFigurine(node.san) + " ";
+    moveSpan.dataset.index = idx;
+    moveSpan.addEventListener("click", function () {
+      goToMove(idx);
+    });
+    movesPanel.appendChild(moveSpan);
+    moveSpans.push(moveSpan);
+
+    if (node.comment) {
+      var commentSpan = document.createElement("span");
+      commentSpan.className = "pgn-reader-inline-comment";
+      commentSpan.textContent = node.comment + " ";
+      commentSpan.dataset.moveIndex = idx;
+      movesPanel.appendChild(commentSpan);
+      commentSpans.push({ idx: idx, el: commentSpan });
+    }
+  });
+
+  /* Orientation */
+  var orientation = "white";
+  if (headers.Orientation) {
+    orientation = headers.Orientation.toLowerCase();
+  }
+
+  var board = Chessboard(boardDiv, {
+    position: startFen,
+    pieceTheme: PIECE_THEME,
+    orientation: orientation,
+  });
+
+  var currentIndex = -1;
+
+  function goToMove(idx) {
+    if (idx < -1 || idx >= allNodes.length) return;
+    currentIndex = idx;
+
+    if (idx === -1) {
+      board.position(startFen, true);
+    } else {
+      board.position(allNodes[idx].fen, true);
+    }
+
+    moveSpans.forEach(function (span, i) {
+      span.classList.toggle("pgn-reader-move-active", i === idx);
+    });
+
+    commentSpans.forEach(function (item) {
+      item.el.classList.toggle(
+        "pgn-reader-inline-comment-active",
+        item.idx === idx,
+      );
+    });
+
+    if (idx >= 0 && moveSpans[idx]) {
+      moveSpans[idx].scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
   }
 
   btnFirst.addEventListener("click", function () {
-    index = 0;
-    updateBoard();
+    goToMove(-1);
   });
   btnPrev.addEventListener("click", function () {
-    if (index > 0) index--;
-    updateBoard();
+    goToMove(currentIndex - 1);
   });
   btnNext.addEventListener("click", function () {
-    if (index < allNodes.length) index++;
-    updateBoard();
+    goToMove(currentIndex + 1);
   });
   btnLast.addEventListener("click", function () {
-    index = allNodes.length;
-    updateBoard();
+    goToMove(allNodes.length - 1);
   });
 
-  updateBoard();
+  if (!window.__jcKeyHandler) {
+    window.__jcKeyHandler = true;
+
+if (!window.__jcActivePGNReader) {
+  window.__jcActivePGNReader = null;
+
+  document.addEventListener("keydown", function (e) {
+    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+
+    if (!window.__jcActivePGNReader) return;
+
+    const goToMove = window.__jcActivePGNReader.goToMove;
+    const currentIndex = window.__jcActivePGNReader.currentIndex;
+    const allNodes = window.__jcActivePGNReader.allNodes;
+
+    if (!goToMove) return;
+
+    if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      goToMove(currentIndex - 1);
+    }
+
+    if (e.key === "ArrowRight") {
+      e.preventDefault();
+      goToMove(currentIndex + 1);
+    }
+
+    if (e.key === "Home") {
+      e.preventDefault();
+      goToMove(-1);
+    }
+
+    if (e.key === "End") {
+      e.preventDefault();
+      goToMove(allNodes.length - 1);
+    }
+  });
 }
 
-function createControlBtn(label, title) {
+window.__jcActivePGNReader = {
+  goToMove,
+  currentIndex,
+  allNodes
+};
+
+function createControlBtn(text, title) {
   var btn = document.createElement("button");
   btn.className = "pgn-reader-btn";
-  btn.textContent = label;
+  btn.textContent = text;
   btn.title = title;
   return btn;
 }
