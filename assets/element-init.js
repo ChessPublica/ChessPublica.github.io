@@ -1,14 +1,16 @@
-// element-init.js
+// ===================== ELEMENT INIT =====================
+
+import { PIECE_THEME } from "./configuration.js";
 import { renderFullPGN } from "./pgn-renderer.js";
 import { renderPGNReader } from "./pgn-reader.js";
 import { jcPuzzleCreate } from "./puzzle.js";
 import { renderPuzzleBlock } from "./puzzle-block.js";
 import { renderPuzzleRush } from "./puzzle-rush.js";
 
-// ------------------ Initializers ------------------
+// --------------------- INIT FUNCTIONS ---------------------
 
 function initPgnElements() {
-  document.querySelectorAll("pgn").forEach((el) => {
+  document.querySelectorAll("pgn").forEach(el => {
     if (el.dataset.jcRendered === "1") return;
     el.dataset.jcRendered = "1";
 
@@ -19,28 +21,20 @@ function initPgnElements() {
     const src = el.getAttribute("src");
     if (src) {
       fetch(src, { cache: "no-store" })
-        .then((res) => res.text())
-        .then((text) => renderFullPGN(text, container))
-        .catch((e) => {
-          container.textContent = "Failed to load PGN: " + e.message;
-        });
+        .then(r => r.text())
+        .then(text => renderFullPGN(text, container))
+        .catch(e => { container.textContent = "Failed to load PGN: " + e.message; });
     } else {
       const pgnText = el.textContent.trim();
-      if (!pgnText) {
-        container.textContent = "No PGN content found.";
-        return;
-      }
-      try {
-        renderFullPGN(pgnText, container);
-      } catch (e) {
-        container.textContent = "Error rendering PGN: " + e.message;
-      }
+      if (!pgnText) { container.textContent = "No PGN content found."; return; }
+      try { renderFullPGN(pgnText, container); }
+      catch (e) { container.textContent = "Error rendering PGN: " + e.message; }
     }
   });
 }
 
 function initPgnReaderElements() {
-  document.querySelectorAll("pgn-reader").forEach((el) => {
+  document.querySelectorAll("pgn-reader").forEach(el => {
     if (el.dataset.jcRendered === "1") return;
     el.dataset.jcRendered = "1";
 
@@ -51,28 +45,20 @@ function initPgnReaderElements() {
     const src = el.getAttribute("src");
     if (src) {
       fetch(src, { cache: "no-store" })
-        .then((res) => res.text())
-        .then((text) => renderPGNReader(text, wrapper))
-        .catch((e) => {
-          wrapper.textContent = "Failed to load PGN: " + e.message;
-        });
+        .then(r => r.text())
+        .then(text => renderPGNReader(text, wrapper))
+        .catch(e => { wrapper.textContent = "Failed to load PGN: " + e.message; });
     } else {
       const pgnText = el.textContent.trim();
-      if (!pgnText) {
-        wrapper.textContent = "No PGN content found.";
-        return;
-      }
-      try {
-        renderPGNReader(pgnText, wrapper);
-      } catch (e) {
-        wrapper.textContent = "Error rendering PGN reader: " + e.message;
-      }
+      if (!pgnText) { wrapper.textContent = "No PGN content found."; return; }
+      try { renderPGNReader(pgnText, wrapper); }
+      catch (e) { wrapper.textContent = "Error rendering PGN reader: " + e.message; }
     }
   });
 }
 
 function initFenElements() {
-  document.querySelectorAll("fen").forEach((el) => {
+  document.querySelectorAll("fen").forEach(el => {
     if (el.dataset.jcRendered === "1") return;
     el.dataset.jcRendered = "1";
 
@@ -97,32 +83,37 @@ function initFenElements() {
     el.replaceWith(wrapper);
 
     requestAnimationFrame(() => {
-      Chessboard(boardDiv, { position: fenStr, pieceTheme: PIECE_THEME });
+      Chessboard(boardDiv, {
+        position: fenStr,
+        pieceTheme: PIECE_THEME
+      });
     });
   });
 }
 
 function initPuzzleElements() {
-  document.querySelectorAll("puzzle").forEach((oldEl) => {
-    const raw = oldEl.textContent;
+  document.querySelectorAll("puzzle").forEach(el => {
+    const raw = el.textContent;
     const wrapper = document.createElement("div");
     wrapper.className = "jc-puzzle";
-    oldEl.replaceWith(wrapper);
+    el.replaceWith(wrapper);
     jcPuzzleCreate(wrapper, { rawPGN: raw });
   });
 }
 
 function initPuzzleBlockElements() {
-  document.querySelectorAll("puzzle-block").forEach(renderPuzzleBlock);
+  document.querySelectorAll("puzzle-block").forEach(el => {
+    renderPuzzleBlock(el);
+  });
 }
 
 function initPuzzleRushElements() {
-  document.querySelectorAll("puzzle-rush").forEach((node) => {
-    const raw = node.textContent.trim();
+  document.querySelectorAll("puzzle-rush").forEach(el => {
+    const raw = el.textContent.replace(/[♔♕♖♗♘♙♚♛♜♝♞♟]/g, "").trim();
     const match = raw.match(/PGN:\s*([^\s]+)/i);
 
     const wrap = document.createElement("div");
-    node.replaceWith(wrap);
+    el.replaceWith(wrap);
 
     if (match) {
       renderPuzzleRush(wrap, new URL(match[1], location.href).href);
@@ -130,7 +121,7 @@ function initPuzzleRushElements() {
   });
 }
 
-// ------------------ Master Init ------------------
+// --------------------- MASTER INIT ---------------------
 
 function initAll() {
   initPgnElements();
@@ -141,6 +132,7 @@ function initAll() {
   initPuzzleElements();
 }
 
+// Auto-initialize on DOM ready
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", initAll, { once: true });
 } else {
