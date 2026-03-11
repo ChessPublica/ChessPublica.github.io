@@ -1,4 +1,6 @@
-/* board.js */
+/**
+ * JekyllChess — Board creation + SVG annotation overlay
+ */
 
 import { PIECE_THEME } from "./helpers.js";
 
@@ -31,17 +33,6 @@ function initOverlay(wrapper, boardDiv, moveNode) {
   svg.setAttribute("viewBox", "0 0 " + size + " " + size);
 
   wrapper.appendChild(svg);
-
-  // ✅ Responsive resize
-  var ro = new ResizeObserver(function () {
-    var newSize = boardDiv.getBoundingClientRect().width;
-    svg.setAttribute("width", newSize);
-    svg.setAttribute("height", newSize);
-    svg.setAttribute("viewBox", "0 0 " + newSize + " " + newSize);
-  });
-  ro.observe(boardDiv);
-
-}
 
   if (!moveNode) return;
 

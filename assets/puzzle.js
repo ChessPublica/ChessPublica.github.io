@@ -1,6 +1,5 @@
-/* puzzle.js */
- 
-/* JekyllChess — Puzzle System
+/**
+ * JekyllChess — Puzzle System
  *
  * Merged from: puzzle-engine.js, puzzle-block.js, puzzle-rush.js
  *

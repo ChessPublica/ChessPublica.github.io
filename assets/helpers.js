@@ -1,11 +1,15 @@
-/* helpers.js */
+/**
+ * JekyllChess — Shared constants, utilities, and helpers
+ *
+ * Merged from: config.js, figurine.js, puzzle-helpers.js
+ */
 
 /* ================================================================
    CONSTANTS
 ================================================================ */
 
 export var PIECE_THEME =
-  "https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png";
+  "/images/Chess.jpg";
 
 export var NBSP = "\u00A0";
 

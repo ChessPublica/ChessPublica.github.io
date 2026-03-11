@@ -1,6 +1,5 @@
-/* pgn.js */
-
-/* JekyllChess — PGN Engine
+/**
+ * JekyllChess — PGN Engine
  *
  * Merged from: pgn-parser.js, pgn-renderer.js, pgn-reader.js
  *
@@ -364,11 +363,7 @@ export function renderHeaders(headers, container) {
 export function renderMoveTree(rootNode, container) {
   var movesDiv = document.createElement("div");
   movesDiv.className = "pgn-moves";
-
-  var frag = document.createDocumentFragment();
-  renderLine(rootNode, frag, false);      
-  movesDiv.appendChild(frag);
-
+  renderLine(rootNode, movesDiv, false);
   container.appendChild(movesDiv);
 }
 
@@ -644,47 +639,34 @@ export function renderPGNReader(pgnText, container) {
   if (!window.__jcKeyHandler) {
     window.__jcKeyHandler = true;
 
-if (!window.__jcActivePGNReader) {
-  window.__jcActivePGNReader = null;
+    document.addEventListener("keydown", function (e) {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")
+        return;
 
-  document.addEventListener("keydown", function (e) {
-    if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        goToMove(currentIndex - 1);
+      }
 
-    if (!window.__jcActivePGNReader) return;
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        goToMove(currentIndex + 1);
+      }
 
-    const goToMove = window.__jcActivePGNReader.goToMove;
-    const currentIndex = window.__jcActivePGNReader.currentIndex;
-    const allNodes = window.__jcActivePGNReader.allNodes;
+      if (e.key === "Home") {
+        e.preventDefault();
+        goToMove(-1);
+      }
 
-    if (!goToMove) return;
+      if (e.key === "End") {
+        e.preventDefault();
+        goToMove(allNodes.length - 1);
+      }
+    });
+  }
 
-    if (e.key === "ArrowLeft") {
-      e.preventDefault();
-      goToMove(currentIndex - 1);
-    }
-
-    if (e.key === "ArrowRight") {
-      e.preventDefault();
-      goToMove(currentIndex + 1);
-    }
-
-    if (e.key === "Home") {
-      e.preventDefault();
-      goToMove(-1);
-    }
-
-    if (e.key === "End") {
-      e.preventDefault();
-      goToMove(allNodes.length - 1);
-    }
-  });
+  goToMove(-1);
 }
-
-window.__jcActivePGNReader = {
-  goToMove,
-  currentIndex,
-  allNodes
-};
 
 function createControlBtn(text, title) {
   var btn = document.createElement("button");
