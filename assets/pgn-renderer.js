@@ -1,6 +1,5 @@
 /* ================================================================
    PGN RENDERER
-   Static renderer for <pgn> blocks
 ================================================================ */
 
 import { NBSP } from "./configuration.js";
@@ -82,8 +81,7 @@ function renderHeaders(headers, container) {
 }
 
 /* ================================================================
-   PGN SPLITTING
-   (critical stability improvement)
+   PGN SPLIT
 ================================================================ */
 
 function splitPGN(pgnText) {
@@ -98,63 +96,24 @@ function splitPGN(pgnText) {
 }
 
 /* ================================================================
-   COMMENT CLEANING
+   COMMENT CLEANER
 ================================================================ */
 
-function cleanComment(comment) {
+function cleanComment(text) {
 
-  if (!comment) return "";
+  if (!text) return "";
 
-  return comment
+  return text
     .replace(/\[%cal [^\]]+\]/g, "")
     .replace(/\[%csl [^\]]+\]/g, "")
     .trim();
 }
 
 /* ================================================================
-   ARROW + SQUARE PARSER
-================================================================ */
-
-function parseAnnotations(comment, board) {
-
-  if (!comment || !board) return;
-
-  const cal = comment.match(/\[%cal ([^\]]+)\]/);
-  const csl = comment.match(/\[%csl ([^\]]+)\]/);
-
-  if (cal && board.drawArrow) {
-
-    cal[1].split(",").forEach(a => {
-
-      const color = a[0];
-      const from = a.slice(1,3);
-      const to = a.slice(3,5);
-
-      board.drawArrow(from, to, color);
-
-    });
-
-  }
-
-  if (csl && board.highlightSquare) {
-
-    csl[1].split(",").forEach(s => {
-
-      const color = s[0];
-      const sq = s.slice(1);
-
-      board.highlightSquare(sq, color);
-
-    });
-
-  }
-}
-
-/* ================================================================
    COMMENT RENDER
 ================================================================ */
 
-function renderCommentBlock(parent, text) {
+function renderComment(parent, text) {
 
   const clean = cleanComment(text);
 
@@ -168,81 +127,54 @@ function renderCommentBlock(parent, text) {
 }
 
 /* ================================================================
-   FAST LINE RENDERER (DocumentFragment optimization)
+   MAIN MOVE RENDERER
 ================================================================ */
 
-function renderLine(node, container, board) {
+function renderMoves(root, container) {
+
+  let cur = root;
+
+  let moveNumber = 1;
+  let color = "w";
 
   const fragment = document.createDocumentFragment();
-
-  let cur = node;
 
   while (cur) {
 
     const span = document.createElement("span");
     span.className = "pgn-move";
 
-    let label = "";
+    let label;
 
-    if (cur.color === "w") {
-      label += cur.moveNumber + "." + NBSP;
+    if (color === "w") {
+
+      label =
+        moveNumber + "." + NBSP +
+        toFigurine(cur.san) +
+        renderNAG(cur.nags) +
+        NBSP;
+
+      color = "b";
+
+    } else {
+
+      label =
+        moveNumber + "..." + NBSP +
+        toFigurine(cur.san) +
+        renderNAG(cur.nags) +
+        NBSP;
+
+      color = "w";
+      moveNumber++;
+
     }
 
-    label += toFigurine(cur.san) + renderNAG(cur.nags);
-
-    span.textContent = label + NBSP;
-
-    span.addEventListener("click", () => {
-
-      board.reset();
-
-      const stack = [];
-      let temp = cur;
-
-      while (temp && temp.san) {
-        stack.unshift(temp.san);
-        temp = temp.parent;
-      }
-
-      stack.forEach(m => board.move(m));
-
-      parseAnnotations(cur.comment, board);
-
-    });
+    span.textContent = label;
 
     fragment.appendChild(span);
 
     if (cur.comment) {
-
-      const clean = cleanComment(cur.comment);
-
-      if (clean) {
-
-        const commentDiv = document.createElement("div");
-        commentDiv.className = "pgn-comment";
-        commentDiv.textContent = clean;
-
-        fragment.appendChild(commentDiv);
-
-      }
-
-    }
-
-    /* variations */
-
-    if (cur.variations && cur.variations.length) {
-
-      cur.variations.forEach(v => {
-
-        const varDiv = document.createElement("div");
-        varDiv.className = "pgn-variation";
-
-        renderLine(v, varDiv, board);
-
-        fragment.appendChild(varDiv);
-
-      });
-
+      renderComment(fragment, cur.comment);
     }
 
     cur = cur.next;
@@ -254,7 +186,7 @@ function renderLine(node, container, board) {
 }
 
 /* ================================================================
-   MAIN PGN RENDERER
+   MAIN RENDER
 ================================================================ */
 
 function renderFullPGN(pgnText, container) {
@@ -266,29 +198,54 @@ function renderFullPGN(pgnText, container) {
     return;
   }
 
-  /* split headers and movetext */
-
   const { headers, movetext } = splitPGN(pgnText);
 
   renderHeaders(headers, container);
 
-  const boardDiv = document.createElement("div");
-  boardDiv.className = "jc-board";
+  const root = buildMoveTree(movetext);
 
-  container.appendChild(boardDiv);
+  if (!root) return;
 
-  const board = createBoard(boardDiv, headers.FEN || "start");
+  const firstMoveBlock = document.createElement("div");
+  firstMoveBlock.className = "pgn-moves";
+
+  container.appendChild(firstMoveBlock);
+
+  /* first move */
+
+  const firstMove = document.createElement("span");
+  firstMove.className = "pgn-move";
+  firstMove.textContent = "1." + NBSP + toFigurine(root.san);
+
+  firstMoveBlock.appendChild(firstMove);
+
+  /* first board */
+
+  const board1 = document.createElement("div");
+  board1.className = "jc-board";
+
+  container.appendChild(board1);
+
+  createBoard(board1);
+
+  /* rest of moves */
 
   const movesDiv = document.createElement("div");
   movesDiv.className = "pgn-moves";
 
   container.appendChild(movesDiv);
 
-  const root = buildMoveTree(movetext);
+  renderMoves(root.next, movesDiv);
 
-  if (!root) return;
+  /* final board */
 
-  renderLine(root, movesDiv, board);
+  const board2 = document.createElement("div");
+  board2.className = "jc-board";
+
+  container.appendChild(board2);
+
+  createBoard(board2);
+
 }
 
 /* ================================================================
@@ -300,7 +257,6 @@ export {
   renderNAG,
   parseHeaders,
   renderHeaders,
-  renderCommentBlock,
   buildMoveTree,
   createBoard,
   toFigurine
