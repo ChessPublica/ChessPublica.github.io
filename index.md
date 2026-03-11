@@ -27,7 +27,7 @@ rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.0/chess.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
-<script type="module" src="/assets/jekyllchess-all.js"></script>
+<script type="module" src="/assets/index.js"></script>
 <link rel="stylesheet" href="/assets/jekyllchess.css" />
 
 <!-- ![SatranChess](https://www.satranchess.com/images/banner.jpg) -->
