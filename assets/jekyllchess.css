@@ -54,7 +54,7 @@
 
 /* <puzzle> element */
 
-.jc-puzzle {width:400px;max-width:100%;}
+.jc-puzzle {display:inline-block;vertical-align:top;width:400px;max-width:100%;}
 
 /* <puzzle-block> element */
 
@@ -89,5 +89,4 @@
   .jc-board-wrapper{max-width:100%;}
   .jc-board{max-width:100%;}
   .pgn-container{}
-}
 }
