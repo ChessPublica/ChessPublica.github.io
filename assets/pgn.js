@@ -1,397 +1,559 @@
-/* puzzle.js */
+/* pgn.js */
 
-/* JekyllChess — Puzzle System
+/* JekyllChess — PGN Engine
  *
- * Merged from: puzzle-engine.js, puzzle-block.js, puzzle-rush.js
+ * Merged from: pgn-parser.js, pgn-renderer.js, pgn-reader.js
  *
  * Sections:
- *   1. Puzzle Engine     — renderLocalPuzzle() (interactive drag-and-drop)
- *   2. Puzzle Block      — renderPuzzleBlock() (multi-puzzle from PGN)
- *   3. Puzzle Rush       — renderPuzzleRush() (sequential puzzle rush)
+ *   1. Tokenizer        — parsePGN()
+ *   2. Move Tree Builder — buildMoveTree()
+ *   3. Header Parser     — parseHeaders()
+ *   4. Static Renderer   — renderFullPGN(), renderHeaders(), renderMoveTree()
+ *   5. Interactive Reader — renderPGNReader()
  */
 
-import {
-  PIECE_THEME,
-  fetchText,
-  normalizeSAN,
-  splitIntoPgnGames,
-  parseGame,
-  stripFigurines,
-  normalizePuzzleText,
-} from "./helpers.js";
-import { parseHeaders } from "./pgn.js";
+import { NBSP, PIECE_THEME, toFigurine } from "./helpers.js";
+import { createBoard } from "./board.js";
 
 /* ================================================================
-   1. PUZZLE ENGINE
+   1. PGN TOKENIZER
 ================================================================ */
 
-var ANIM_MS = 250;
+export function parsePGN(pgnText) {
+  var movetext = extractMovetext(pgnText);
+  return tokenize(movetext);
+}
 
-export function renderLocalPuzzle(
-  container,
-  fen,
-  moves,
-  autoFirstMove,
-  forceBlack,
-  onSolved,
-  forcedOrientation,
-  orientationFromPGN,
-  isRush
-) {
-  function createPuzzleBoard() {
-    container.innerHTML = "";
+function tokenize(text) {
+  var tokens = [];
+  var i = 0;
 
-    var boardDiv = document.createElement("div");
-    boardDiv.className = "jc-board";
-    container.appendChild(boardDiv);
-
-    var game = new Chess(fen);
-
-    var state = {
-      game: game,
-      moves: moves,
-      index: 0,
-      solverSide: game.turn(),
-      locked: false,
-      solved: false,
-    };
-
-    boardDiv.__state = state;
-
-    function getOrientation() {
-      if (orientationFromPGN) return orientationFromPGN;
-      if (forcedOrientation) return forcedOrientation;
-      if (forceBlack) return "black";
-      return state.solverSide === "w" ? "white" : "black";
+  while (i < text.length) {
+    /* COMMENT */
+    if (text[i] === "{") {
+      var depth = 1;
+      var j = i + 1;
+      while (depth > 0 && j < text.length) {
+        if (text[j] === "{") depth++;
+        if (text[j] === "}") depth--;
+        j++;
+      }
+      tokens.push({ type: "comment", value: text.slice(i + 1, j - 1).trim() });
+      i = j;
+      continue;
     }
 
-    function dispatchMoveEvent(index) {
-      boardDiv.dispatchEvent(
-        new CustomEvent("jc-puzzle-move", {
-          detail: { index: index },
-          bubbles: true,
-        })
+    /* VARIATION */
+    if (text[i] === "(") {
+      var depth2 = 1;
+      var j2 = i + 1;
+      while (depth2 > 0 && j2 < text.length) {
+        if (text[j2] === "(") depth2++;
+        if (text[j2] === ")") depth2--;
+        j2++;
+      }
+      tokens.push({ type: "variation", value: tokenize(text.slice(i + 1, j2 - 1)) });
+      i = j2;
+      continue;
+    }
+
+    var nagMatch = text.slice(i).match(/^\$\d+/);
+    if (nagMatch) {
+      tokens.push({ type: "nag", value: nagMatch[0] });
+      i += nagMatch[0].length;
+      continue;
+    }
+
+    /* RESULT — must be checked BEFORE move number, because "1-0" starts with "1" */
+    var resultMatch = text.slice(i).match(/^(1-0|0-1|1\/2-1\/2|\*)/);
+    if (resultMatch) {
+      tokens.push({ type: "result", value: resultMatch[0] });
+      i += resultMatch[0].length;
+      continue;
+    }
+
+    var moveNumberMatch = text.slice(i).match(/^\d+(\.\.\.?)?\./);
+    if (moveNumberMatch) {
+      tokens.push({ type: "moveNumber", value: moveNumberMatch[0] });
+      i += moveNumberMatch[0].length;
+      continue;
+    }
+
+    var moveMatch = text
+      .slice(i)
+      .match(
+        /^(?:O-O-O|O-O|[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](?:=[QRBN])?|[a-h][1-8])[+#]?/,
       );
+    if (moveMatch) {
+      tokens.push({ type: "move", value: moveMatch[0] });
+      i += moveMatch[0].length;
+      continue;
     }
 
-    function finishSolved() {
-      state.solved = true;
-      board.position(state.game.fen(), false);
-      boardDiv.classList.remove("jc-fire-once");
-      boardDiv.classList.add("jc-fire-solved");
+    i++;
+  }
 
-      boardDiv.addEventListener(
-        "mousedown",
-        function () {
-          if (container.reset) container.reset();
-        },
-        { once: true, capture: true }
-      );
+  return tokens;
+}
 
-      if (onSolved) onSolved();
+function extractMovetext(pgnText) {
+  return pgnText.split(/\n\n/).slice(1).join(" ").trim();
+}
+
+/* ================================================================
+   2. MOVE TREE BUILDER
+================================================================ */
+
+export function buildMoveTree(pgnText) {
+  var tokens = parsePGN(pgnText);
+  var chess = new Chess();
+  var root = { next: null, fen: chess.fen() };
+  parseSequence(tokens, chess, root, pgnText);
+  return root.next;
+}
+
+function getMoveNumber(fen) {
+  return parseInt(fen.split(" ")[5], 10) || 1;
+}
+
+function parseSequence(tokens, chess, parentNode, originalPgn) {
+  var current = parentNode;
+  var lastMoveNode = null;
+  var i = 0;
+
+  while (i < tokens.length) {
+    var token = tokens[i];
+
+    if (token.type === "moveNumber" || token.type === "result") {
+      i++;
+      continue;
     }
 
-    function autoReply() {
-      if (state.index >= state.moves.length) return finishSolved();
-
-      var mv = state.game.move(state.moves[state.index], { sloppy: true });
-
-      if (!mv) {
-        console.error("Invalid puzzle move:", state.moves[state.index]);
-        return;
+    /* MOVE */
+    if (token.type === "move") {
+      var move = chess.move(token.value, { sloppy: true });
+      if (!move) {
+        var currentFen = chess.fen();
+        var error = new Error(
+          "Invalid move: " + token.value + "\nMove number: " + getMoveNumber(currentFen),
+        );
+        error.pgnIndex = originalPgn.indexOf(token.value);
+        throw error;
       }
 
-      state.index++;
-      board.position(state.game.fen(), true);
-      dispatchMoveEvent(state.index);
+      var fen = chess.fen();
+      var fenMoveNum = getMoveNumber(fen);
 
-      setTimeout(function () {
-        state.locked = false;
-      }, ANIM_MS);
+      var node = {
+        san: token.value,
+        fen: fen,
+        moveNumber: move.color === "w" ? fenMoveNum : fenMoveNum - 1,
+        color: move.color,
+        next: null,
+        parent: current,
+        variations: [],
+        comment: null,
+        nags: [],
+        arrows: [],
+        squareMarks: [],
+      };
+
+      current.next = node;
+      current = node;
+      lastMoveNode = node;
+      i++;
+      continue;
     }
 
-    function onDrop(from, to) {
-      if (state.locked || state.solved || state.game.turn() !== state.solverSide)
-        return "snapback";
-
-      var expectedSAN = String(state.moves[state.index] || "").trim();
-      var move = state.game.move({ from: from, to: to, promotion: "q" });
-      if (!move) return "snapback";
-
-      if (normalizeSAN(move.san) !== normalizeSAN(expectedSAN)) {
-        state.game.undo();
-        board.position(state.game.fen(), false);
-        boardDiv.classList.remove("jc-shake");
-        void boardDiv.offsetWidth;
-        boardDiv.classList.add("jc-shake");
-        return "snapback";
-      }
-
-      state.index++;
-      board.position(state.game.fen(), false);
-      dispatchMoveEvent(state.index);
-
-      boardDiv.classList.remove("jc-fire-once");
-      requestAnimationFrame(function () {
-        boardDiv.classList.add("jc-fire-once");
-      });
-
-      setTimeout(function () {
-        if (!state.solved) boardDiv.classList.remove("jc-fire-once");
-      }, 1000);
-
-      if (state.index >= state.moves.length) return finishSolved();
-
-      state.locked = true;
-      setTimeout(autoReply, 80);
-      return true;
+    /* NAG */
+    if (token.type === "nag") {
+      if (lastMoveNode) lastMoveNode.nags.push(token.value);
+      i++;
+      continue;
     }
 
-    var board = Chessboard(boardDiv, {
-      draggable: true,
-      position: fen,
-      orientation: getOrientation(),
-      pieceTheme: PIECE_THEME,
-      onDrop: onDrop,
-      onSnapEnd: function () {
-        board.position(state.game.fen(), false);
-      },
-    });
-
-    boardDiv.__board = board;
-
-    if (autoFirstMove) {
-      var mv = state.game.move(moves[0], { sloppy: true });
-      if (mv) {
-        board.position(state.game.fen(), true);
-        state.index = 1;
-        state.solverSide = state.game.turn();
+    /* COMMENT */
+    if (token.type === "comment") {
+      if (lastMoveNode) {
+        processComment(token.value, lastMoveNode, current, parentNode, chess, originalPgn);
       }
+      i++;
+      continue;
+    }
+
+    /* VARIATION */
+    if (token.type === "variation") {
+      var branchFen = determineBranchFen(token.value, current, parentNode);
+      var snapshot = new Chess(branchFen);
+      var variationRoot = { next: null, fen: branchFen };
+
+      parseSequence(token.value, snapshot, variationRoot, originalPgn);
+
+      if (current && variationRoot.next) {
+        current.variations.push(variationRoot.next);
+      }
+
+      i++;
+      continue;
+    }
+
+    i++;
+  }
+}
+
+/* ── Comment processor ──────────────────────────────────── */
+
+var RE_CSL = /\[%csl\s+([^\]]+)\]/g;
+var RE_CAL = /\[%cal\s+([^\]]+)\]/g;
+var RE_ANNOTATIONS = /\[%(?:eval|clk|emt|depth)\s+[^\]]+\]/g;
+var RE_GENERIC_BRACKET = /\[%.*?\]/g;
+
+function processComment(commentText, lastMoveNode, current, parentNode, chess, originalPgn) {
+  var inlineMoveText = "";
+
+  var variationMatch = commentText.match(/\(([^()]+)\)/);
+  if (variationMatch) {
+    var variationText = variationMatch[1].trim();
+    var hasDiagram = variationText.includes("[D]");
+
+    inlineMoveText = variationText
+      .replace(/\{[^}]*\}/g, "")
+      .replace(RE_GENERIC_BRACKET, "")
+      .replace(/\[D\]/g, "")
+      .trim();
+
+    try {
+      var fakePGN = '[Event "?"]\n\n1. ' + variationText.replace(/\[D\]/g, "");
+      var variationTokens = parsePGN(fakePGN);
+
+      if (hasDiagram) {
+        variationTokens.push({ type: "comment", value: "[D]" });
+      }
+
+      var branchFen = determineBranchFen(variationTokens, current, parentNode);
+      var snapshot = new Chess(branchFen);
+      var variationRoot = { next: null, fen: branchFen };
+
+      parseSequence(variationTokens, snapshot, variationRoot, originalPgn);
+
+      if (current && variationRoot.next) {
+        current.variations.push(variationRoot.next);
+      }
+    } catch (_e) {
+      // Silently skip invalid inline variations
     }
   }
 
-  createPuzzleBoard();
+  /* Square marks */
+  var cslM;
+  RE_CSL.lastIndex = 0;
+  while ((cslM = RE_CSL.exec(commentText))) {
+    lastMoveNode.squareMarks = lastMoveNode.squareMarks.concat(parseCSL(cslM[1]));
+  }
 
-  container.reset = function () {
-    createPuzzleBoard();
-    container.dispatchEvent(new CustomEvent("jc-puzzle-reset", { bubbles: true }));
-  };
+  /* Arrows */
+  var calM;
+  RE_CAL.lastIndex = 0;
+  while ((calM = RE_CAL.exec(commentText))) {
+    lastMoveNode.arrows = lastMoveNode.arrows.concat(parseCAL(calM[1]));
+  }
+
+  /* Clean comment text */
+  var cleaned = commentText
+    .replace(/\([^)]*\)/g, "")
+    .replace(RE_CSL, "")
+    .replace(RE_CAL, "")
+    .replace(RE_ANNOTATIONS, "")
+    .replace(RE_GENERIC_BRACKET, "")
+    .trim();
+
+  var finalComment = (cleaned + " " + inlineMoveText).trim();
+
+  if (finalComment.length) {
+    lastMoveNode.comment = lastMoveNode.comment
+      ? lastMoveNode.comment + " " + finalComment
+      : finalComment;
+  }
 }
 
-/* ================================================================
-   2. PUZZLE BLOCK
-================================================================ */
+/* ── Smart branch logic ─────────────────────────────────── */
 
-function stripPgnHeaders(pgn) {
-  return pgn.replace(/(?:\[[^\]]+\]\s*)+/g, "").trim();
+function determineBranchFen(variationTokens, current, parentNode) {
+  if (!current) return parentNode.fen;
+
+  var firstMoveNumberToken = null;
+  for (var k = 0; k < variationTokens.length; k++) {
+    if (variationTokens[k].type === "moveNumber") {
+      firstMoveNumberToken = variationTokens[k];
+      break;
+    }
+  }
+
+  var variationColor;
+  if (firstMoveNumberToken && firstMoveNumberToken.value.includes("...")) {
+    variationColor = "b";
+  } else if (firstMoveNumberToken) {
+    variationColor = "w";
+  } else {
+    variationColor = current.color === "w" ? "b" : "w";
+  }
+
+  var nextToMove = current.color === "w" ? "b" : "w";
+
+  if (variationColor === nextToMove) {
+    return current.fen;
+  }
+  return current.parent && current.parent.fen
+    ? current.parent.fen
+    : parentNode.fen;
 }
 
-function extractAllComments(pgn) {
-  var body = stripPgnHeaders(pgn);
-  var matches = body.match(/\{([\s\S]*?)\}/g) || [];
-  return matches.map(function (c) {
-    return c.replace(/^\{|\}$/g, "").trim();
+function parseCSL(data) {
+  return data.split(",").map(function (entry) {
+    return { color: entry[0], square: entry.slice(1) };
   });
 }
 
-function resolveSource(node) {
-  var attrSrc = node.getAttribute("src");
-  if (attrSrc) {
-    return { type: "url", value: new URL(attrSrc, location.href).href };
-  }
-
-  var text = (node.textContent || "").trim();
-  var match = text.match(/PGN:\s*["']?([^"'\s]+)["']?/i);
-  if (match) {
-    return { type: "url", value: new URL(match[1], location.href).href };
-  }
-
-  if (text.startsWith("[")) {
-    return { type: "inline", value: text };
-  }
-
-  return null;
+function parseCAL(data) {
+  return data.split(",").map(function (entry) {
+    return { color: entry[0], from: entry.slice(1, 3), to: entry.slice(3, 5) };
+  });
 }
 
-export function jcPuzzleCreate(el, cfg) {
-  var parsed = parseGame(cfg.rawPGN || "");
-  if (parsed.error) return;
+/* ================================================================
+   3. HEADER PARSER
+================================================================ */
 
-  renderLocalPuzzle(
-    el,
-    parsed.fen,
-    parsed.moves,
-    parsed.firstMoveAuto === true,
-    false,
-    null,
-    null,
-    parsed.orientation
-  );
+export function parseHeaders(pgnText) {
+  var headers = {};
+  var regex = /\[(\w+)\s+"([^"]*)"\]/g;
+  var match;
+  while ((match = regex.exec(pgnText))) {
+    headers[match[1]] = match[2];
+  }
+  return headers;
 }
 
-export function renderPuzzleBlock(node) {
-  if (node.dataset.jcRendered === "1") return;
-  node.dataset.jcRendered = "1";
+/* ================================================================
+   4. STATIC PGN RENDERER
+================================================================ */
 
-  var source = resolveSource(node);
-  if (!source) {
-    node.textContent = "No PGN source found.";
-    return;
+export function renderHeaders(headers, container) {
+  var div = document.createElement("div");
+  div.className = "pgn-headers";
+
+  if (headers.White && headers.Black) {
+    var players = document.createElement("div");
+    players.className = "pgn-players";
+    players.textContent = headers.White + " – " + headers.Black;
+    div.appendChild(players);
   }
 
-  node.textContent = "Loading puzzles…";
-
-  function processText(text) {
-    var games = splitIntoPgnGames(text);
-    node.innerHTML = "";
-
-    games.forEach(function (g) {
-      var headers = parseHeaders(g);
-      var allComments = extractAllComments(g);
-
-      var wrap = document.createElement("div");
-      wrap.className = "jc-puzzle-item";
-      node.appendChild(wrap);
-
-      /* META HEADER */
-      var metaDiv = document.createElement("div");
-      metaDiv.className = "jc-puzzle-meta";
-
-      var emojiDiv = document.createElement("div");
-      emojiDiv.className = "jc-puzzle-meta-emoji";
-      emojiDiv.textContent = "🧩";
-      metaDiv.appendChild(emojiDiv);
-
-      var textDiv = document.createElement("div");
-      textDiv.className = "jc-puzzle-meta-text";
-
-      var white = headers.White || "";
-      var black = headers.Black || "";
-
-      var line1El = document.createElement("div");
-      line1El.className = "jc-puzzle-meta-line1";
-      line1El.textContent =
-        white && black ? white + " - " + black : white || black || "Puzzle";
-      textDiv.appendChild(line1El);
-
-      var line2El = document.createElement("div");
-      line2El.className = "jc-puzzle-meta-line2";
-      line2El.textContent = headers.Event || headers.Variant || "";
-      textDiv.appendChild(line2El);
-
-      metaDiv.appendChild(textDiv);
-      wrap.appendChild(metaDiv);
-
-      /* BOARD */
-      var boardDiv = document.createElement("div");
-      boardDiv.className = "jc-board";
-      wrap.appendChild(boardDiv);
-
-      /* MOVE COMMENT */
-      var moveCommentDiv = document.createElement("div");
-      moveCommentDiv.className = "jc-puzzle-move-comment";
-      wrap.appendChild(moveCommentDiv);
-
-      jcPuzzleCreate(boardDiv, { rawPGN: g });
-      moveCommentDiv.textContent = allComments[0] || "";
-
-      wrap.addEventListener("jc-puzzle-move", function (e) {
-        var moveIndex = e.detail.index;
-        if (moveIndex < allComments.length) {
-          moveCommentDiv.textContent = allComments[moveIndex] || "";
-        }
-      });
-
-      wrap.addEventListener("jc-puzzle-reset", function () {
-        moveCommentDiv.textContent = allComments[0] || "";
-      });
-    });
+  if (headers.Site || headers.Date) {
+    var meta = document.createElement("div");
+    meta.className = "pgn-meta";
+    var site = headers.Site || "";
+    var date = headers.Date || "";
+    meta.textContent = site && date ? site + ", " + date : site || date;
+    div.appendChild(meta);
   }
 
-  if (source.type === "url") {
-    fetchText(source.value)
-      .then(processText)
-      .catch(function (err) {
-        node.textContent = "Failed to load puzzle file: " + err.message;
+  container.appendChild(div);
+}
+
+export function renderMoveTree(rootNode, container) {
+  var movesDiv = document.createElement("div");
+  movesDiv.className = "pgn-moves";
+  renderLine(rootNode, movesDiv, false);
+  container.appendChild(movesDiv);
+}
+
+var NAG_MAP = {
+  $1: "!", $2: "?", $3: "!!", $4: "??", $5: "!?", $6: "?!",
+};
+
+function renderNAG(nags) {
+  if (!nags || !nags.length) return "";
+  var out = "";
+  for (var i = 0; i < nags.length; i++) {
+    out += NAG_MAP[nags[i]] || "";
+  }
+  return out;
+}
+
+function renderLine(node, parent, isVariation) {
+  var current = node;
+  var buffer = "";
+  var lastMoveNumber = null;
+  var needsMoveNumber = true;
+
+  while (current) {
+    var newMoveNumber = current.moveNumber !== lastMoveNumber;
+
+    /* MOVE NUMBER */
+    if (!isVariation) {
+      if (current.color === "w") {
+        buffer += current.moveNumber + "." + NBSP;
+      } else if (needsMoveNumber) {
+        buffer += current.moveNumber + "..." + NBSP;
+      }
+    } else {
+      if (needsMoveNumber && !buffer.trim()) {
+        buffer += current.moveNumber + (current.color === "b" ? "..." : ".") + NBSP;
+      } else if (needsMoveNumber && current.color === "b") {
+        buffer += current.moveNumber + "..." + NBSP;
+      } else if (newMoveNumber && current.color === "w") {
+        buffer += current.moveNumber + "." + NBSP;
+      }
+    }
+
+    needsMoveNumber = false;
+
+    /* MOVE TEXT */
+    buffer += toFigurine(current.san) + renderNAG(current.nags) + " ";
+
+    lastMoveNumber = current.moveNumber;
+
+    /* COMMENT */
+    if (current.comment) {
+      flushBuffer(parent, buffer, isVariation);
+      buffer = "";
+      var p = document.createElement("p");
+      p.className = "pgn-comment";
+      p.textContent = current.comment;
+      parent.appendChild(p);
+      needsMoveNumber = true;
+    }
+
+    /* BOARD */
+    var hasAnnotations =
+      (current.arrows && current.arrows.length) ||
+      (current.squareMarks && current.squareMarks.length);
+
+    if (hasAnnotations || current.comment === "[D]") {
+      flushBuffer(parent, buffer, isVariation);
+      buffer = "";
+      createBoard(parent, current.fen, current);
+      needsMoveNumber = true;
+    }
+
+    /* VARIATIONS */
+    if (current.variations.length > 0) {
+      flushBuffer(parent, buffer, isVariation);
+      buffer = "";
+
+      current.variations.forEach(function (variationRoot) {
+        var variationWrapper = document.createElement("div");
+        variationWrapper.className = "pgn-variation";
+        parent.appendChild(variationWrapper);
+        renderLine(variationRoot, variationWrapper, true);
       });
+
+      needsMoveNumber = true;
+    }
+
+    current = current.next;
   }
 
-  if (source.type === "inline") {
-    processText(source.value);
+  flushBuffer(parent, buffer, isVariation);
+}
+
+function flushBuffer(parent, text, isVariation) {
+  var trimmed = text.trim();
+  if (!trimmed) return;
+  var p = document.createElement("p");
+  p.className = isVariation ? "pgn-variation-line" : "pgn-mainline";
+  p.textContent = trimmed;
+  parent.appendChild(p);
+}
+
+export function renderFullPGN(pgnText, container) {
+  try {
+    var headers = parseHeaders(pgnText);
+    renderHeaders(headers, container);
+
+    var rootNode = buildMoveTree(pgnText);
+    if (rootNode) {
+      renderMoveTree(rootNode, container);
+    }
+  } catch (e) {
+    var errorDiv = document.createElement("div");
+    errorDiv.className = "pgn-error";
+    errorDiv.textContent = "Error parsing PGN: " + e.message;
+    container.appendChild(errorDiv);
   }
 }
 
 /* ================================================================
-   3. PUZZLE RUSH
+   5. INTERACTIVE PGN READER
 ================================================================ */
 
-var RUSH_KEY = "jekyllchess_puzzle_rush_index";
+export function renderPGNReader(pgnText, container) {
+  var headers = parseHeaders(pgnText);
 
-export function renderPuzzleRush(container, url) {
-  container.textContent = "Loading...";
+  var headerDiv = document.createElement("div");
+  headerDiv.className = "pgn-reader-header";
+  renderHeaders(headers, headerDiv);
+  container.appendChild(headerDiv);
 
-  fetchText(url)
-    .then(function (text) {
-      var puzzles = splitIntoPgnGames(text)
-        .map(parseGame)
-        .filter(function (p) {
-          return !p.error;
-        });
+  var rootNode = buildMoveTree(pgnText);
+  if (!rootNode) {
+    container.textContent = "No moves found in PGN.";
+    return;
+  }
 
-      var idx = parseInt(localStorage.getItem(RUSH_KEY), 10) || 0;
+  var allNodes = [];
+  var startFen = rootNode.parent
+    ? rootNode.parent.fen
+    : "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-      container.innerHTML = "";
-      var holder = document.createElement("div");
-      holder.className = "puzzle-rush-wrap";
-      container.appendChild(holder);
+  function collectNodes(node) {
+    var cur = node;
+    while (cur) {
+      allNodes.push(cur);
+      cur = cur.next;
+    }
+  }
+  collectNodes(rootNode);
 
-      var counterDiv = document.createElement("div");
-      counterDiv.className = "puzzle-rush-counter";
-      holder.appendChild(counterDiv);
+  var layout = document.createElement("div");
+  layout.className = "pgn-reader-layout";
+  container.appendChild(layout);
 
-      function updateCounter() {
-        counterDiv.textContent =
-          "Puzzle " + Math.min(idx + 1, puzzles.length) + " / " + puzzles.length;
-      }
+  /* Board area */
+  var boardArea = document.createElement("div");
+  boardArea.className = "pgn-reader-board-area";
+  layout.appendChild(boardArea);
 
-      function loadNext() {
-        if (!puzzles[idx]) {
-          localStorage.removeItem(RUSH_KEY);
-          holder.innerHTML =
-            "<div class='jc-finished'>All puzzles completed ✔</div>";
-          return;
-        }
+  var boardDiv = document.createElement("div");
+  boardDiv.className = "jc-board pgn-reader-board";
+  boardArea.appendChild(boardDiv);
 
-        updateCounter();
+  /* Controls */
+  var controls = document.createElement("div");
+  controls.className = "pgn-reader-controls";
+  boardArea.appendChild(controls);
 
-        var fenParts = puzzles[idx].fen.split(" ");
-        var solverSide = fenParts[1] === "w" ? "b" : "w";
-        var orientation = solverSide === "w" ? "white" : "black";
+  var btnFirst = createControlBtn("⏮", "First move");
+  var btnPrev = createControlBtn("◀", "Previous move");
+  var btnNext = createControlBtn("▶", "Next move");
+  var btnLast = createControlBtn("⏭", "Last move");
+  controls.appendChild(btnFirst);
+  controls.appendChild(btnPrev);
+  controls.appendChild(btnNext);
+  controls.appendChild(btnLast);
 
-        renderLocalPuzzle(
-          holder,
-          puzzles[idx].fen,
-          puzzles[idx].moves,
-          true,
-          false,
-          function () {
-            idx++;
-            localStorage.setItem(RUSH_KEY, idx);
-            var boards = holder.querySelectorAll(".jc-board");
-            boards.forEach(function (b) {
-              b.remove();
-            });
-            requestAnimationFrame(loadNext);
-          },
-          orientation,
-          null,
-          true
-        );
-      }
+  /* Moves panel */
+  var movesPanel = document.createElement("div");
+  movesPanel.className = "pgn-reader-moves-panel";
+  layout.appendChild(movesPanel);
 
-      loadNext();
-    })
-    .catch(function () {
-      container.textContent = "Failed to load PGN.";
-    });
-}
+  var moveSpans = [];
+  var commentSpans = [];
+
+  allNodes.forEach(function (node, idx) {
+    if (node.color === "w") {
+      var numSpan = document.createElement("span");
+      numSpan.className = "pgn-reader-move-number";
+      numSpan.textContent = node.moveNumber + "." + NBSP;
+      movesPanel
