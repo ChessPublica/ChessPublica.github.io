@@ -13,12 +13,8 @@ This document demonstrates **every custom HTML element** provided by JekyllChess
 
 1. [`<fen>`](#1-fen--static-board-from-fen-string)
 2. [`<pgn>`](#2-pgn--annotated-game-viewer)
-3. [`<pgn-reader>`](#3-pgn-reader--interactive-board--clickable-moves)
-4. [`<puzzle>`](#4-puzzle--single-interactive-puzzle)
-5. [`<puzzle-block>`](#5-puzzle-block--multiple-puzzles-from-pgn)
-6. [`<puzzle-rush>`](#6-puzzle-rush--sequential-puzzle-rush)
-7. [Layout Utilities](#7-layout-utilities)
-8. [Setup & Dependencies](#8-setup--dependencies)
+3. [`<puzzle>`](#3-puzzle--single-interactive-puzzle)
+4. [Setup & Dependencies](#4-setup--dependencies)
 
 ---
 
@@ -164,64 +160,7 @@ exf5 27. Rxf5 Nh7 28. Rcf1 Qd8 29. Qg3 Re7 30. h4 Rbb7
 
 ---
 
-## 3. `<pgn-reader>` — Interactive Board + Clickable Moves
-
-Renders a two-panel layout: interactive chessboard on the left, clickable move list on the right. Supports keyboard navigation (← → Home End).
-
-### Inline PGN
-
-```html
-<pgn-reader>
-[Event "Immortal Game"]
-[Site "London"]
-[Date "1851.06.21"]
-[White "Anderssen, Adolf"]
-[Black "Kieseritzky, Lionel"]
-[Result "1-0"]
-
-1. e4 e5 2. f4 {The King's Gambit!} exf4 3. Bc4 Qh4+ 4. Kf1 b5
-5. Bxb5 Nf6 6. Nf3 {Pinning the knight to the queen.} Qh6
-7. d3 Nh5 8. Nh4 Qg5 9. Nf5 c6 10. g4 Nf6 11. Rg1 cxb5
-12. h4 Qg6 13. h5 Qg5 14. Qf3 Ng8 15. Bxf4 Qf6 16. Nc3 Bc5
-17. Nd5 {Attacking both b7 and f7.} Qxb2 18. Bd6 Bxg1
-19. e5 Qxa1+ 20. Ke2 Na6 21. Nxg7+ Kd8 22. Qf6+ Nxf6
-23. Be7# {A spectacular checkmate — the Immortal Game!} 1-0
-</pgn-reader>
-```
-
-<pgn-reader>
-[Event "Immortal Game"]
-[Site "London"]
-[Date "1851.06.21"]
-[White "Anderssen, Adolf"]
-[Black "Kieseritzky, Lionel"]
-[Result "1-0"]
-
-1. e4 e5 2. f4 {The King's Gambit!} exf4 3. Bc4 Qh4+ 4. Kf1 b5
-5. Bxb5 Nf6 6. Nf3 {Pinning the knight to the queen.} Qh6
-7. d3 Nh5 8. Nh4 Qg5 9. Nf5 c6 10. g4 Nf6 11. Rg1 cxb5
-12. h4 Qg6 13. h5 Qg5 14. Qf3 Ng8 15. Bxf4 Qf6 16. Nc3 Bc5
-17. Nd5 {Attacking both b7 and f7.} Qxb2 18. Bd6 Bxg1
-19. e5 Qxa1+ 20. Ke2 Na6 21. Nxg7+ Kd8 22. Qf6+ Nxf6
-23. Be7# {A spectacular checkmate — the Immortal Game!} 1-0
-</pgn-reader>
-
-### Load from File
-
-```html
-<pgn-reader src="./data/sample-game.pgn"></pgn-reader>
-```
-
-### Features
-
-- **Click any move** in the right panel to jump to that position
-- **Inline comments** appear as italic text after moves
-- **Keyboard shortcuts**: ← (prev), → (next), Home (start), End (last)
-- **Control buttons**: ⏮ ◀ ▶ ⏭
-
----
-
-## 4. `<puzzle>` — Single Interactive Puzzle
+## 3. `<puzzle>` — Single Interactive Puzzle
 
 Renders a drag-and-drop puzzle. The user must find the correct sequence of moves.
 
@@ -296,117 +235,7 @@ Force the board to show from Black's perspective:
 
 ---
 
-## 5. `<puzzle-block>` — Multiple Puzzles from PGN
-
-Renders multiple puzzles from a multi-game PGN source. Each puzzle gets its own board with metadata header and move-by-move comments.
-
-### Load from File
-
-```html
-<puzzle-block src="./data/sample-puzzles.pgn"></puzzle-block>
-```
-
-### Inline PGN (Multiple Games)
-
-```html
-<puzzle-block>
-[Event "Pin and Win"]
-[White "?"]
-[Black "?"]
-[FEN "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 0 1"]
-
-{Find the winning move!} 1. Qxf7# {Scholar's Mate!}
-
-[Event "Back Rank Mate"]
-[White "?"]
-[Black "?"]
-[FEN "6k1/5ppp/8/8/8/8/5PPP/4R1K1 w - - 0 1"]
-
-{Deliver checkmate in one.} 1. Re8# {Back rank mate!}
-</puzzle-block>
-```
-
-<puzzle-block>
-[Event "Pin and Win"]
-[White "?"]
-[Black "?"]
-[FEN "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 0 1"]
-
-{Find the winning move!} 1. Qxf7# {Scholar's Mate!}
-
-[Event "Back Rank Mate"]
-[White "?"]
-[Black "?"]
-[FEN "6k1/5ppp/8/8/8/8/5PPP/4R1K1 w - - 0 1"]
-
-{Deliver checkmate in one.} 1. Re8# {Back rank mate!}
-</puzzle-block>
-
-### PGN Text Reference (in body)
-
-```html
-<puzzle-block>
-PGN: ./assets/pgn/sample-puzzles.pgn
-</puzzle-block>
-```
-
-### PGN File Format for Puzzles
-
-Each puzzle in the PGN file should have:
-
-```
-[Event "Puzzle Name"]
-[White "Player 1"]
-[Black "Player 2"]
-[FEN "position..."]
-[FirstMoveAuto "true"]
-
-{Initial hint comment} 1. e4 {Comment after move 1} e5 {Comment after move 2}
-```
-
-Comments are displayed below the board and update as the user progresses through moves.
-
----
-
-## 6. `<puzzle-rush>` — Sequential Puzzle Rush
-
-Loads a PGN file with multiple puzzles and presents them one after another. Progress is saved in `localStorage`.
-
-### Usage
-
-```html
-<puzzle-rush>
-PGN: ./data/rush-puzzles.pgn
-</puzzle-rush>
-```
-
-### With Reset Button
-
-Add a button to reset progress:
-
-```html
-<div class="rush-container">
-  <div class="rush-controls">
-    <button class="rush-btn" onclick="localStorage.removeItem('jekyllchess_puzzle_rush_index'); location.reload();">
-      Reset Progress
-    </button>
-  </div>
-  <puzzle-rush>
-    PGN: ./data/rush-puzzles.pgn
-  </puzzle-rush>
-</div>
-```
-
-### Behavior
-
-- Puzzles auto-advance after solving
-- Progress persists across page reloads (localStorage key: `jekyllchess_puzzle_rush_index`)
-- Shows "All puzzles completed ✔" when finished
-- First move is always auto-played
-
----
-
-## 7. Setup & Dependencies
+## 4. Setup & Dependencies
 
 ### Required External Libraries
 
@@ -440,7 +269,4 @@ Load these **before** `jekyllchess.js`:
 |---------|---------|-------------|--------|
 | `<fen>` | Static board | ❌ | Inline FEN |
 | `<pgn>` | Annotated game | ❌ | Inline or `src` |
-| `<pgn-reader>` | Board + move list | ✅ Click/keyboard | Inline or `src` |
 | `<puzzle>` | Single puzzle | ✅ Drag & drop | Inline PGN |
-| `<puzzle-block>` | Multiple puzzles | ✅ Drag & drop | Inline or `src` |
-| `<puzzle-rush>` | Puzzle sequence | ✅ Drag & drop | `PGN:` reference |
