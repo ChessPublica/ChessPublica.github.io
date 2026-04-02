@@ -1,3 +1,8 @@
+---
+layout: post
+title: Complete Reference
+---
+
 # JekyllChess — Complete Element Reference
 
 This document demonstrates **every custom HTML element** provided by JekyllChess, along with all supported usage patterns.
