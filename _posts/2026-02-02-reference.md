@@ -37,22 +37,6 @@ Renders a non-interactive chessboard from a FEN position string.
 ```
 <fen caption="Starting Position">rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</fen>
 
-### Famous Positions
-
-```html
-<!-- Lucena Position (Rook Endgame) -->
-<fen caption="Lucena Position — White to play and win">1K1k4/1P6/8/8/8/8/r7/2R5 w - - 0 1</fen>
-
-<!-- Philidor Position -->
-<fen caption="Philidor Position — Black draws">8/8/8/4k3/R7/4K3/4P3/3r4 w - - 0 1</fen>
-
-<!-- Sicilian Dragon -->
-<fen caption="Sicilian Dragon — Yugoslav Attack">r1bq1rk1/pp2ppbp/2np1np1/8/3NP3/2N1BP2/PPPQ2PP/R3KB1R w KQ - 0 9</fen>
-```
-<fen caption="Lucena Position — White to play and win">1K1k4/1P6/8/8/8/8/r7/2R5 w - - 0 1</fen>
-<fen caption="Philidor Position — Black draws">8/8/8/4k3/R7/4K3/4P3/3r4 w - - 0 1</fen>
-<fen caption="Sicilian Dragon — Yugoslav Attack">r1bq1rk1/pp2ppbp/2np1np1/8/3NP3/2N1BP2/PPPQ2PP/R3KB1R w KQ - 0 9</fen>
-
 ### Attributes
 
 | Attribute | Required | Description |
@@ -122,10 +106,10 @@ exf5 27. Rxf5 Nh7 28. Rcf1 Qd8 29. Qg3 Re7 30. h4 Rbb7
 ### Load from File
 
 ```html
-<pgn src="./data/sample-game.pgn"></pgn>
+<pgn src="./assets/pgn/sample-game.pgn"></pgn>
 ```
 
-<pgn src="./assets/pgn/sample-game.pgn"></pgn>
+<pgn src="assets/pgn/sample-game.pgn"></pgn>
 
 ### Supported PGN Features
 
@@ -168,10 +152,10 @@ Renders a video-style chess game player with play/pause controls, an eval bar, c
 ### Load from File
 
 ```html
-<pgn-player src="./assets/pgn/sample-player.pgn"></pgn-player>
+<pgn-player src="assets/pgn/sample-player.pgn"></pgn-player>
 ```
 
-<pgn-player src="/assets/pgn/sample-player.pgn"></pgn-player>
+<pgn-player src="assets/pgn/sample-game.pgn"></pgn-player>
 
 ### Features
 
