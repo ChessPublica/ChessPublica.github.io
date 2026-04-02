@@ -16,4 +16,4 @@ title: Home
 <script type="module" src="/assets/index.js"></script>
 <link rel="stylesheet" href="/assets/jekyllchess.css" />
 
-![SatranChess](https://www.satranchess.com/images/banner.jpg)
+<!-- ![SatranChess](https://www.satranchess.com/images/banner.jpg) -->
