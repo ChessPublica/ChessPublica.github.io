@@ -9,17 +9,14 @@
  *
  * Custom HTML elements supported:
  *   <pgn>           — Annotated game viewer (static)
- *   <pgn-reader>    — Interactive board + clickable move list
  *   <fen>           — Static board from FEN string
  *   <puzzle>        — Single interactive puzzle
- *   <puzzle-block>  — Multiple puzzles from PGN file
- *   <puzzle-rush>   — Sequential puzzle rush mode
  */
 
 import { toFigurine, parseGame } from "./helpers.js";
 import { createBoard } from "./board.js";
-import { buildMoveTree, parseHeaders, renderFullPGN, renderPGNReader } from "./pgn.js";
-import { renderLocalPuzzle, renderPuzzleBlock, renderPuzzleRush } from "./puzzle.js";
+import { buildMoveTree, parseHeaders, renderFullPGN } from "./pgn.js";
+import { renderLocalPuzzle } from "./puzzle.js";
 import { initAll } from "./init.js";
 
 /* ================================================================
@@ -38,14 +35,11 @@ if (document.readyState === "loading") {
 
 window.JekyllChess = {
   renderFullPGN: renderFullPGN,
-  renderPGNReader: renderPGNReader,
   buildMoveTree: buildMoveTree,
   parseHeaders: parseHeaders,
   createBoard: createBoard,
   toFigurine: toFigurine,
   parseGame: parseGame,
   renderLocalPuzzle: renderLocalPuzzle,
-  renderPuzzleBlock: renderPuzzleBlock,
-  renderPuzzleRush: renderPuzzleRush,
   initAll: initAll,
 };

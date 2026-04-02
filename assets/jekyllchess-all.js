@@ -9,11 +9,8 @@
  *
  * Custom HTML elements supported:
  *   <pgn>           — Annotated game viewer (static)
- *   <pgn-reader>    — Interactive board + clickable move list
  *   <fen>           — Static board from FEN string
  *   <puzzle>        — Single interactive puzzle
- *   <puzzle-block>  — Multiple puzzles from PGN file
- *   <puzzle-rush>   — Sequential puzzle rush mode
  */
 (function () {
   "use strict";
@@ -767,214 +764,8 @@
   }
 
   /* ================================================================
-     PGN READER — Interactive board + clickable move list
-  ================================================================ */
-
-  function renderPGNReader(pgnText, container) {
-    var headers = parseHeaders(pgnText);
-
-    var headerDiv = document.createElement("div");
-    headerDiv.className = "pgn-reader-header";
-    renderHeaders(headers, headerDiv);
-    container.appendChild(headerDiv);
-
-    var rootNode = buildMoveTree(pgnText);
-    if (!rootNode) {
-      container.textContent = "No moves found in PGN.";
-      return;
-    }
-
-    var allNodes = [];
-    var startFen = rootNode.parent
-      ? rootNode.parent.fen
-      : "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-
-    function collectNodes(node) {
-      var cur = node;
-      while (cur) {
-        allNodes.push(cur);
-        cur = cur.next;
-      }
-    }
-    collectNodes(rootNode);
-
-    var layout = document.createElement("div");
-    layout.className = "pgn-reader-layout";
-    container.appendChild(layout);
-
-    /* Board area */
-    var boardArea = document.createElement("div");
-    boardArea.className = "pgn-reader-board-area";
-    layout.appendChild(boardArea);
-
-    var boardDiv = document.createElement("div");
-    boardDiv.className = "jc-board pgn-reader-board";
-    boardArea.appendChild(boardDiv);
-
-    /* Controls */
-    var controls = document.createElement("div");
-    controls.className = "pgn-reader-controls";
-    boardArea.appendChild(controls);
-
-    var btnFirst = createControlBtn("⏮", "First move");
-    var btnPrev = createControlBtn("◀", "Previous move");
-    var btnNext = createControlBtn("▶", "Next move");
-    var btnLast = createControlBtn("⏭", "Last move");
-    controls.appendChild(btnFirst);
-    controls.appendChild(btnPrev);
-    controls.appendChild(btnNext);
-    controls.appendChild(btnLast);
-
-    /* Moves panel */
-    var movesPanel = document.createElement("div");
-    movesPanel.className = "pgn-reader-moves-panel";
-    layout.appendChild(movesPanel);
-
-    var moveSpans = [];
-    var commentSpans = [];
-
-    allNodes.forEach(function (node, idx) {
-      if (node.color === "w") {
-        var numSpan = document.createElement("span");
-        numSpan.className = "pgn-reader-move-number";
-        numSpan.textContent = node.moveNumber + "." + NBSP;
-        movesPanel.appendChild(numSpan);
-      } else if (idx === 0) {
-        var numSpan2 = document.createElement("span");
-        numSpan2.className = "pgn-reader-move-number";
-        numSpan2.textContent = node.moveNumber + "..." + NBSP;
-        movesPanel.appendChild(numSpan2);
-      }
-
-      var moveSpan = document.createElement("span");
-      moveSpan.className = "pgn-reader-move";
-      moveSpan.textContent = toFigurine(node.san) + " ";
-      moveSpan.dataset.index = idx;
-      moveSpan.addEventListener("click", function () {
-        goToMove(idx);
-      });
-      movesPanel.appendChild(moveSpan);
-      moveSpans.push(moveSpan);
-
-      if (node.comment) {
-        var commentSpan = document.createElement("span");
-        commentSpan.className = "pgn-reader-inline-comment";
-        commentSpan.textContent = node.comment + " ";
-        commentSpan.dataset.moveIndex = idx;
-        movesPanel.appendChild(commentSpan);
-        commentSpans.push({ idx: idx, el: commentSpan });
-      }
-    });
-
-    /* Orientation */
-    var orientation = "white";
-    if (headers.Orientation) {
-      orientation = headers.Orientation.toLowerCase();
-    }
-
-    var board = Chessboard(boardDiv, {
-      position: startFen,
-      pieceTheme: PIECE_THEME,
-      orientation: orientation,
-    });
-
-    var currentIndex = -1;
-
-    function goToMove(idx) {
-      if (idx < -1 || idx >= allNodes.length) return;
-      currentIndex = idx;
-
-      if (idx === -1) {
-        board.position(startFen, true);
-      } else {
-        board.position(allNodes[idx].fen, true);
-      }
-
-      moveSpans.forEach(function (span, i) {
-        span.classList.toggle("pgn-reader-move-active", i === idx);
-      });
-
-      commentSpans.forEach(function (item) {
-        item.el.classList.toggle(
-          "pgn-reader-inline-comment-active",
-          item.idx === idx,
-        );
-      });
-
-      if (idx >= 0 && moveSpans[idx]) {
-        moveSpans[idx].scrollIntoView({ block: "nearest", behavior: "smooth" });
-      }
-    }
-
-    btnFirst.addEventListener("click", function () {
-      goToMove(-1);
-    });
-    btnPrev.addEventListener("click", function () {
-      goToMove(currentIndex - 1);
-    });
-    btnNext.addEventListener("click", function () {
-      goToMove(currentIndex + 1);
-    });
-    btnLast.addEventListener("click", function () {
-      goToMove(allNodes.length - 1);
-    });
-
-    if (!window.__jcKeyHandler) {
-      window.__jcKeyHandler = true;
-
-      document.addEventListener("keydown", function (e) {
-        if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")
-          return;
-
-        if (e.key === "ArrowLeft") {
-          e.preventDefault();
-          goToMove(currentIndex - 1);
-        }
-
-        if (e.key === "ArrowRight") {
-          e.preventDefault();
-          goToMove(currentIndex + 1);
-        }
-
-        if (e.key === "Home") {
-          e.preventDefault();
-          goToMove(-1);
-        }
-
-        if (e.key === "End") {
-          e.preventDefault();
-          goToMove(allNodes.length - 1);
-        }
-      });
-    }
-
-    goToMove(-1);
-  }
-
-  function createControlBtn(text, title) {
-    var btn = document.createElement("button");
-    btn.className = "pgn-reader-btn";
-    btn.textContent = text;
-    btn.title = title;
-    return btn;
-  }
-
-  /* ================================================================
      PUZZLE SYSTEM — Helpers
   ================================================================ */
-
-  function stripFigurines(s) {
-    return String(s || "").replace(/[♔♕♖♗♘♙♚♛♜♝♞♟]/g, "");
-  }
-
-  function normalizePuzzleText(s) {
-    return String(s || "")
-      .replace(/\r/g, "")
-      .replace(/\n+/g, "\n")
-      .replace(/[ \t]+/g, " ")
-      .replace(/\s*:\s*/g, ": ")
-      .trim();
-  }
 
   function normalizeSAN(s) {
     return String(s || "")
@@ -982,14 +773,6 @@
       .replace(/0-0-0/g, "O-O-O")
       .replace(/0-0/g, "O-O")
       .trim();
-  }
-
-  function splitIntoPgnGames(text) {
-    return String(text || "")
-      .replace(/\r/g, "")
-      .trim()
-      .split(/\n\s*\n(?=\s*\[)/)
-      .filter(Boolean);
   }
 
   function tokenizeMoves(text) {
@@ -1258,234 +1041,6 @@
   }
 
   /* ================================================================
-     PUZZLE-BLOCK RENDERER
-  ================================================================ */
-
-  function splitIntoPgnBlocks(text) {
-    return String(text || "")
-      .replace(/\r/g, "")
-      .trim()
-      .split(/\n\s*\n(?=\[)/)
-      .filter(Boolean);
-  }
-
-  function stripPgnHeaders(pgn) {
-    return pgn.replace(/(?:\[[^\]]+\]\s*)+/g, "").trim();
-  }
-
-  function extractPgnHeaders(pgn) {
-    var headers = {};
-    var regex = /\[(\w+)\s+"([^"]*)"\]/g;
-    var match;
-    while ((match = regex.exec(pgn))) {
-      headers[match[1]] = match[2];
-    }
-    return headers;
-  }
-
-  function extractAllComments(pgn) {
-    var body = stripPgnHeaders(pgn);
-    var matches = body.match(/\{([\s\S]*?)\}/g) || [];
-    return matches.map(function (c) {
-      return c.replace(/^\{|\}$/g, "").trim();
-    });
-  }
-
-  function resolveSource(node) {
-    var attrSrc = node.getAttribute("src");
-    if (attrSrc) {
-      return { type: "url", value: new URL(attrSrc, location.href).href };
-    }
-
-    var text = (node.textContent || "").trim();
-    var match = text.match(/PGN:\s*["']?([^"'\s]+)["']?/i);
-    if (match) {
-      return { type: "url", value: new URL(match[1], location.href).href };
-    }
-
-    if (text.startsWith("[")) {
-      return { type: "inline", value: text };
-    }
-
-    return null;
-  }
-
-  function renderPuzzleBlock(node) {
-    if (node.dataset.jcRendered === "1") return;
-    node.dataset.jcRendered = "1";
-
-    var source = resolveSource(node);
-    if (!source) {
-      node.textContent = "No PGN source found.";
-      return;
-    }
-
-    node.textContent = "Loading puzzles…";
-
-    function processText(text) {
-      var games = splitIntoPgnBlocks(text);
-      node.innerHTML = "";
-
-      games.forEach(function (g) {
-        var headers = extractPgnHeaders(g);
-        var allComments = extractAllComments(g);
-
-        var wrap = document.createElement("div");
-        wrap.className = "jc-puzzle-item";
-        node.appendChild(wrap);
-
-        /* META HEADER */
-        var metaDiv = document.createElement("div");
-        metaDiv.className = "jc-puzzle-meta";
-
-        var white = headers.White || "";
-        var black = headers.Black || "";
-        var line1 =
-          white && black ? white + " - " + black : white || black || "Puzzle";
-        var line2 = headers.Event || headers.Variant || "";
-
-        metaDiv.innerHTML =
-          '<div class="jc-puzzle-meta-emoji">🧩</div>' +
-          '<div class="jc-puzzle-meta-text">' +
-          '<div class="jc-puzzle-meta-line1">' +
-          line1 +
-          "</div>" +
-          '<div class="jc-puzzle-meta-line2">' +
-          line2 +
-          "</div>" +
-          "</div>";
-        wrap.appendChild(metaDiv);
-
-        /* BOARD */
-        var boardDiv = document.createElement("div");
-        boardDiv.className = "jc-board";
-        wrap.appendChild(boardDiv);
-
-        /* MOVE COMMENT */
-        var moveCommentDiv = document.createElement("div");
-        moveCommentDiv.className = "jc-puzzle-move-comment";
-        wrap.appendChild(moveCommentDiv);
-
-        function renderText(target, text) {
-          target.textContent = text || "";
-        }
-
-        jcPuzzleCreate(boardDiv, { rawPGN: g });
-        renderText(moveCommentDiv, allComments[0]);
-
-        wrap.addEventListener("jc-puzzle-move", function (e) {
-          var moveIndex = e.detail.index;
-          if (moveIndex < allComments.length) {
-            renderText(moveCommentDiv, allComments[moveIndex]);
-          }
-        });
-
-        wrap.addEventListener("jc-puzzle-reset", function () {
-          renderText(moveCommentDiv, allComments[0]);
-        });
-      });
-    }
-
-    if (source.type === "url") {
-      fetch(source.value, { cache: "no-store" })
-        .then(function (r) {
-          return r.text();
-        })
-        .then(processText)
-        .catch(function (err) {
-          node.textContent = "Failed to load puzzle file: " + err.message;
-        });
-    }
-
-    if (source.type === "inline") {
-      processText(source.value);
-    }
-  }
-
-  /* ================================================================
-     PUZZLE-RUSH RENDERER
-  ================================================================ */
-
-  var RUSH_KEY = "jekyllchess_puzzle_rush_index";
-
-  function renderPuzzleRush(container, url) {
-    container.textContent = "Loading...";
-
-    fetch(url, { cache: "no-store" })
-      .then(function (res) {
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        return res.text();
-      })
-      .then(function (text) {
-        var puzzles = splitIntoPgnGames(text)
-          .map(parseGame)
-          .filter(function (p) {
-            return !p.error;
-          });
-
-        var idx = parseInt(localStorage.getItem(RUSH_KEY), 10) || 0;
-
-        container.innerHTML = "";
-        var holder = document.createElement("div");
-        holder.className = "puzzle-rush-wrap";
-        container.appendChild(holder);
-
-        var counterDiv = document.createElement("div");
-        counterDiv.className = "puzzle-rush-counter";
-        holder.appendChild(counterDiv);
-
-        function updateCounter() {
-          counterDiv.textContent =
-            "Puzzle " +
-            Math.min(idx + 1, puzzles.length) +
-            " / " +
-            puzzles.length;
-        }
-
-        function loadNext() {
-          if (!puzzles[idx]) {
-            localStorage.removeItem(RUSH_KEY);
-            holder.innerHTML =
-              "<div class='jc-finished'>All puzzles completed ✔</div>";
-            return;
-          }
-
-          updateCounter();
-
-          var fenParts = puzzles[idx].fen.split(" ");
-          var solverSide = fenParts[1] === "w" ? "b" : "w";
-          var orientation = solverSide === "w" ? "white" : "black";
-
-          renderLocalPuzzle(
-            holder,
-            puzzles[idx].fen,
-            puzzles[idx].moves,
-            true,
-            false,
-            function () {
-              idx++;
-              localStorage.setItem(RUSH_KEY, idx);
-              holder.innerHTML = "";
-              var newCounter = document.createElement("div");
-              newCounter.className = "puzzle-rush-counter";
-              holder.appendChild(newCounter);
-              counterDiv.remove();
-              requestAnimationFrame(loadNext);
-            },
-            orientation,
-            null,
-            true,
-          );
-        }
-
-        loadNext();
-      })
-      .catch(function () {
-        container.textContent = "Failed to load PGN.";
-      });
-  }
-
-  /* ================================================================
      ELEMENT INITIALIZERS
   ================================================================ */
 
@@ -1522,43 +1077,6 @@
           renderFullPGN(pgnText, container);
         } catch (e) {
           container.textContent = "Error rendering PGN: " + e.message;
-        }
-      }
-    });
-  }
-
-  function initPgnReaderElements() {
-    document.querySelectorAll("pgn-reader").forEach(function (el) {
-      if (el.dataset.jcRendered === "1") return;
-      el.dataset.jcRendered = "1";
-
-      var wrapper = document.createElement("div");
-      wrapper.className = "pgn-reader-container";
-      el.replaceWith(wrapper);
-
-      var src = el.getAttribute("src");
-
-      if (src) {
-        fetch(src, { cache: "no-store" })
-          .then(function (res) {
-            return res.text();
-          })
-          .then(function (text) {
-            renderPGNReader(text, wrapper);
-          })
-          .catch(function (e) {
-            wrapper.textContent = "Failed to load PGN: " + e.message;
-          });
-      } else {
-        var pgnText = el.textContent.trim();
-        if (!pgnText) {
-          wrapper.textContent = "No PGN content found.";
-          return;
-        }
-        try {
-          renderPGNReader(pgnText, wrapper);
-        } catch (e) {
-          wrapper.textContent = "Error rendering PGN reader: " + e.message;
         }
       }
     });
@@ -1608,34 +1126,13 @@
     });
   }
 
-  function initPuzzleBlockElements() {
-    document.querySelectorAll("puzzle-block").forEach(renderPuzzleBlock);
-  }
-
-  function initPuzzleRushElements() {
-    document.querySelectorAll("puzzle-rush").forEach(function (node) {
-      var raw = normalizePuzzleText(stripFigurines(node.textContent));
-      var pgnMatch = raw.match(/PGN:\s*([^\s]+)/i);
-
-      var wrap = document.createElement("div");
-      node.replaceWith(wrap);
-
-      if (pgnMatch) {
-        renderPuzzleRush(wrap, new URL(pgnMatch[1], location.href).href);
-      }
-    });
-  }
-
   /* ================================================================
      MASTER INIT
   ================================================================ */
 
   function initAll() {
     initPgnElements();
-    initPgnReaderElements();
     initFenElements();
-    initPuzzleRushElements();
-    initPuzzleBlockElements();
     initPuzzleElements();
   }
 
@@ -1651,15 +1148,12 @@
 
   window.JekyllChess = {
     renderFullPGN: renderFullPGN,
-    renderPGNReader: renderPGNReader,
     buildMoveTree: buildMoveTree,
     parseHeaders: parseHeaders,
     createBoard: createBoard,
     toFigurine: toFigurine,
     parseGame: parseGame,
     renderLocalPuzzle: renderLocalPuzzle,
-    renderPuzzleBlock: renderPuzzleBlock,
-    renderPuzzleRush: renderPuzzleRush,
     initAll: initAll,
   };
 })();

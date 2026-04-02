@@ -36,37 +36,9 @@
 .fen-container{display:block;margin:1rem auto;width:100%;max-width:400px;}
 .fen-caption{text-align: center;}
 
-/* <pgn-reader> element */
-
-.pgn-reader-container{}
-.pgn-reader-header{}
-.pgn-reader-layout {display:flex;gap:1rem;align-items:flex-start;}
-.pgn-reader-board-area {flex-shrink:0;width:400px;}
-.pgn-reader-board {width:100%;max-width:400px;}
-.pgn-reader-controls{display:flex;justify-content:center;gap:8px;margin-top: 12px;}
-.pgn-reader-btn {padding: 8px 16px;cursor: pointer;line-height: 1;}
-.pgn-reader-moves-panel {flex:1;max-height:400px;overflow-y:auto;}
-.pgn-reader-move {cursor: pointer;}
-.pgn-reader-inline-comment{display: inline;}
-.pgn-reader-inline-comment-active{font-weight: bold;}
-.pgn-reader-comment{display: none;}
-
 /* <puzzle> element */
 
 .jc-puzzle {display:block;vertical-align:top;width:100%;max-width:400px;}
-
-/* <puzzle-block> element */
-
-.jc-puzzle-item { }
-.jc-puzzle-meta {display: flex;align-items: center;gap: 1rem;margin-bottom: 1rem;}
-.jc-puzzle-move-comment {margin-top: 1rem; min-height: 1rem;}
-.jc-puzzle-move-comment:empty {display: none;}
-
-/* <puzzle-rush> element */
-
-.puzzle-rush-wrap {padding: 1rem;}
-.puzzle-rush-counter {text-align: center;}
-.jc-finished {text-align: center;}
 
 /* PUZZLE ANIMATIONS — Shake feedback for wrong moves */
 
@@ -81,11 +53,6 @@
 /* Mobile */
 
 @media (max-width: 640px) {
-  .pgn-reader-layout{flex-direction: column;}
-  .pgn-reader-board-area{width: 100%;}
-  .pgn-reader-board{width:100% !important;max-width:100% !important;}
-  .pgn-reader-moves-panel{max-height:200px;}
   .jc-board-wrapper{max-width:100%;}
   .jc-board{max-width:100%;}
-  .pgn-container{}
 }

@@ -2,9 +2,9 @@
  * JekyllChess — Element Initializers
  */
 
-import { PIECE_THEME, fetchText, stripFigurines, normalizePuzzleText } from "./helpers.js";
-import { renderFullPGN, renderPGNReader } from "./pgn.js";
-import { jcPuzzleCreate, renderPuzzleBlock, renderPuzzleRush } from "./puzzle.js";
+import { PIECE_THEME, fetchText } from "./helpers.js";
+import { renderFullPGN } from "./pgn.js";
+import { jcPuzzleCreate } from "./puzzle.js";
 
 /* ── Init helpers ─────────────────────────────────────────── */
 
@@ -48,10 +48,6 @@ function initCustomElements(selector, wrapperClass, renderFn) {
 
 export function initPgnElements() {
   initCustomElements("pgn", "pgn-container game-card", renderFullPGN);
-}
-
-export function initPgnReaderElements() {
-  initCustomElements("pgn-reader", "pgn-reader-container", renderPGNReader);
 }
 
 export function initFenElements() {
@@ -98,29 +94,8 @@ export function initPuzzleElements() {
   });
 }
 
-export function initPuzzleBlockElements() {
-  document.querySelectorAll("puzzle-block").forEach(renderPuzzleBlock);
-}
-
-export function initPuzzleRushElements() {
-  document.querySelectorAll("puzzle-rush").forEach(function (node) {
-    var raw = normalizePuzzleText(stripFigurines(node.textContent));
-    var pgnMatch = raw.match(/PGN:\s*([^\s]+)/i);
-
-    var wrap = document.createElement("div");
-    node.replaceWith(wrap);
-
-    if (pgnMatch) {
-      renderPuzzleRush(wrap, new URL(pgnMatch[1], location.href).href);
-    }
-  });
-}
-
 export function initAll() {
   initPgnElements();
-  initPgnReaderElements();
   initFenElements();
-  initPuzzleRushElements();
-  initPuzzleBlockElements();
   initPuzzleElements();
 }
