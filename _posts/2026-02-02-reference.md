@@ -3,9 +3,9 @@ layout: post
 title: Complete Reference
 ---
 
-♟️ Chess-Blog Complete Element Reference
+## PublishChess Complete Element Reference
 
-This document demonstrates **every custom HTML element** provided, along with all supported usage patterns.
+This document demonstrates **every custom HTML element** provided by **PublishChess**, along with all supported usage patterns.
 
 ---
 
@@ -122,7 +122,7 @@ or
 
 ---
 
-## 3. `<pgn>` — Annotated Game for Blog Post
+## 3. `<pgn>` — Annotated Game for Blog Posts
 
 Renders a complete annotated game with move numbers, comments, variations, NAGs, arrow/square annotations, and inline diagrams.
 
@@ -210,20 +210,22 @@ or
 
 ## 5. Setup & Dependencies
 
-### Chess-Blog Setup
+### PublishChess Setup
 
 Setup requires only two lines of code:
 
 ```html
-<!-- Chess-Blog JS (all-in-one JavaScript code, includes <fen>, <puzzle>, <pgn>, and <pgn-player> elements.) -->
-<script src="chess-blog.js"></script>
+<!-- PublishChess JS (all-in-one JavaScript code, includes <fen>, <puzzle>, <pgn>, and <pgn-player> elements.) -->
+<script src="PublishChess.js"></script>
 
-<!-- Chess-Blog CSS (required) -->
-<link rel="stylesheet" href="chess-blog.css" />
+<!-- PublishChess CSS (required) -->
+<link rel="stylesheet" href="PublishChess.css" />
 ```
 ### Required External Libraries
 
 All required external libraries ([jQuery](https://jquery.com/), [Chess.js](https://github.com/jhlywa/chess.js/), [Chessboard.js](https://chessboardjs.com/), and [Google Material Icons](https://fonts.google.com/icons) are automatically loaded.
+
+---
 
 ## Quick Reference
 
