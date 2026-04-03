@@ -21,7 +21,7 @@ This document demonstrates **every custom HTML element** provided, along with al
 
 ## 1. `<fen>` — Static Board from FEN String
 
-Renders a non-interactive chessboard from a FEN position string.
+Renders a non-interactive chessboard diagram from a FEN string.
 
 ### Basic Usage
 
@@ -36,6 +36,28 @@ Renders a non-interactive chessboard from a FEN position string.
 <fen caption="Starting Position">rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</fen>
 ```
 <fen caption="Starting Position">rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</fen>
+
+or
+
+```html
+<fen>
+[White "..."]
+[Black "..."]
+[Event "..."]
+[Date "..."]
+[FEN "..."]
+[Caption "..."]
+[Orientation "..."]
+[FirstMoveAuto "..."]
+
+1. ...
+</fen>
+```
+Displays:
+- a title with player names, event, and date,
+- a static FEN diagram in desired board orientation,
+- a caption below the diagram,
+- the first move played if `[FirstMoveAuto]` is set to `true`.
 
 ---
 
@@ -191,10 +213,10 @@ Load these **before** JekyllChess scripts:
 
 | Element | Purpose | Interactive | Source |
 |---------|---------|-------------|--------|
-| `<fen>` | Static board | ❌ | Inline FEN |
-| `<pgn>` | Annotated game | ❌ | Inline or `src` |
-| `<pgn-player>` | Video-style player | ✅ Play/pause/keyboard | `src` |
-| `<puzzle>` | Single puzzle | ✅ Drag & drop | Inline PGN |
+| `<fen>` | Static diagram with circle and arrow annotations | ❌ | Inline FEN |
+| `<pgn>` | Annotated game with static diagrams | ❌ | Inline or `src` |
+| `<pgn-player>` | Video-style PGN player | ✅ | Inline or `src` |
+| `<puzzle>` | Single puzzle or puzzle-pack | ✅ | Inline or `src` |
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.0/chess.min.js"></script>
