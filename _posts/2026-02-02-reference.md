@@ -106,10 +106,10 @@ exf5 27. Rxf5 Nh7 28. Rcf1 Qd8 29. Qg3 Re7 30. h4 Rbb7
 ### Load from File
 
 ```html
-<pgn src="assets/pgn/sample-game.pgn"></pgn>
+<pgn src="/assets/pgn/sample-game.pgn"></pgn>
 ```
 
-<pgn src="assets/pgn/sample-game.pgn"></pgn>
+<pgn src="/assets/pgn/sample-game.pgn"></pgn>
 
 ### Supported PGN Features
 
@@ -152,10 +152,10 @@ Renders a video-style chess game player with play/pause controls, an eval bar, c
 ### Load from File
 
 ```html
-<pgn-player src="assets/pgn/sample-player.pgn"></pgn-player>
+<pgn-player src="/assets/pgn/sample-player.pgn"></pgn-player>
 ```
 
-<pgn-player src="assets/pgn/sample-game.pgn"></pgn-player>
+<pgn-player src="/assets/pgn/sample-player.pgn"></pgn-player>
 
 ### Features
 
