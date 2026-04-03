@@ -36,7 +36,7 @@
 
 /* <puzzle> element */
 
-.jc-puzzle {display:block;vertical-align:top;width:100%;max-width:350px;}
+.jc-puzzle {display:block;margin:1rem auto;vertical-align:top;width:100%;max-width:350px;}
 
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
