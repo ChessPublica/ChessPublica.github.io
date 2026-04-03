@@ -7,6 +7,12 @@ title: Home
 📌 [{{ post.title }}]({{ post.url }})
 {% endfor %}
 
+<style>
+h1 {color:black;text-decoration:none;}
+h1:active {color:black;text-decoration:none;cursor:pointer;}
+h1:hover {color:black;text-decoration:none;cursor:pointer;}
+</style>
+
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.0/chess.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
