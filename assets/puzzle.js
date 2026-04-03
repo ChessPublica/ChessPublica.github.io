@@ -1,5 +1,5 @@
 /**
- * JekyllChess — Puzzle System
+ * PublishChess — Puzzle System
  *
  * Sections:
  *   1. Puzzle Engine     — renderLocalPuzzle() (interactive drag-and-drop)

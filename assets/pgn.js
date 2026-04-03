@@ -1,7 +1,5 @@
 /**
- * JekyllChess — PGN Engine
- *
- * Merged from: pgn-parser.js, pgn-renderer.js, pgn-reader.js
+ * PublishChess — PGN Engine
  *
  * Sections:
  *   1. Tokenizer        — parsePGN()

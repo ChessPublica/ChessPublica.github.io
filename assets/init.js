@@ -1,5 +1,5 @@
 /**
- * JekyllChess — Element Initializers
+ * PublishChess — Element Initializers
  */
 
 import { PIECE_THEME, fetchText } from "./helpers.js";

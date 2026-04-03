@@ -1,5 +1,5 @@
 /**
- * JekyllChess — All-in-one chess blog engine (ES6 Module Entry Point)
+ * PublishChess — All-in-one chess blog engine (ES6 Module Entry Point)
  * Combines: figurine, board, pgn-engine, puzzle-system, and element initializers
  *
  * Dependencies (load BEFORE this script):

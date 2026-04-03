@@ -1,5 +1,5 @@
 /**
- * JekyllChess — Board creation + SVG annotation overlay
+ * PublishChess — Board creation + SVG annotation overlay
  */
 
 import { PIECE_THEME } from "./helpers.js";
