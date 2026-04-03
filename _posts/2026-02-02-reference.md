@@ -231,9 +231,9 @@ All required external libraries ([jQuery](https://jquery.com/), [Chess.js](https
 
 | Element | Purpose | Interactive | Source |
 |---------|---------|-------------|--------|
-| `<fen>` | Static diagram with circle and arrow annotations | ❌ | Inline |
+| `<fen>` | Static diagram with annotations | ❌ | Inline |
 | `<puzzle>` | Single puzzle or puzzle-pack | ✅ | Inline or `src` |
-| `<pgn>` | Annotated game with static diagrams | ❌ | Inline or `src` |
+| `<pgn>` | Annotated game with diagrams | ❌ | Inline or `src` |
 | `<pgn-player>` | Video-style PGN player | ✅ | Inline or `src` |
 
 ---
