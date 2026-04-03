@@ -223,7 +223,7 @@ Setup requires only two lines of code:
 ```
 ### Required External Libraries
 
-All required external libraries ([jQuery](https://jquery.com/), [Chess.js](https://github.com/jhlywa/chess.js/), [Chessboard.js](https://chessboardjs.com/), and [Google Material Icons](https://fonts.google.com/icons) are automatically loaded.
+All required external libraries [jQuery](https://jquery.com/), [Chess.js](https://github.com/jhlywa/chess.js/), [Chessboard.js](https://chessboardjs.com/), and [Google Material Icons](https://fonts.google.com/icons) are automatically loaded.
 
 ---
 
