@@ -3,13 +3,13 @@ layout: post
 title: Complete Reference
 ---
 
-Complete Element Reference
+Chess-Blog Complete Element Reference
 
 This document demonstrates **every custom HTML element** provided, along with all supported usage patterns.
 
 ---
 
-## Table of Contents
+## 📋 Table of Contents
 
 1. [`<fen>`](#1-fen--static-board-from-fen-string)
 2. [`<puzzle>`](#2-puzzle--single-interactive-puzzle)
@@ -19,7 +19,7 @@ This document demonstrates **every custom HTML element** provided, along with al
 
 ---
 
-## 1. `<fen>` — Static Board from FEN String
+## 1. 🔲 `<fen>` — Static Diagram from FEN String
 
 Renders a non-interactive chessboard diagram from a FEN string.
 
@@ -30,13 +30,6 @@ Renders a non-interactive chessboard diagram from a FEN string.
 ```
 <fen>rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</fen>
 
-### With Caption
-
-```html
-<fen caption="Starting Position">rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</fen>
-```
-<fen caption="Starting Position">rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</fen>
-
 or
 
 ```html
@@ -44,17 +37,21 @@ or
 [FEN "..."]
 [Orientation "..."]
 [Caption "..."]
-
-1. ...
 </fen>
 ```
 displays:
 - a static FEN diagram in the specified board orientation,
 - a caption below the diagram.
 
+<fen>
+[FEN "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2"]
+[Orientation "Black"]
+[Caption "Sicilian Defence"]
+</fen>
+
 ---
 
-## 2. `<puzzle>` — Single Interactive Puzzle
+## 2. 🧩 `<puzzle>` — Single Interactive Puzzle
 
 Renders a drag-and-drop puzzle. The user must find the correct sequence of moves.
 
@@ -67,11 +64,6 @@ Renders a drag-and-drop puzzle. The user must find the correct sequence of moves
 1. Qxf7#
 </puzzle>
 ```
-<puzzle>
-[FEN "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 0 1"]
-
-1. Qxf7#
-</puzzle>
 
 or
 
@@ -97,6 +89,19 @@ displays:
 - a caption below the diagram,
 - the first move on the board if `FirstMoveAuto` is set to `true`.
 
+<puzzle>
+[White "White"]
+[Black "Black"]
+[Event "Test"]
+[Date "2026"]
+[FEN "r1bqkbnr/pppp1ppp/2n5/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 3 3"]
+[Orientation "White"]
+[Caption "Mate in one"]
+[FirstMoveAuto "true"]
+
+3... Nf6?? 4. Qh5#
+</puzzle>
+
 or
 
 ### Load from File
@@ -117,7 +122,7 @@ or
 
 ---
 
-## 3. `<pgn>` — Annotated Game Viewer
+## 3. `<pgn>` — Annotated Game for Blog Post
 
 Renders a complete annotated game with move numbers, comments, variations, NAGs, arrow/square annotations, and inline diagrams.
 
@@ -161,7 +166,7 @@ or
 
 ---
 
-## 4. `<pgn-player>` — Interactive Video-Style Game Player
+## 4. ⚔️ `<pgn-player>` — Interactive Video-Style Game Player
 
 Renders a video-style chess game player with play/pause controls, an eval bar, clickable move list, comments, variations, move quality glyphs, and board annotations. Supports keyboard navigation and gesture controls.
 
