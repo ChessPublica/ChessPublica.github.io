@@ -210,7 +210,9 @@ or
 
 ## 5. Setup & Dependencies
 
-### Chess-Blog Files
+### Chess-Blog Setup
+
+Setup requires only two lines of code:
 
 ```html
 <!-- Chess-Blog JS (all-in-one JavaScript code, includes <fen>, <puzzle>, <pgn>, and <pgn-player> elements.) -->
