@@ -246,5 +246,4 @@ All required external libraries ([jQuery](https://jquery.com/), [Chess.js](https
 
 <script type="module" src="/assets/PublishChess.js"></script>
 <link rel="stylesheet" href="/assets/PublishChess.css" />
-<link rel="stylesheet" href="/assets/pgn-player/pgn-player.css" />
-<script src="/assets/pgn-player/pgn-player.js"></script>
+<script src="/assets/pgn-player.js"></script>
