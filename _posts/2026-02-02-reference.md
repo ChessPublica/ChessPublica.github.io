@@ -12,9 +12,9 @@ This document demonstrates **every custom HTML element** provided, along with al
 ## Table of Contents
 
 1. [`<fen>`](#1-fen--static-board-from-fen-string)
-2. [`<pgn>`](#2-pgn--annotated-game-viewer)
-3. [`<pgn-player>`](#3-pgn-player--interactive-video-style-game-player)
-4. [`<puzzle>`](#4-puzzle--single-interactive-puzzle)
+2. [`<puzzle>`](#2-puzzle--single-interactive-puzzle)
+3. [`<pgn>`](#3-pgn--annotated-game-viewer)
+4. [`<pgn-player>`](#4-pgn-player--interactive-video-style-game-player) 
 5. [Setup & Dependencies](#5-setup--dependencies)
 
 ---
@@ -54,7 +54,56 @@ displays:
 
 ---
 
-## 2. `<pgn>` — Annotated Game Viewer
+## 2. `<puzzle>` — Single Interactive Puzzle
+
+Renders a drag-and-drop puzzle. The user must find the correct sequence of moves.
+
+### Inline FEN in PGN header
+
+```html
+<puzzle>
+[FEN "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 0 1"]
+
+1. Qxf7#
+</puzzle>
+```
+<puzzle>
+[FEN "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 0 1"]
+
+1. Qxf7#
+</puzzle>
+
+```html
+<puzzle>
+[White "..."]
+[Black "..."]
+[Event "..."]
+[Date "..."]
+[FEN "..."]
+[Orientation "..."]
+[Caption "..."]
+[FirstMoveAuto "..."]
+
+1. ...
+</puzzle>
+```
+displays:
+- a puzzle title with player names, event, and date,
+- a draggable puzzle diagram in specified board orientation,
+- a caption below the diagram,
+- the first move on the board if `FirstMoveAuto` is set to `true`.
+
+### Attributes / PGN Headers
+
+| Header | Required | Description |
+|--------|----------|-------------|
+| `FEN` | ✅ | Position |
+| `Orientation` | ❌ | `"white"` or `"black"` |
+| `FirstMoveAuto` | ❌ | `"true"` to auto-play first move |
+
+---
+
+## 3. `<pgn>` — Annotated Game Viewer
 
 Renders a complete annotated game with move numbers, comments, variations, NAGs, arrow/square annotations, and inline diagrams.
 
@@ -87,16 +136,17 @@ or
 | Feature | Syntax | Example |
 |---------|--------|---------|
 | Comments | `{text}` | `{A strong move.}` |
-| Diagrams | `[D]` in comment | Renders a diagram at that position |
 | Variations | `(moves)` | `(14. Be2 Nf6)` |
 | NAGs | `$1` – `$6` | `$1` → `!`, `$3` → `!!` |
 | Arrow annotations | `[%cal Rf1f7]` | Colored arrows |
 | Square highlights | `[%csl Gc5,Rd4]` | Colored square markers |
 | Results | `1-0`, `0-1`, `1/2-1/2`, `*` | Game termination |
+| Diagrams | `[D]` in comment | Renders a diagram at that position |
+| | `[%cal]` and `[%csl]` tags in comment | Renders a diagram at that position |
 
 ---
 
-## 3. `<pgn-player>` — Interactive Video-Style Game Player
+## 4. `<pgn-player>` — Interactive Video-Style Game Player
 
 Renders a video-style chess game player with play/pause controls, an eval bar, clickable move list, comments, variations, move quality glyphs, and board annotations. Supports keyboard navigation and gesture controls.
 
@@ -138,61 +188,7 @@ or
 
 ---
 
-## 4. `<puzzle>` — Single Interactive Puzzle
-
-Renders a drag-and-drop puzzle. The user must find the correct sequence of moves.
-
-### Inline FEN in PGN header
-
-```html
-<puzzle>
-[FEN "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 0 1"]
-
-1. Qxf7#
-</puzzle>
-```
-<puzzle>
-[FEN "r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 0 1"]
-
-1. Qxf7#
-</puzzle>
-
-```html
-<puzzle>
-[White "..."]
-[Black "..."]
-[Event "..."]
-[Date "..."]
-[FEN "..."]
-[Orientation "..."]
-[Caption "..."]
-[FirstMoveAuto "..."]
-
-1. ...
-</puzzle>
-```
-
-displays:
-- a puzzle title with player names, event, and date,
-- a draggable puzzle diagram in specified board orientation,
-- a caption below the diagram,
-- the first move on the board if `FirstMoveAuto` is set to `true`.
-
-### Attributes / PGN Headers
-
-| Header | Required | Description |
-|--------|----------|-------------|
-| `FEN` | ✅ | Position |
-| `Orientation` | ❌ | `"white"` or `"black"` |
-| `FirstMoveAuto` | ❌ | `"true"` to auto-play first move |
-
----
-
 ## 5. Setup & Dependencies
-
-### Required External Libraries
-
-All required external libraries (jQuery, Chess.js, Chessboard.js, and Google Material Icons) are automatically loaded.
 
 ### Chess-Blog Files
 
@@ -203,15 +199,20 @@ All required external libraries (jQuery, Chess.js, Chessboard.js, and Google Mat
 <!-- Chess-Blog CSS (required) -->
 <link rel="stylesheet" href="chess-blog.css" />
 ```
+### Required External Libraries
+
+All required external libraries ([jQuery](https://jquery.com/), [Chess.js](https://github.com/jhlywa/chess.js/), [Chessboard.js](https://chessboardjs.com/), and [Google Material Icons](https://fonts.google.com/icons) are automatically loaded.
 
 ## Quick Reference
 
 | Element | Purpose | Interactive | Source |
 |---------|---------|-------------|--------|
-| `<fen>` | Static diagram with circle and arrow annotations | ❌ | Inline FEN |
+| `<fen>` | Static diagram with circle and arrow annotations | ❌ | Inline |
+| `<puzzle>` | Single puzzle or puzzle-pack | ✅ | Inline or `src` |
 | `<pgn>` | Annotated game with static diagrams | ❌ | Inline or `src` |
 | `<pgn-player>` | Video-style PGN player | ✅ | Inline or `src` |
-| `<puzzle>` | Single puzzle or puzzle-pack | ✅ | Inline or `src` |
+
+---
 
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.0/chess.min.js"></script>
