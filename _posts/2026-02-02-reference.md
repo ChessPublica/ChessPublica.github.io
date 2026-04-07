@@ -1,6 +1,7 @@
 ---
 layout: post
 title: Complete Reference
+permalink: /reference.html
 ---
 
 ## ChessPublica Complete Element Reference
