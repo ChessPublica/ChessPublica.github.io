@@ -156,11 +156,10 @@ function parseSequence(tokens, chess, parentNode, originalPgn) {
         next: null,
         parent: current,
         variations: [],
-        comment: null,
+        parts: [],
         nags: [],
         arrows: [],
         squareMarks: [],
-        diagram: false,
       };
 
       current.next = node;
@@ -251,22 +250,23 @@ function processComment(commentText, lastMoveNode, current, parentNode, chess, o
 
   /* Square marks */
   var cslM;
+  var hadSquareMarks = false;
   RE_CSL.lastIndex = 0;
   while ((cslM = RE_CSL.exec(commentText))) {
     lastMoveNode.squareMarks = lastMoveNode.squareMarks.concat(parseCSL(cslM[1]));
+    hadSquareMarks = true;
   }
 
   /* Arrows */
   var calM;
+  var hadArrows = false;
   RE_CAL.lastIndex = 0;
   while ((calM = RE_CAL.exec(commentText))) {
     lastMoveNode.arrows = lastMoveNode.arrows.concat(parseCAL(calM[1]));
+    hadArrows = true;
   }
 
-  /* Diagram marker */
-  if (/\[D\]/.test(commentText)) {
-    lastMoveNode.diagram = true;
-  }
+  var hasDiagramMarker = /\[D\]/.test(commentText);
 
   /* Clean comment text */
   var cleaned = commentText
@@ -281,10 +281,13 @@ function processComment(commentText, lastMoveNode, current, parentNode, chess, o
 
   var finalComment = (cleaned + " " + inlineMoveText).trim();
 
+  /* Push parts in PGN order: diagram first (if this comment had one),
+     then the textual comment. */
+  if (hasDiagramMarker || hadArrows || hadSquareMarks) {
+    lastMoveNode.parts.push({ type: "diagram" });
+  }
   if (finalComment.length) {
-    lastMoveNode.comment = lastMoveNode.comment
-      ? lastMoveNode.comment + " " + finalComment
-      : finalComment;
+    lastMoveNode.parts.push({ type: "text", value: finalComment });
   }
 }
 
@@ -429,32 +432,30 @@ function renderLine(node, parent, isVariation) {
 
     lastMoveNumber = current.moveNumber;
 
-    /* COMMENT */
-    if (current.comment) {
-      if (isVariation) {
-        /* Inline comments inside variations stay on the same line */
-        buffer += current.comment + " ";
-      } else {
-        flushBuffer(parent, buffer, isVariation);
-        buffer = "";
-        var p = document.createElement("p");
-        p.className = "pgn-comment";
-        p.textContent = current.comment;
-        parent.appendChild(p);
-        needsMoveNumber = true;
+    /* COMMENTS & DIAGRAMS — rendered in PGN order */
+    if (current.parts && current.parts.length) {
+      for (var pi = 0; pi < current.parts.length; pi++) {
+        var part = current.parts[pi];
+        if (part.type === "text") {
+          if (isVariation) {
+            /* Inline comments inside variations stay on the same line */
+            buffer += part.value + " ";
+          } else {
+            flushBuffer(parent, buffer, isVariation);
+            buffer = "";
+            var p = document.createElement("p");
+            p.className = "pgn-comment";
+            p.textContent = part.value;
+            parent.appendChild(p);
+            needsMoveNumber = true;
+          }
+        } else if (part.type === "diagram") {
+          flushBuffer(parent, buffer, isVariation);
+          buffer = "";
+          createBoard(parent, current.fen, current);
+          needsMoveNumber = true;
+        }
       }
-    }
-
-    /* BOARD */
-    var hasAnnotations =
-      (current.arrows && current.arrows.length) ||
-      (current.squareMarks && current.squareMarks.length);
-
-    if (hasAnnotations || current.diagram) {
-      flushBuffer(parent, buffer, isVariation);
-      buffer = "";
-      createBoard(parent, current.fen, current);
-      needsMoveNumber = true;
     }
 
     /* VARIATIONS */
