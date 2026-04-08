@@ -700,9 +700,8 @@ function initOverlay(boardDiv, moveNode) {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
 
   svg.classList.add("board-overlay");
-  svg.setAttribute("width",   "100%");
-  svg.setAttribute("height",  "100%");
   svg.setAttribute("viewBox", "0 0 100 100");
+  sizeOverlayToGrid(svg, boardDiv);
 
   boardDiv.appendChild(svg);
 
@@ -722,18 +721,69 @@ function initOverlay(boardDiv, moveNode) {
 
 /* ================= UTIL ================= */
 
+/**
+ * Compute the bounding rect of the actual 8×8 grid (relative to boardDiv).
+ * chessboard.js's inner board element has a border, so the grid area is
+ * slightly inset from the outer board div — we can't assume 0..100% of
+ * boardDiv maps to square centers. Derive the grid rect from the squares
+ * themselves so overlays line up exactly.
+ */
+function getGridMetrics(boardDiv) {
+  const squares = boardDiv.querySelectorAll("[data-square]");
+  if (!squares.length) return null;
+
+  const br = boardDiv.getBoundingClientRect();
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  squares.forEach(sq => {
+    const r = sq.getBoundingClientRect();
+    if (r.left   < minX) minX = r.left;
+    if (r.top    < minY) minY = r.top;
+    if (r.right  > maxX) maxX = r.right;
+    if (r.bottom > maxY) maxY = r.bottom;
+  });
+
+  return {
+    left:   minX - br.left,
+    top:    minY - br.top,
+    width:  maxX - minX,
+    height: maxY - minY,
+  };
+}
+
+function sizeOverlayToGrid(svg, boardDiv) {
+  const m = getGridMetrics(boardDiv);
+  if (!m) {
+    svg.setAttribute("width", "100%");
+    svg.setAttribute("height", "100%");
+    return;
+  }
+  svg.removeAttribute("width");
+  svg.removeAttribute("height");
+  svg.style.position = "absolute";
+  svg.style.left   = m.left   + "px";
+  svg.style.top    = m.top    + "px";
+  svg.style.width  = m.width  + "px";
+  svg.style.height = m.height + "px";
+}
+
 function getSquareCenter(boardDiv, square) {
 
   const squareEl = boardDiv.querySelector(`[data-square="${square}"]`);
   if (!squareEl) return null;
 
+  const metrics = getGridMetrics(boardDiv);
+  if (!metrics) return null;
+
   const boardRect = boardDiv.getBoundingClientRect();
   const rect      = squareEl.getBoundingClientRect();
 
+  const xInGrid = (rect.left - boardRect.left - metrics.left) + rect.width  / 2;
+  const yInGrid = (rect.top  - boardRect.top  - metrics.top)  + rect.height / 2;
+
   return {
-    x:    ((rect.left - boardRect.left + rect.width  / 2) / boardRect.width)  * 100,
-    y:    ((rect.top  - boardRect.top  + rect.height / 2) / boardRect.height) * 100,
-    size: (rect.width / boardRect.width) * 100
+    x:    (xInGrid     / metrics.width)  * 100,
+    y:    (yInGrid     / metrics.height) * 100,
+    size: (rect.width  / metrics.width)  * 100,
   };
 }
 
@@ -1263,9 +1313,8 @@ class VideoEngine {
     if (move && move.from && move.to) {
       const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
       svg.classList.add("board-overlay", "last-move-overlay");
-      svg.setAttribute("width",   "100%");
-      svg.setAttribute("height",  "100%");
       svg.setAttribute("viewBox", "0 0 100 100");
+      sizeOverlayToGrid(svg, this.boardEl);
       svg.style.zIndex = "14";
       this.boardEl.appendChild(svg);
       _drawLastMoveArrowSVG(svg, this.boardEl, move.from, move.to);
@@ -1328,9 +1377,8 @@ class VideoEngine {
 
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.classList.add("board-overlay", "last-move-overlay");
-    svg.setAttribute("width",   "100%");
-    svg.setAttribute("height",  "100%");
     svg.setAttribute("viewBox", "0 0 100 100");
+    sizeOverlayToGrid(svg, this.boardEl);
     svg.style.zIndex = "14";
 
     this.boardEl.appendChild(svg);
@@ -1555,20 +1603,8 @@ class VideoEngine {
 --------------------------------------------------------------- */
 function _drawLastMoveArrowSVG(svg, boardDiv, fromSquare, toSquare) {
 
-  const getCenter = (sq) => {
-    const el = boardDiv.querySelector(`[data-square="${sq}"]`);
-    if (!el) return null;
-    const br = boardDiv.getBoundingClientRect();
-    const sr = el.getBoundingClientRect();
-    return {
-      x:    ((sr.left - br.left + sr.width  / 2) / br.width)  * 100,
-      y:    ((sr.top  - br.top  + sr.height / 2) / br.height) * 100,
-      size: (sr.width / br.width) * 100
-    };
-  };
-
-  const start = getCenter(fromSquare);
-  const end   = getCenter(toSquare);
+  const start = getSquareCenter(boardDiv, fromSquare);
+  const end   = getSquareCenter(boardDiv, toSquare);
   if (!start || !end) return;
 
   const dx     = end.x - start.x;

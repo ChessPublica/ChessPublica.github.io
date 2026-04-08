@@ -37,6 +37,12 @@
 
 .jc-puzzle {display:block;margin:1rem auto;vertical-align:top;width:100%;max-width:350px;}
 
+/* Prevent the page from scrolling while the user drags a piece on a
+   touch device. Applied only to interactive puzzle boards so static
+   <fen>/<pgn> diagrams still allow page scrolling over them. */
+.jc-puzzle-board,
+.jc-puzzle-board * {touch-action:none;}
+
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
