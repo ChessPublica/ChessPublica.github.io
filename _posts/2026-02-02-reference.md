@@ -100,7 +100,7 @@ displays:
 [Caption "Mate in one"]
 [FirstMoveAuto "true"]
 
-3... Nf6?? 4. Qh5#
+3... Nf6?? 4. Qxf7#
 </puzzle>
 
 or
