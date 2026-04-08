@@ -60,6 +60,14 @@ function tokenize(text) {
       continue;
     }
 
+    /* Inline suffix NAGs: !!, ??, !?, ?!, !, ? */
+    var suffixNagMatch = text.slice(i).match(/^(!!|\?\?|!\?|\?!|!|\?)/);
+    if (suffixNagMatch) {
+      tokens.push({ type: "nag", value: suffixNagMatch[0] });
+      i += suffixNagMatch[0].length;
+      continue;
+    }
+
     /* RESULT — must be checked BEFORE move number, because "1-0" starts with "1" */
     var resultMatch = text.slice(i).match(/^(1-0|0-1|1\/2-1\/2|\*)/);
     if (resultMatch) {
@@ -374,13 +382,16 @@ export function renderMoveTree(rootNode, container) {
 
 var NAG_MAP = {
   $1: "!", $2: "?", $3: "!!", $4: "??", $5: "!?", $6: "?!",
+  $7: "□", $10: "=", $13: "∞",
+  $14: "⩲", $15: "⩱", $16: "±", $17: "∓", $18: "+−", $19: "−+",
+  "!!": "!!", "??": "??", "!?": "!?", "?!": "?!", "!": "!", "?": "?",
 };
 
 function renderNAG(nags) {
   if (!nags || !nags.length) return "";
   var out = "";
   for (var i = 0; i < nags.length; i++) {
-    out += NAG_MAP[nags[i]] || "";
+    out += NAG_MAP[nags[i]] || nags[i];
   }
   return out;
 }
