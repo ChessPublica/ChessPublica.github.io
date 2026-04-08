@@ -12,7 +12,7 @@
 .pgn-variation{display:block;}
 .pgn-variation-line{display:inline;margin:0;}
 .pgn-variation-line::after{content: " ";}
-.pgn-comment{display:block;margin:1em 0;}
+.pgn-comment{display:block;margin:0 0 1em 0;padding-top:1em;}
 .pgn-error {color:red;}
 
 /* CHESSBOARD — Board wrapper + SVG overlay */
