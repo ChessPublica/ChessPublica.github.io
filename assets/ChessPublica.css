@@ -10,6 +10,7 @@
 .pgn-mainline{display:inline;margin:0;font-weight:bold;margin-bottom:1rem;}
 .pgn-mainline::after{content: " ";}
 .pgn-variation, .pgn-comment{display:block;margin-bottom:1rem;margin-top:1rem;}
+.pgn-comment{padding-top:1rem;}
 .pgn-variation-line{display:inline;margin:0;}
 .pgn-variation-line::after{content: " ";}
 .pgn-error{color:red;}
