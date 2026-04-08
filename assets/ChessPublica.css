@@ -7,13 +7,12 @@
 .pgn-headers{margin-bottom:1rem;}
 .pgn-players{font-weight:bold;}
 .pgn-container{overflow:hidden;padding:0 1rem;margin-bottom:1rem;}
-.pgn-mainline {display:inline;margin:0;font-weight:bold;margin-bottom:1rem;}
+.pgn-mainline{display:inline;margin:0;font-weight:bold;margin-bottom:1rem;}
 .pgn-mainline::after{content: " ";}
-.pgn-variation{display:block;margin:1rem 0;}
+.pgn-variation, .pgn-comment{display:block;margin-bottom:1rem;}
 .pgn-variation-line{display:inline;margin:0;}
 .pgn-variation-line::after{content: " ";}
-.pgn-comment{display:block;margin:1rem 0;}
-.pgn-error {color:red;}
+.pgn-error{color:red;}
 
 /* CHESSBOARD — Board wrapper + SVG overlay */
 
