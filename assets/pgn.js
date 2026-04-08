@@ -152,6 +152,7 @@ function parseSequence(tokens, chess, parentNode, originalPgn) {
         nags: [],
         arrows: [],
         squareMarks: [],
+        diagram: false,
       };
 
       current.next = node;
@@ -254,6 +255,11 @@ function processComment(commentText, lastMoveNode, current, parentNode, chess, o
     lastMoveNode.arrows = lastMoveNode.arrows.concat(parseCAL(calM[1]));
   }
 
+  /* Diagram marker */
+  if (/\[D\]/.test(commentText)) {
+    lastMoveNode.diagram = true;
+  }
+
   /* Clean comment text */
   var cleaned = commentText
     .replace(/\([^)]*\)/g, "")
@@ -261,6 +267,8 @@ function processComment(commentText, lastMoveNode, current, parentNode, chess, o
     .replace(RE_CAL, "")
     .replace(RE_ANNOTATIONS, "")
     .replace(RE_GENERIC_BRACKET, "")
+    .replace(/\[D\]/g, "")
+    .replace(/\s+/g, " ")
     .trim();
 
   var finalComment = (cleaned + " " + inlineMoveText).trim();
@@ -412,13 +420,18 @@ function renderLine(node, parent, isVariation) {
 
     /* COMMENT */
     if (current.comment) {
-      flushBuffer(parent, buffer, isVariation);
-      buffer = "";
-      var p = document.createElement("p");
-      p.className = "pgn-comment";
-      p.textContent = current.comment;
-      parent.appendChild(p);
-      needsMoveNumber = true;
+      if (isVariation) {
+        /* Inline comments inside variations stay on the same line */
+        buffer += current.comment + " ";
+      } else {
+        flushBuffer(parent, buffer, isVariation);
+        buffer = "";
+        var p = document.createElement("p");
+        p.className = "pgn-comment";
+        p.textContent = current.comment;
+        parent.appendChild(p);
+        needsMoveNumber = true;
+      }
     }
 
     /* BOARD */
@@ -426,7 +439,7 @@ function renderLine(node, parent, isVariation) {
       (current.arrows && current.arrows.length) ||
       (current.squareMarks && current.squareMarks.length);
 
-    if (hasAnnotations || current.comment === "[D]") {
+    if (hasAnnotations || current.diagram) {
       flushBuffer(parent, buffer, isVariation);
       buffer = "";
       createBoard(parent, current.fen, current);

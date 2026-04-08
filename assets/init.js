@@ -161,24 +161,60 @@ export function initFenElements() {
 
 /* ── <puzzle> ─────────────────────────────────────────────── */
 
-function renderPuzzleHeader(wrapper, raw) {
+function renderPuzzleHeader(wrapper, raw, packInfo) {
   var white = parseHeader(raw, "White");
   var black = parseHeader(raw, "Black");
   var event = parseHeader(raw, "Event");
   var date = parseHeader(raw, "Date");
   var caption = parseHeader(raw, "Caption");
 
-  if (white || black || event || date) {
-    var title = document.createElement("div");
-    title.className = "jc-puzzle-title";
-    title.style.fontWeight = "bold";
-    title.style.textAlign = "center";
-    title.style.marginBottom = "0.25rem";
+  var line1 = "";
+  var line2 = "";
+
+  if (packInfo) {
+    line1 = "Puzzle " + packInfo.index + " / " + packInfo.total;
+    var packParts = [];
+    if (event) packParts.push(event);
+    if (date) packParts.push(date);
+    line2 = packParts.join(", ");
+  } else {
+    if (white || black) line1 = (white || "?") + " — " + (black || "?");
     var parts = [];
-    if (white || black) parts.push((white || "?") + " — " + (black || "?"));
     if (event) parts.push(event);
     if (date) parts.push(date);
-    title.textContent = parts.join(", ");
+    line2 = parts.join(", ");
+    if (!line1 && line2) {
+      line1 = line2;
+      line2 = "";
+    }
+  }
+
+  if (line1 || line2) {
+    var title = document.createElement("div");
+    title.className = "video-title jc-puzzle-title";
+
+    var emojiSpan = document.createElement("span");
+    emojiSpan.className = "video-title-emoji";
+    emojiSpan.textContent = "🧩";
+    title.appendChild(emojiSpan);
+
+    var textDiv = document.createElement("div");
+    textDiv.className = "video-title-text";
+
+    if (line1) {
+      var l1 = document.createElement("div");
+      l1.className = "video-title-players";
+      l1.textContent = line1;
+      textDiv.appendChild(l1);
+    }
+    if (line2) {
+      var l2 = document.createElement("div");
+      l2.className = "video-title-event";
+      l2.textContent = line2;
+      textDiv.appendChild(l2);
+    }
+
+    title.appendChild(textDiv);
     wrapper.appendChild(title);
   }
 
@@ -197,15 +233,8 @@ function renderPuzzleFromText(raw, wrapper) {
       var sub = document.createElement("div");
       sub.className = "jc-puzzle jc-puzzle-pack-item";
       sub.style.marginBottom = "1.5rem";
-      var label = document.createElement("div");
-      label.className = "jc-puzzle-index";
-      label.style.textAlign = "center";
-      label.style.fontSize = "0.85em";
-      label.style.opacity = "0.7";
-      label.textContent = "Puzzle " + (i + 1) + " / " + games.length;
-      sub.appendChild(label);
       wrapper.appendChild(sub);
-      renderSinglePuzzle(game, sub);
+      renderSinglePuzzle(game, sub, { index: i + 1, total: games.length });
     });
     return;
   }
@@ -213,8 +242,8 @@ function renderPuzzleFromText(raw, wrapper) {
   renderSinglePuzzle(raw, wrapper);
 }
 
-function renderSinglePuzzle(raw, wrapper) {
-  var caption = renderPuzzleHeader(wrapper, raw);
+function renderSinglePuzzle(raw, wrapper, packInfo) {
+  var caption = renderPuzzleHeader(wrapper, raw, packInfo);
 
   var boardHost = document.createElement("div");
   boardHost.className = "jc-puzzle-board";
