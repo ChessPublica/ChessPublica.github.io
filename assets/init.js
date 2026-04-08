@@ -1,6 +1,6 @@
 /* ChessPublica — Element Initializers */
 
-import { PIECE_THEME, fetchText } from "./helpers.js";
+import { PIECE_THEME, fetchText, splitIntoPgnGames } from "./helpers.js";
 import { renderFullPGN } from "./pgn.js";
 import { jcPuzzleCreate } from "./puzzle.js";
 
@@ -191,6 +191,29 @@ function renderPuzzleFromText(raw, wrapper) {
     return;
   }
 
+  var games = splitIntoPgnGames(raw);
+  if (games.length > 1) {
+    games.forEach(function (game, i) {
+      var sub = document.createElement("div");
+      sub.className = "jc-puzzle jc-puzzle-pack-item";
+      sub.style.marginBottom = "1.5rem";
+      var label = document.createElement("div");
+      label.className = "jc-puzzle-index";
+      label.style.textAlign = "center";
+      label.style.fontSize = "0.85em";
+      label.style.opacity = "0.7";
+      label.textContent = "Puzzle " + (i + 1) + " / " + games.length;
+      sub.appendChild(label);
+      wrapper.appendChild(sub);
+      renderSinglePuzzle(game, sub);
+    });
+    return;
+  }
+
+  renderSinglePuzzle(raw, wrapper);
+}
+
+function renderSinglePuzzle(raw, wrapper) {
   var caption = renderPuzzleHeader(wrapper, raw);
 
   var boardHost = document.createElement("div");
