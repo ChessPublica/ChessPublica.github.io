@@ -150,7 +150,7 @@ Renders a complete annotated game with move numbers, comments, variations, NAGs,
 [Black "Black"]
 [Result "0-1"]
 
-1. g4 e5 2. f3?? {[D]} 2... Qh4#
+1. g4 e5 2. f3?? {[D] Black to move} 2... Qh4#
 </pgn>
 
 or
