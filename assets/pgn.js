@@ -420,13 +420,18 @@ function renderLine(node, parent, isVariation) {
 
     /* COMMENT */
     if (current.comment) {
-      flushBuffer(parent, buffer, isVariation);
-      buffer = "";
-      var p = document.createElement("p");
-      p.className = "pgn-comment";
-      p.textContent = current.comment;
-      parent.appendChild(p);
-      needsMoveNumber = true;
+      if (isVariation) {
+        /* Inline comments inside variations stay on the same line */
+        buffer += current.comment + " ";
+      } else {
+        flushBuffer(parent, buffer, isVariation);
+        buffer = "";
+        var p = document.createElement("p");
+        p.className = "pgn-comment";
+        p.textContent = current.comment;
+        parent.appendChild(p);
+        needsMoveNumber = true;
+      }
     }
 
     /* BOARD */
