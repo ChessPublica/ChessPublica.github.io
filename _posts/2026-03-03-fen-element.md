@@ -1,15 +1,24 @@
 ---
 layout: post
-title: <fen> element
+title: `<fen>` element
 ---
 
 ## Single board diagram
 
+```html
 <fen>rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</fen>
+```
 
 <fen>rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</fen>
 
 ## Diagram with caption
+
+```html
+<fen>
+[FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"]
+[Caption "Starting position"]
+</fen>
+```
 
 <fen>
 [FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"]
@@ -17,6 +26,13 @@ title: <fen> element
 </fen>
 
 ## Board orientation
+
+```html
+<fen>
+[FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"]
+[Orientation "Black"]
+</fen>
+```
 
 <fen>
 [FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"]
