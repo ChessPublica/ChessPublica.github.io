@@ -12,13 +12,12 @@ ChessPublica is a [markdown](https://www.markdownguide.org/)-friendly publishing
 It transforms raw chess notation—[FEN](https://en.wikipedia.org/wiki/Forsyth%E2%80%93Edwards_Notation) and [PGN](https://en.wikipedia.org/wiki/Portable_Game_Notation)—into figurines, diagrams, puzzles, studies, and fully playable, interactive content directly in the browser.
 
 <puzzle>
-[Site "Endgame study by Richard Réti"]
-[Event "📰 Endgame study by Richard Réti, originally published in Münchner Neueste Nachrichten, in 1928."]
+[Event "Endgame study by Richard Réti, Münchner Neueste Nachrichten, 1928"]
 [FEN "8/5K2/8/4pk2/4R3/8/8/8 w - - 0 1"]
 [Orientation "White"]
 [Caption "🏳️ White to move and win."]
 
-1. Re2! {💡 In this classical study composed by Richard Réti (1889–1929) a seemingly sensible move, Re1? is a huge mistake and black can hold the position after: (1... e4 2. Ke7 Ke5 3. Kd7 Kd5 ) and black gains the opposition. = 🤝 } {⚡ But interestingly, losing a move with 1. Re2! wins. 1... e4 2. Re1! Ke5 3. Ke7 Kd4 4. Ke6 Kd3 5. Ke5 e3 6. Kf4 e2 7. Kf3 { Black will lose the pawn, and the game. 🪦}
+1. Re2! {💡 In this classical study composed by Richard Réti (1889–1929) a seemingly sensible move, Re1? would be a mistake and black could hold the position after: ( 1. Re1? e4 2. Ke7 Ke5 3. Kd7 Kd5 ) and black gains the opposition. = 🤝 } {⚡ But interestingly, losing a move with 1. Re2! wins: ( 1... e4 2. Re1! Ke5 3. Ke7 Kd4 4. Ke6 Kd3 5. Ke5 e3 6. Kf4 e2 7. Kf3 { Black will lose the pawn, and the game. 🪦} )
 </puzzle>
 
 ## 🧰 Elements
