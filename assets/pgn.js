@@ -376,10 +376,22 @@ export function renderHeaders(headers, container) {
   container.appendChild(div);
 }
 
-export function renderMoveTree(rootNode, container) {
+export function renderMoveTree(rootNode, container, headers) {
   var movesDiv = document.createElement("div");
   movesDiv.className = "pgn-moves";
   renderLine(rootNode, movesDiv, false);
+
+  /* Append the game result (1-0 / 0-1 / ½-½) inline at the end of
+     the main line. Skip "*" (ongoing) and missing values. */
+  var rawResult = headers && headers.Result;
+  if (rawResult && rawResult !== "*") {
+    var label = rawResult === "1/2-1/2" ? "½-½" : rawResult;
+    var resultP = document.createElement("p");
+    resultP.className = "pgn-mainline pgn-result";
+    resultP.textContent = label;
+    movesDiv.appendChild(resultP);
+  }
+
   container.appendChild(movesDiv);
 }
 
@@ -506,7 +518,7 @@ export function renderFullPGN(pgnText, container) {
 
     var rootNode = buildMoveTree(pgnText);
     if (rootNode) {
-      renderMoveTree(rootNode, container);
+      renderMoveTree(rootNode, container, headers);
     }
   } catch (e) {
     var errorDiv = document.createElement("div");
