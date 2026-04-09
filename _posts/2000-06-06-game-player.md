@@ -38,10 +38,9 @@ ChessPublica's `<pgn-player>` element displays a game in a basic player.
 
 <pgn-player src="/assets/pgn/sample-game.pgn"></pgn-player>
 
-### Load from Remote URL (e.g. Lichess broadcast game URL)
+### Load from Remote URL (e.g. Lichess URL)
 
-<pgn-player src="https://lichess.org/broadcast/fide-candidates-2026-open/round-4/97di6JjX/Jzyakrf4"></pgn-player>
-
+<pgn-player src="https://lichess.org/study/97di6JjX/Jzyakrf4.pgn"></pgn-player>
 
 <style>
 h1 a {color:black;text-decoration:none;}
