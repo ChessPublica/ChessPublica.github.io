@@ -1,29 +1,27 @@
 ---
 layout: post
-title: NaSil Lichess Latest Game
+title: <fen> element
 ---
 
-## Load Game from Remote Source (Lichess)
+## Single board diagram
 
-Syntax:
+<fen>rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</fen>
 
-```html
-<pgn-player src="https://lichess.org/game/export/HDtMYO67?literate=1"></pgn-player>
-```
+<fen>rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</fen>
 
-Result:
+## Diagram with caption
 
-<pgn-player src="https://lichess.org/game/export/HDtMYO67?literate=1"></pgn-player>
+<fen>
+[FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"]
+[Caption "Starting position"]
+</fen>
 
-Syntax:
+## Board orientation
 
-```html
-<pgn src="https://lichess.org/game/export/HDtMYO67?literate=1"></pgn>
-```
-
-Result:
-
-<pgn src="https://lichess.org/game/export/HDtMYO67?literate=1"></pgn>
+<fen>
+[FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"]
+[Orientation "Black"]
+</fen>
 
 <style>
 h1 a {color:black;text-decoration:none;}
