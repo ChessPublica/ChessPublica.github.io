@@ -1670,6 +1670,36 @@ function _drawLastMoveArrowSVG(svg, boardDiv, fromSquare, toSquare) {
      <pgn-player src="./data/sample-game.pgn"></pgn-player>
 */
 
+/* Lichess serves PGNs from two families of URLs:
+     - Public web routes (e.g. /study/{id}/{chapter}.pgn, /{gameId}) —
+       these work in a browser tab but do NOT set Access-Control-Allow-Origin,
+       so fetch() from another origin fails with "Failed to fetch".
+     - /api/* endpoints — these DO set CORS headers and work from any origin.
+   Rewrite the common web routes to their API equivalents so users can
+   paste the URL straight from the Lichess address bar. */
+function normalizeLichessUrl(src) {
+
+  const m = src.match(/^https?:\/\/lichess\.org\/(.*)$/i);
+  if (!m) return src;
+
+  // Strip query / fragment before matching
+  const path = m[1].replace(/[?#].*$/, "");
+
+  // Study chapter: study/{studyId}/{chapterId}(.pgn)?
+  let mm = path.match(/^study\/([^/]+)\/([^/.]+)(?:\.pgn)?$/);
+  if (mm) return `https://lichess.org/api/study/${mm[1]}/${mm[2]}.pgn`;
+
+  // Whole study:  study/{studyId}(.pgn)?
+  mm = path.match(/^study\/([^/.]+)(?:\.pgn)?$/);
+  if (mm) return `https://lichess.org/api/study/${mm[1]}.pgn`;
+
+  // Single game: {gameId}[/white|/black][.pgn]
+  mm = path.match(/^([a-zA-Z0-9]{8})(?:\/(?:white|black))?(?:\.pgn)?$/);
+  if (mm) return `https://lichess.org/game/export/${mm[1]}.pgn`;
+
+  return src;
+}
+
 class PgnPlayerElement extends HTMLElement {
 
   connectedCallback() {
@@ -1749,13 +1779,21 @@ class PgnPlayerElement extends HTMLElement {
     const pgnSrc = this.getAttribute("src");
 
     if (pgnSrc) {
-      fetch(pgnSrc)
+      const fetchUrl = normalizeLichessUrl(pgnSrc);
+      fetch(fetchUrl)
         .then(r => {
           if (!r.ok) throw new Error(`HTTP ${r.status}`);
           return r.text();
         })
         .then(renderFromText)
-        .catch(err => showError(err.message));
+        .catch(err => {
+          // fetch() throws TypeError on network/CORS failures — the message
+          // ("Failed to fetch") is unhelpful on its own, so add context.
+          const msg = (err && err.name === "TypeError")
+            ? `network or CORS error fetching ${fetchUrl}`
+            : err.message;
+          showError(msg);
+        });
     } else if (inlineText) {
       try {
         renderFromText(inlineText);
