@@ -5,7 +5,7 @@
  *   1. Puzzle Engine     — renderLocalPuzzle() (interactive drag-and-drop)
  */
 
-import { PIECE_THEME, normalizeSAN, parseGame } from "./helpers.js";
+import { PIECE_THEME, normalizeSAN, parseGame, formatComment } from "./helpers.js";
 
 /* ================================================================
    1. PUZZLE ENGINE
@@ -23,7 +23,32 @@ export function renderLocalPuzzle(
   forcedOrientation,
   orientationFromPGN,
   isRush,
+  opts,
 ) {
+  opts = opts || {};
+  var comments = opts.comments || [];
+  var captionEl = opts.captionEl || null;
+  var initialCaption = opts.initialCaption || "";
+
+  /* Write a per-move comment into the caption slot. When no comment
+     exists for the given move the caption is cleared (per spec: the
+     initial caption is shown only before the first move; after that,
+     only move comments appear). */
+  function setCaptionForMoveIndex(moveIndex) {
+    if (!captionEl) return;
+    var cm = comments[moveIndex];
+    if (cm) {
+      captionEl.innerHTML = formatComment(cm);
+    } else {
+      captionEl.textContent = "";
+    }
+  }
+
+  function resetCaption() {
+    if (!captionEl) return;
+    captionEl.innerHTML = initialCaption ? formatComment(initialCaption) : "";
+  }
+
   function createPuzzleBoard() {
     container.innerHTML = "";
 
@@ -41,6 +66,8 @@ export function renderLocalPuzzle(
       locked: false,
       solved: false,
     };
+
+    resetCaption();
 
     boardDiv.__state = state;
 
@@ -89,6 +116,7 @@ export function renderLocalPuzzle(
 
       state.index++;
       board.position(state.game.fen(), true);
+      setCaptionForMoveIndex(state.index - 1);
       dispatchMoveEvent(state.index);
 
       setTimeout(function () {
@@ -115,6 +143,7 @@ export function renderLocalPuzzle(
 
       state.index++;
       board.position(state.game.fen(), false);
+      setCaptionForMoveIndex(state.index - 1);
       dispatchMoveEvent(state.index);
 
       boardDiv.classList.remove("jc-fire-once");
@@ -152,6 +181,7 @@ export function renderLocalPuzzle(
         board.position(state.game.fen(), true);
         state.index = 1;
         state.solverSide = state.game.turn();
+        setCaptionForMoveIndex(0);
       }
     }
   }
@@ -179,5 +209,11 @@ export function jcPuzzleCreate(el, cfg) {
     null,
     null,
     parsed.orientation,
+    false,
+    {
+      comments: parsed.comments || [],
+      captionEl: cfg.captionEl || null,
+      initialCaption: cfg.initialCaption || "",
+    },
   );
 }

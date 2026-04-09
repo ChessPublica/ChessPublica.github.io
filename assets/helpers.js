@@ -223,6 +223,99 @@ export function tokenizeMoves(text) {
     .filter(function (t) { return t && !/^(1-0|0-1|1\/2-1\/2|\*)$/.test(t); });
 }
 
+/**
+ * Parse PGN-ish move text into parallel arrays of SAN moves and the
+ * comments attached to them. Comments in {braces} attach to the most
+ * recent mainline move. Multiple comments on the same move are joined
+ * with a single space. Variations (in parens) and their inner comments
+ * are ignored.
+ *
+ * Returns { moves: string[], comments: (string|null)[] } with
+ * comments.length === moves.length.
+ */
+export function parseMovesWithComments(text) {
+  var s = String(text || "").replace(/;[^\n]*/g, " ");
+
+  var moves = [];
+  var comments = [];
+  var i = 0;
+
+  while (i < s.length) {
+    var ch = s[i];
+
+    /* Brace comment — attach to the most recent move. The full content
+       between { and the matching } is taken verbatim, so parentheses
+       inside the comment (e.g. a textual "(1. Re1? …)" reference) are
+       kept, not treated as variations. */
+    if (ch === "{") {
+      var j = i + 1;
+      while (j < s.length && s[j] !== "}") j++;
+      var cm = s.slice(i + 1, j).trim();
+      if (cm && moves.length > 0) {
+        var idx = moves.length - 1;
+        comments[idx] = comments[idx] ? comments[idx] + " " + cm : cm;
+      }
+      i = j + 1;
+      continue;
+    }
+
+    /* Variation — skip everything up to the matching ), correctly
+       handling nested parens and brace-comments that happen to sit
+       inside the variation. */
+    if (ch === "(") {
+      var depth = 1;
+      var k = i + 1;
+      while (k < s.length && depth > 0) {
+        var kc = s[k];
+        if (kc === "(") {
+          depth++; k++;
+        } else if (kc === ")") {
+          depth--; k++;
+        } else if (kc === "{") {
+          k++;
+          while (k < s.length && s[k] !== "}") k++;
+          if (k < s.length) k++;
+        } else {
+          k++;
+        }
+      }
+      i = k;
+      continue;
+    }
+
+    if (/\s/.test(ch)) { i++; continue; }
+
+    var rest = s.slice(i);
+
+    /* Result */
+    var rs = rest.match(/^(1-0|0-1|1\/2-1\/2|\*)/);
+    if (rs) { i += rs[0].length; continue; }
+
+    /* Move-number prefix (e.g. "12." or "12...") */
+    var mn = rest.match(/^\d+\.(?:\.\.)?/);
+    if (mn) { i += mn[0].length; continue; }
+
+    /* NAG $n */
+    var nag = rest.match(/^\$\d+/);
+    if (nag) { i += nag[0].length; continue; }
+
+    /* SAN move (with optional !? suffix) */
+    var mv = rest.match(
+      /^(?:O-O-O|O-O|[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](?:=[QRBN])?|[a-h][1-8])[+#]?[!?]*/
+    );
+    if (mv) {
+      moves.push(mv[0].replace(/[!?]+$/, ""));
+      comments.push(null);
+      i += mv[0].length;
+      continue;
+    }
+
+    i++;
+  }
+
+  return { moves: moves, comments: comments };
+}
+
 /* ================================================================
    PUZZLE GAME PARSER
 ================================================================ */
@@ -255,7 +348,13 @@ export function parseGame(pgn) {
     if (fenMatch && movesMatch) {
       var moves = tokenizeMoves(movesMatch[1]);
       if (!moves.length) return { error: true };
-      return { fen: fenMatch[1].trim(), moves: moves, firstMoveAuto: false, orientation: null };
+      return {
+        fen: fenMatch[1].trim(),
+        moves: moves,
+        comments: new Array(moves.length).fill(null),
+        firstMoveAuto: false,
+        orientation: null,
+      };
     }
   }
 
@@ -265,10 +364,17 @@ export function parseGame(pgn) {
     .filter(function (line) { return !/^\s*\[[^\]]+\]\s*$/.test(line); })
     .join(" ")
     .trim();
-  var moves2 = tokenizeMoves(moveText);
+  var parsedMoves = parseMovesWithComments(moveText);
+  var moves2 = parsedMoves.moves;
 
   if (!moves2.length) return { error: true };
   if (!fen) fen = DEFAULT_FEN;
 
-  return { fen: fen, moves: moves2, firstMoveAuto: firstMoveAuto, orientation: orientation };
+  return {
+    fen: fen,
+    moves: moves2,
+    comments: parsedMoves.comments,
+    firstMoveAuto: firstMoveAuto,
+    orientation: orientation,
+  };
 }

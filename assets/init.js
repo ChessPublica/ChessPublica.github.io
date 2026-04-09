@@ -261,16 +261,20 @@ function renderSinglePuzzle(raw, wrapper, packInfo) {
   boardHost.className = "jc-puzzle-board";
   wrapper.appendChild(boardHost);
 
-  if (caption) {
-    var cap = document.createElement("div");
-    cap.className = "fen-caption";
-    cap.textContent = caption;
-    wrapper.appendChild(cap);
-  }
+  /* Always create the caption slot (even when no initial caption is
+     set) so that per-move comments have a home to render into. */
+  var cap = document.createElement("div");
+  cap.className = "fen-caption";
+  if (caption) cap.textContent = caption;
+  wrapper.appendChild(cap);
 
   try {
     var before = boardHost.innerHTML;
-    jcPuzzleCreate(boardHost, { rawPGN: raw });
+    jcPuzzleCreate(boardHost, {
+      rawPGN: raw,
+      captionEl: cap,
+      initialCaption: caption || "",
+    });
     if (boardHost.innerHTML === before) {
       showError(wrapper, "could not parse <puzzle>: missing FEN or moves.");
     }
