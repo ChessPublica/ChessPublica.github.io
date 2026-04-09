@@ -17,7 +17,7 @@ It transforms raw chess notation—[FEN](https://en.wikipedia.org/wiki/Forsyth%E
 [Orientation "White"]
 [Caption "🏳️ White to move and win."]
 
-1. Re2! e4 {💡 In this classical study composed by Richard Réti, Re1? a seemingly sensible move would be a mistake and black could hold the position after: ( 1. Re1? e4 2. Ke7 Ke5 3. Kd7 Kd5 ) and black gains the opposition. = 🤝 } {⚡ But interestingly, losing a move with 1. Re2! wins: } 2. Re1! Ke5 3. Ke7 Kd4 4. Ke6 Kd3 5. Ke5 e3 6. Kf4 e2 7. Kf3 { Black will lose the pawn, and the game. 🪦}
+1. Re2! e4 {💡 In this classical study composed by Richard Réti, Re1? a seemingly sensible move would be a mistake and black could hold the position after: } ( 1. Re1? e4 2. Ke7 Ke5 3. Kd7 Kd5 ) { and black gains the opposition. = 🤝<br>⚡ But interestingly, losing a move with 1. Re2! wins: } 2. Re1! Ke5 3. Ke7 Kd4 4. Ke6 Kd3 5. Ke5 e3 6. Kf4 e2 7. Kf3 { Black will lose the pawn, and the game. 🪦}
 </puzzle>
 
 ## 🧰 Elements
