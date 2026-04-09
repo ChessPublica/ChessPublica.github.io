@@ -11,6 +11,7 @@ Chess puzzles are handled by the `<puzzle>` element.
 <puzzle>
 [FEN "rnbqkbnr/pppp1ppp/8/4p3/6P1/5P2/PPPPP2P/RNBQKBNR b KQkq - 0 2"]
 [Orientation "Black"]
+[Caption "Mate in one"]
 
 1... Qh4#
 </puzzle>
@@ -18,6 +19,7 @@ Chess puzzles are handled by the `<puzzle>` element.
 <puzzle>
 [FEN "rnbqkbnr/pppp1ppp/8/4p3/6P1/5P2/PPPPP2P/RNBQKBNR b KQkq - 0 2"]
 [Orientation "Black"]
+[Caption "Mate in one"]
 
 1... Qh4#
 </puzzle>
