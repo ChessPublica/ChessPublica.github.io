@@ -1647,8 +1647,7 @@ function _drawLastMoveArrowSVG(svg, boardDiv, fromSquare, toSquare) {
   ].join(" "));
 
   path.setAttribute("fill",    "rgba(40, 40, 40, 0.38)");
-  path.setAttribute("stroke",  "rgba(0, 0, 0, 0.15)");
-  path.setAttribute("stroke-width", "0.3");
+  path.setAttribute("stroke",  "none");
 
   svg.appendChild(path);
 }
