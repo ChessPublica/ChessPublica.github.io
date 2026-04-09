@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Annotated Game
+title: Annotated Games
 ---
 
 ChessPublica `<pgn>` element displays the game with comments, variations, annotations, and diagrams.
