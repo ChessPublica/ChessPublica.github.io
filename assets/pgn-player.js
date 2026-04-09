@@ -696,25 +696,24 @@ function initOverlay(boardDiv, moveNode) {
   const old = boardDiv.querySelector(".board-overlay:not(.last-move-overlay)");
   if (old) old.remove();
 
-  // Create SVG overlay
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-
-  svg.classList.add("board-overlay");
-  svg.setAttribute("viewBox", "0 0 100 100");
-  sizeOverlayToGrid(svg, boardDiv);
-
-  boardDiv.appendChild(svg);
+  // Create SVG overlay and attach it inside the actual 8×8 grid so 100%/100%
+  // maps exactly to the square area — avoids sub-pixel offsets from the
+  // chessboard.js outer border.
+  const svg = createGridOverlaySVG(boardDiv);
+  if (!svg) return;
 
   if (!moveNode) return;
 
+  const grid = svg.parentNode;
+
   // Draw square highlights (circles)
   moveNode.squareMarks?.forEach(mark => {
-    drawCircle(svg, boardDiv, mark.square, mark.color);
+    drawCircle(svg, grid, mark.square, mark.color);
   });
 
   // Draw arrows
   moveNode.arrows?.forEach(arrow => {
-    drawArrow(svg, boardDiv, arrow.from, arrow.to, arrow.color);
+    drawArrow(svg, grid, arrow.from, arrow.to, arrow.color);
   });
 }
 
@@ -722,68 +721,59 @@ function initOverlay(boardDiv, moveNode) {
 /* ================= UTIL ================= */
 
 /**
- * Compute the bounding rect of the actual 8×8 grid (relative to boardDiv).
- * chessboard.js's inner board element has a border, so the grid area is
- * slightly inset from the outer board div — we can't assume 0..100% of
- * boardDiv maps to square centers. Derive the grid rect from the squares
- * themselves so overlays line up exactly.
+ * Locate the chessboard.js inner 8×8 grid element. All squares live directly
+ * inside this element; attaching the SVG overlay here (instead of the outer
+ * board wrapper) avoids any border/padding offsets and gives pixel-perfect
+ * alignment without manual positioning math.
  */
-function getGridMetrics(boardDiv) {
-  const squares = boardDiv.querySelectorAll("[data-square]");
-  if (!squares.length) return null;
-
-  const br = boardDiv.getBoundingClientRect();
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  squares.forEach(sq => {
-    const r = sq.getBoundingClientRect();
-    if (r.left   < minX) minX = r.left;
-    if (r.top    < minY) minY = r.top;
-    if (r.right  > maxX) maxX = r.right;
-    if (r.bottom > maxY) maxY = r.bottom;
-  });
-
-  return {
-    left:   minX - br.left,
-    top:    minY - br.top,
-    width:  maxX - minX,
-    height: maxY - minY,
-  };
+function getGridElement(boardDiv) {
+  return boardDiv.querySelector(".chessboard-63f37") || boardDiv;
 }
 
-function sizeOverlayToGrid(svg, boardDiv) {
-  const m = getGridMetrics(boardDiv);
-  if (!m) {
-    svg.setAttribute("width", "100%");
-    svg.setAttribute("height", "100%");
-    return;
+/**
+ * Create an SVG board-overlay element, attached inside the actual 8×8 grid,
+ * sized 100%×100% so viewBox 0..100 maps exactly to the square area.
+ */
+function createGridOverlaySVG(boardDiv, extraClass) {
+  const grid = getGridElement(boardDiv);
+  if (!grid) return null;
+
+  // Ensure the grid can host absolutely-positioned overlays.
+  if (grid !== boardDiv && getComputedStyle(grid).position === "static") {
+    grid.style.position = "relative";
   }
-  svg.removeAttribute("width");
-  svg.removeAttribute("height");
+
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.classList.add("board-overlay");
+  if (extraClass) svg.classList.add(extraClass);
+  svg.setAttribute("viewBox", "0 0 100 100");
+  svg.setAttribute("preserveAspectRatio", "none");
   svg.style.position = "absolute";
-  svg.style.left   = m.left   + "px";
-  svg.style.top    = m.top    + "px";
-  svg.style.width  = m.width  + "px";
-  svg.style.height = m.height + "px";
+  svg.style.left   = "0";
+  svg.style.top    = "0";
+  svg.style.width  = "100%";
+  svg.style.height = "100%";
+  svg.style.pointerEvents = "none";
+
+  grid.appendChild(svg);
+  return svg;
 }
 
-function getSquareCenter(boardDiv, square) {
+function getSquareCenter(grid, square) {
 
-  const squareEl = boardDiv.querySelector(`[data-square="${square}"]`);
+  const squareEl = grid.querySelector(`[data-square="${square}"]`);
   if (!squareEl) return null;
 
-  const metrics = getGridMetrics(boardDiv);
-  if (!metrics) return null;
+  const gridRect = grid.getBoundingClientRect();
+  const rect     = squareEl.getBoundingClientRect();
 
-  const boardRect = boardDiv.getBoundingClientRect();
-  const rect      = squareEl.getBoundingClientRect();
-
-  const xInGrid = (rect.left - boardRect.left - metrics.left) + rect.width  / 2;
-  const yInGrid = (rect.top  - boardRect.top  - metrics.top)  + rect.height / 2;
+  const xInGrid = (rect.left - gridRect.left) + rect.width  / 2;
+  const yInGrid = (rect.top  - gridRect.top)  + rect.height / 2;
 
   return {
-    x:    (xInGrid     / metrics.width)  * 100,
-    y:    (yInGrid     / metrics.height) * 100,
-    size: (rect.width  / metrics.width)  * 100,
+    x:    (xInGrid     / gridRect.width)  * 100,
+    y:    (yInGrid     / gridRect.height) * 100,
+    size: (rect.width  / gridRect.width)  * 100,
   };
 }
 
@@ -1311,13 +1301,11 @@ class VideoEngine {
 
     /* Draw last-move arrow for the variation move */
     if (move && move.from && move.to) {
-      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      svg.classList.add("board-overlay", "last-move-overlay");
-      svg.setAttribute("viewBox", "0 0 100 100");
-      sizeOverlayToGrid(svg, this.boardEl);
-      svg.style.zIndex = "14";
-      this.boardEl.appendChild(svg);
-      _drawLastMoveArrowSVG(svg, this.boardEl, move.from, move.to);
+      const svg = createGridOverlaySVG(this.boardEl, "last-move-overlay");
+      if (svg) {
+        svg.style.zIndex = "14";
+        _drawLastMoveArrowSVG(svg, svg.parentNode, move.from, move.to);
+      }
     }
 
     /* Render variation annotations (e.g. [%cal], [%csl]) on the board */
@@ -1375,15 +1363,11 @@ class VideoEngine {
     const from = lastMove.from;
     const to   = lastMove.to;
 
-    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    svg.classList.add("board-overlay", "last-move-overlay");
-    svg.setAttribute("viewBox", "0 0 100 100");
-    sizeOverlayToGrid(svg, this.boardEl);
+    const svg = createGridOverlaySVG(this.boardEl, "last-move-overlay");
+    if (!svg) return;
     svg.style.zIndex = "14";
 
-    this.boardEl.appendChild(svg);
-
-    _drawLastMoveArrowSVG(svg, this.boardEl, from, to);
+    _drawLastMoveArrowSVG(svg, svg.parentNode, from, to);
   }
 
 
