@@ -15,7 +15,6 @@
 [SetUp "1"]
 [LichessPuzzleRating "1961"]
 [LichessPuzzleTags "master, mate, mateIn1, middlegame, oneMove"]
-[Orientation "Black"]
 [FirstMoveAuto "True"]
 
 14... Qxc3 15. Qc8# *
