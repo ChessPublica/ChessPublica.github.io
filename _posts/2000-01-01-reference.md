@@ -234,11 +234,11 @@ All required external libraries [Chess.js](https://github.com/jhlywa/chess.js/),
 | `<pgn-player>` | Video-style PGN player | ✅ | Inline or `src` |
 
 
-{% if page.next.url %}
-[{{page.next.title}}&laquo;&nbsp;]({{page.next.url}})
-{% endif %}
 {% if page.previous.url %}
-[{{page.previous.title}}&laquo;&nbsp;]({{page.previous.url}})
+[{{page.previous.title}}&nbsp;&raquo;]({{page.previous.url}})
+{% endif %}
+{% if page.next.url %}
+[&laquo;&nbsp;{{page.next.title}}]({{page.next.url}})
 {% endif %}
 
 <style>
