@@ -34,13 +34,13 @@ Chess puzzles are handled by the `<puzzle>` element.
 
 ---
 
-# [{{ site.title }}]({{ site.url }})
-
 ## 🧰 Elements
 
 {% for post in site.posts %}
 📌 [{{ post.title }}]({{ post.url }})
 {% endfor %}
+
+# [{{ site.title }}]({{ site.url }})
 
 <style>
 h1 a {color:black;text-decoration:none;}

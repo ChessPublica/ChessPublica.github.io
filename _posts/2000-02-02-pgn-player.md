@@ -48,13 +48,13 @@ ChessPublica's `<pgn-player>` element displays a game in a basic player.
 
 ---
 
-# [{{ site.title }}]({{ site.url }})
-
 ## 🧰 Elements
 
 {% for post in site.posts %}
 📌 [{{ post.title }}]({{ post.url }})
 {% endfor %}
+
+# [{{ site.title }}]({{ site.url }})
 
 <style>
 h1 a {color:black;text-decoration:none;}

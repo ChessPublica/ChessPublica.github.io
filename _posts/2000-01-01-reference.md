@@ -235,13 +235,13 @@ All required external libraries [Chess.js](https://github.com/jhlywa/chess.js/),
 
 ---
 
-# [{{ site.title }}]({{ site.url }})
-
 ## 🧰 Elements
 
 {% for post in site.posts %}
 📌 [{{ post.title }}]({{ post.url }})
 {% endfor %}
+
+# [{{ site.title }}]({{ site.url }})
 
 <style>
 h1 a {color:black;text-decoration:none;}
