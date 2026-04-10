@@ -74,6 +74,39 @@ var ALLOWED_COMMENT_TAGS = {
    link hrefs — blocks javascript: and data: URLs. */
 var SAFE_URL_RE = /^(?:https?:|mailto:|#|\/)/i;
 
+/**
+ * Convert SAN piece-move patterns in HTML-mixed text to figurine
+ * notation.  The first alternative (<[^>]*>) matches and preserves
+ * HTML tags so that piece letters inside tag names (<br>, <b>) and
+ * attribute values (href URLs) are left untouched.  The preceding-
+ * character check is done via the callback's offset rather than a
+ * consumed group, so moves immediately after a closing ">" are
+ * still converted.
+ */
+function _applyFigurineNotation(html) {
+  /* Piece moves: Nf3, Bxe5+, Nbd7, R1e1, Qh4#, etc. */
+  html = html.replace(
+    /<[^>]*>|(([KQRBN])([a-h]?[1-8]?x?[a-h][1-8](?:=[QRBN])?[+#!?]*))/g,
+    function (m, _full, piece, rest, offset, str) {
+      if (piece == null) return m;
+      if (offset > 0 && /[a-zA-Z]/.test(str[offset - 1])) return m;
+      return FIGURINES[piece] + rest.replace(/=([QRBN])/, function (__, p) {
+        return "=" + FIGURINES[p];
+      });
+    }
+  );
+  /* Pawn promotions: e8=Q+, bxa1=R#, etc. */
+  html = html.replace(
+    /<[^>]*>|(([a-h](?:x[a-h])?[18])=([QRBN])([+#!?]*))/g,
+    function (m, _full, pawn, piece, suffix, offset, str) {
+      if (piece == null) return m;
+      if (offset > 0 && /[a-zA-Z]/.test(str[offset - 1])) return m;
+      return pawn + "=" + FIGURINES[piece] + (suffix || "");
+    }
+  );
+  return html;
+}
+
 function _applyInlineMarkdown(text) {
 
   /* Protect code spans first so their contents bypass further
@@ -97,6 +130,11 @@ function _applyInlineMarkdown(text) {
   text = text.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, function (_m, label, url) {
     return '<a href="' + url + '">' + label + "</a>";
   });
+
+  /* Chess notation → figurine symbols.  Applied after markdown so that
+     HTML tags produced by the conversions above (e.g. <strong>, <a>)
+     are properly skipped by the tag-aware regex. */
+  text = _applyFigurineNotation(text);
 
   /* Restore protected code spans */
   text = text.replace(/\u0000CODE(\d+)\u0000/g, function (_m, i) {

@@ -290,6 +290,8 @@ function loadPGN(pgn) {
     evals.push(isFinite(parsed) ? parsed : 0);
   }
 
+  const hasEvals = evals.length > 0;
+
   while (evals.length < moves.length) {
     evals.push(evals.length > 0 ? evals[evals.length - 1] : 0);
   }
@@ -301,6 +303,7 @@ function loadPGN(pgn) {
   return {
     moves,
     evals,
+    hasEvals,
     headers,
     comments,
     variations,
@@ -455,9 +458,20 @@ function loadPGN(pgn) {
     this.container = container;
     this.bar  = container.querySelector(".eval-bar");
     this.fill = this.bar ? this.bar.querySelector(".eval-fill") : null;
+    this._disabled = false;
+  }
+
+  /** Grey-out the bar when the PGN has no [%eval] annotations. */
+  setDisabled(flag) {
+    this._disabled = !!flag;
+    if (this.bar) {
+      this.bar.classList.toggle("eval-disabled", this._disabled);
+    }
   }
 
   update(score) {
+
+    if (this._disabled) return;
 
     // Guard against null / undefined / NaN / Infinity
     if (score === undefined || score === null || typeof score !== "number" || !isFinite(score)) {
@@ -1240,6 +1254,8 @@ class VideoEngine {
     this.state.variations  = data.variations  || [];
     this.state.annotations = data.annotations || [];
     this.state.glyphs      = data.glyphs      || [];
+
+    if (this.evalBar) this.evalBar.setDisabled(!data.hasEvals);
 
     this.buildCache();
 

@@ -53,31 +53,41 @@ export function renderLocalPuzzle(
   function createPuzzleBoard() {
     container.innerHTML = "";
 
+    /* Wrap the board in a positioned container so the round replay
+       button can sit over its bottom-right corner, matching the
+       pgn-player style. .jc-board-wrapper already declares
+       position:relative + the same max-width as .jc-board. */
+    var boardWrap = document.createElement("div");
+    boardWrap.className = "jc-board-wrapper";
+    container.appendChild(boardWrap);
+
     var boardDiv = document.createElement("div");
     boardDiv.className = "jc-board";
-    container.appendChild(boardDiv);
+    /* The wrapper already supplies the 1rem auto margin .jc-board uses
+       on its own, so zero it here to avoid doubling the vertical gap. */
+    boardDiv.style.margin = "0";
+    boardWrap.appendChild(boardDiv);
 
     /* Refresh button — hidden by default. Shown while the solver is
        exploring a variation (acts as "return to main line") and again
-       once the puzzle is solved (acts as "replay the puzzle"). */
+       once the puzzle is solved (acts as "replay the puzzle"). Uses
+       the same .comment-play-btn class as <pgn-player> so it gets the
+       same circular replay-icon styling. */
     var refreshBtn = document.createElement("button");
     refreshBtn.type = "button";
-    refreshBtn.className = "jc-puzzle-refresh";
+    refreshBtn.className = "comment-play-btn jc-puzzle-refresh";
     refreshBtn.setAttribute("aria-label", "Reset puzzle");
     refreshBtn.title = "Reset puzzle";
-    refreshBtn.textContent = "↻";
+    refreshBtn.innerHTML = '<span class="material-icons">replay</span>';
     refreshBtn.style.display = "none";
-    refreshBtn.style.margin = "0.5rem auto";
-    refreshBtn.style.padding = "0.25rem 0.75rem";
-    refreshBtn.style.fontSize = "1.1rem";
-    refreshBtn.style.cursor = "pointer";
     refreshBtn.addEventListener("click", function () {
       handleRefresh();
     });
-    container.appendChild(refreshBtn);
+    boardWrap.appendChild(refreshBtn);
 
     function showRefreshButton() {
-      refreshBtn.style.display = "block";
+      /* .comment-play-btn uses display:flex to center the icon. */
+      refreshBtn.style.display = "flex";
     }
     function hideRefreshButton() {
       refreshBtn.style.display = "none";
