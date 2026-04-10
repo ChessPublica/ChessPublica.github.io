@@ -13,7 +13,7 @@ title: Home
 [Orientation "White"]
 [Caption "🏳️ White to move and win."]
 
-1. Re2! e4 ( 1. Re1? {💡 Re1? a seemingly sensible move would be a mistake and black could hold the position after: } 1... e4 2. Ke7 Ke5 3. Kd7 Kd5 { and black gains the opposition. = 🤝 } ) 2. Re1! Ke5 {⚡ Losing a move with 1. Re2! and 2. Re1! is the key! } 3. Ke7 Kd4 4. Ke6 Kd3 5. Ke5 e3 6. Kf4 e2 7. Kf3 { Black will lose the pawn, and the game. 🪦}
+1. Re2! e4 ( 1. Re1? { 💡 Re1? a seemingly sensible move would be a mistake and black could hold the position after: } 1... e4 2. Ke7 Ke5 3. Kd7 Kd5 { and black gains the opposition. = 🤝 } ) 2. Re1! Ke5 { 🔑 Losing a move with 1. Re2! and 2. Re1! is the key! } 3. Ke7 Kd4 { 🎯 White can keep the opposition to win. } 4. Ke6 Kd3 5. Ke5 e3 6. Kf4 e2 7. Kf3 { Black will lose the pawn, and the game. 🪦}
 </puzzle>
 
 ## 🧰 Elements
