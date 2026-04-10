@@ -160,7 +160,9 @@ export function renderLocalPuzzle(
 
       boardDiv.addEventListener(
         "mousedown",
-        function () {
+        function (e) {
+          e.stopImmediatePropagation();
+          e.preventDefault();
           if (container.reset) container.reset();
         },
         { once: true, capture: true },
