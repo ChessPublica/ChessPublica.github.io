@@ -91,11 +91,11 @@ export function renderLocalPuzzle(
     boardDiv.style.margin = "0";
     boardWrap.appendChild(boardDiv);
 
-    /* Refresh button — hidden by default. Shown while the solver is
-       exploring a variation (acts as "return to main line") and again
-       once the puzzle is solved (acts as "replay the puzzle"). Uses
-       the same .comment-play-btn class as <pgn-player> so it gets the
-       same circular replay-icon styling. */
+    /* Refresh button — hidden by default. Shown once the puzzle is
+       solved (acts as "replay the puzzle"). Uses the same
+       .comment-play-btn class as <pgn-player> so it gets the same
+       circular replay-icon styling. Placed inside captionEl so it
+       sits at the bottom-right of the comment area. */
     var refreshBtn = document.createElement("button");
     refreshBtn.type = "button";
     refreshBtn.className = "comment-play-btn jc-puzzle-refresh";
@@ -106,7 +106,10 @@ export function renderLocalPuzzle(
     refreshBtn.addEventListener("click", function () {
       handleRefresh();
     });
-    boardWrap.appendChild(refreshBtn);
+    if (captionEl) {
+      captionEl.style.position = "relative";
+      captionEl.appendChild(refreshBtn);
+    }
 
     function showRefreshButton() {
       /* .comment-play-btn uses display:flex to center the icon. */
