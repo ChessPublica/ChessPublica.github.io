@@ -2,7 +2,7 @@
  * ChessPublica — Board creation + SVG annotation overlay
  */
 
-import { PIECE_THEME } from "./helpers.js";
+import { PIECE_THEME, getDestinationSquare, renderMoveQualityBadge } from "./helpers.js";
 
 export function createBoard(container, fen, moveNode) {
   var wrapper = document.createElement("div");
@@ -20,7 +20,33 @@ export function createBoard(container, fen, moveNode) {
       pieceTheme: PIECE_THEME,
     });
     initOverlay(wrapper, boardDiv, moveNode);
+
+    /* Show a move-quality badge on the destination square if the
+       move that produced this diagram has a NAG annotation. */
+    if (moveNode && moveNode.nags && moveNode.nags.length) {
+      var glyph = _nagToGlyph(moveNode.nags);
+      if (glyph && moveNode.san) {
+        var square = getDestinationSquare(moveNode.san, moveNode.color);
+        if (square) {
+          boardDiv.style.position = "relative";
+          renderMoveQualityBadge(boardDiv, square, glyph);
+        }
+      }
+    }
   });
+}
+
+var _NAG_GLYPH_MAP = {
+  "$1": "!", "$2": "?", "$3": "!!", "$4": "??", "$5": "!?", "$6": "?!",
+  "!": "!", "?": "?", "!!": "!!", "??": "??", "!?": "!?", "?!": "?!",
+};
+
+function _nagToGlyph(nags) {
+  for (var i = 0; i < nags.length; i++) {
+    var g = _NAG_GLYPH_MAP[nags[i]];
+    if (g) return g;
+  }
+  return null;
 }
 
 function initOverlay(wrapper, boardDiv, moveNode) {

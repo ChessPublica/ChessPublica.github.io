@@ -14,6 +14,73 @@ export var PIECE_THEME =
 export var NBSP = "\u00A0";
 
 /* ================================================================
+   MOVE-QUALITY BADGE
+================================================================ */
+
+var GLYPH_META = {
+  "!!": { label: "!!", color: "#1aa34a" },
+  "!":  { label: "!",  color: "#00AA00" },
+  "!?": { label: "!?", color: "#0000FF" },
+  "?!": { label: "?!", color: "#FFAA00" },
+  "?":  { label: "?",  color: "#FF0000" },
+  "??": { label: "??", color: "#9c0202" },
+};
+
+var NAG_TO_GLYPH = {
+  "$1": "!", "$2": "?", "$3": "!!", "$4": "??", "$5": "!?", "$6": "?!",
+};
+
+/**
+ * Derive the destination square from a SAN string.
+ * e.g. "Nf3" → "f3", "O-O" (white) → "g1", "exd5" → "d5".
+ */
+export function getDestinationSquare(san, color) {
+  if (/^O-O-O/.test(san)) return color === "w" ? "c1" : "c8";
+  if (/^O-O/.test(san))   return color === "w" ? "g1" : "g8";
+  var m = san.match(/([a-h][1-8])/g);
+  return m ? m[m.length - 1] : null;
+}
+
+/**
+ * Render a move-quality badge (!, !!, ?, …) on a destination square
+ * of the given board element.  Clears any existing badge first.
+ *
+ * @param {HTMLElement} boardEl – element passed to Chessboard() (has data-square children)
+ * @param {string}      square  – e.g. "e4"
+ * @param {string}      glyph   – e.g. "!" or "??"
+ */
+export function renderMoveQualityBadge(boardEl, square, glyph) {
+  clearMoveQualityBadge(boardEl);
+  if (!square || !glyph) return;
+
+  var meta = GLYPH_META[glyph];
+  if (!meta) return;
+
+  var squareEl = boardEl.querySelector('[data-square="' + square + '"]');
+  if (!squareEl) return;
+
+  var badge = document.createElement("div");
+  badge.className = "gm-badge";
+  badge.textContent = meta.label;
+  badge.style.background = meta.color;
+
+  var boardRect  = boardEl.getBoundingClientRect();
+  var squareRect = squareEl.getBoundingClientRect();
+
+  badge.style.position = "absolute";
+  badge.style.right = (boardRect.right - squareRect.right + squareRect.width * 0.05) + "px";
+  badge.style.top   = (squareRect.top  - boardRect.top   - squareRect.height * 0.05) + "px";
+  badge.style.zIndex = "30";
+
+  boardEl.appendChild(badge);
+}
+
+export function clearMoveQualityBadge(boardEl) {
+  var old = boardEl.querySelector(".gm-badge");
+  if (old) old.remove();
+}
+
+/* ================================================================
    FETCH HELPER
 ================================================================ */
 
@@ -270,8 +337,8 @@ export function tokenizeMoves(text) {
  * mainline move they branch from — so variations[i] is either null or
  * an array of { moves, comments, variations } objects.
  *
- * Returns { moves, comments, variations } with all three arrays having
- * length === moves.length.
+ * Returns { moves, comments, variations, glyphs } with all four arrays
+ * having length === moves.length.
  */
 export function parseMovesWithComments(text) {
   var s = String(text || "").replace(/;[^\n]*/g, " ");
@@ -279,6 +346,7 @@ export function parseMovesWithComments(text) {
   var moves = [];
   var comments = [];
   var variations = [];
+  var glyphs = [];
   var i = 0;
 
   while (i < s.length) {
@@ -350,18 +418,27 @@ export function parseMovesWithComments(text) {
     var mn = rest.match(/^\d+\.(?:\.\.)?/);
     if (mn) { i += mn[0].length; continue; }
 
-    /* NAG $n */
+    /* NAG $n — attach glyph to the most recent move */
     var nag = rest.match(/^\$\d+/);
-    if (nag) { i += nag[0].length; continue; }
+    if (nag) {
+      if (moves.length > 0 && !glyphs[moves.length - 1]) {
+        var nagGlyph = NAG_TO_GLYPH[nag[0]];
+        if (nagGlyph) glyphs[moves.length - 1] = nagGlyph;
+      }
+      i += nag[0].length;
+      continue;
+    }
 
     /* SAN move (with optional !? suffix) */
     var mv = rest.match(
       /^(?:O-O-O|O-O|[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](?:=[QRBN])?|[a-h][1-8])[+#]?[!?]*/
     );
     if (mv) {
+      var suffixMatch = mv[0].match(/[!?]+$/);
       moves.push(mv[0].replace(/[!?]+$/, ""));
       comments.push(null);
       variations.push(null);
+      glyphs.push(suffixMatch ? suffixMatch[0] : null);
       i += mv[0].length;
       continue;
     }
@@ -369,7 +446,7 @@ export function parseMovesWithComments(text) {
     i++;
   }
 
-  return { moves: moves, comments: comments, variations: variations };
+  return { moves: moves, comments: comments, variations: variations, glyphs: glyphs };
 }
 
 /* ================================================================
@@ -409,6 +486,7 @@ export function parseGame(pgn) {
         moves: moves,
         comments: new Array(moves.length).fill(null),
         variations: new Array(moves.length).fill(null),
+        glyphs: new Array(moves.length).fill(null),
         firstMoveAuto: false,
         orientation: null,
       };
@@ -432,6 +510,7 @@ export function parseGame(pgn) {
     moves: moves2,
     comments: parsedMoves.comments,
     variations: parsedMoves.variations || [],
+    glyphs: parsedMoves.glyphs || [],
     firstMoveAuto: firstMoveAuto,
     orientation: orientation,
   };

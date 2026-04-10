@@ -5,7 +5,7 @@
  *   1. Puzzle Engine     — renderLocalPuzzle() (interactive drag-and-drop)
  */
 
-import { PIECE_THEME, normalizeSAN, parseGame, formatComment } from "./helpers.js";
+import { PIECE_THEME, normalizeSAN, parseGame, formatComment, getDestinationSquare, renderMoveQualityBadge, clearMoveQualityBadge } from "./helpers.js";
 
 /* ================================================================
    1. PUZZLE ENGINE
@@ -28,6 +28,7 @@ export function renderLocalPuzzle(
   opts = opts || {};
   var comments = opts.comments || [];
   var variations = opts.variations || [];
+  var pgnGlyphs = opts.glyphs || [];
   var captionEl = opts.captionEl || null;
   var initialCaption = opts.initialCaption || "";
 
@@ -50,6 +51,26 @@ export function renderLocalPuzzle(
     captionEl.innerHTML = initialCaption ? formatComment(initialCaption) : "";
   }
 
+  /* Show a move-quality badge on the destination square of the move
+     at the given index.  The boardDiv reference is captured from the
+     closure inside createPuzzleBoard. */
+  var _boardDivRef = null;
+
+  function showBadgeForMove(moveIndex) {
+    if (!_boardDivRef) return;
+    clearMoveQualityBadge(_boardDivRef);
+    var glyph = pgnGlyphs[moveIndex];
+    if (!glyph) return;
+    var san = moves[moveIndex];
+    /* The color that played this move: after the move, the turn flips,
+       so the mover is the opposite of the current turn. But we can
+       also derive it from the move index and the starting side. */
+    var startTurn = fen.split(" ")[1] || "w";
+    var color = (moveIndex % 2 === 0) ? startTurn : (startTurn === "w" ? "b" : "w");
+    var square = getDestinationSquare(san, color);
+    if (square) renderMoveQualityBadge(_boardDivRef, square, glyph);
+  }
+
   function createPuzzleBoard() {
     container.innerHTML = "";
 
@@ -63,6 +84,8 @@ export function renderLocalPuzzle(
 
     var boardDiv = document.createElement("div");
     boardDiv.className = "jc-board";
+    boardDiv.style.position = "relative";
+    _boardDivRef = boardDiv;
     /* The wrapper already supplies the 1rem auto margin .jc-board uses
        on its own, so zero it here to avoid doubling the vertical gap. */
     boardDiv.style.margin = "0";
@@ -141,6 +164,7 @@ export function renderLocalPuzzle(
         state.index = saved.index;
         state.savedForVariation = null;
         state.locked = false;
+        clearMoveQualityBadge(boardDiv);
         board.position(state.game.fen(), true);
         if (state.index > 0) {
           setCaptionForMoveIndex(state.index - 1);
@@ -184,6 +208,8 @@ export function renderLocalPuzzle(
       state.index++;
       board.position(state.game.fen(), true);
       setCaptionForMoveIndex(state.index - 1);
+      /* Badge after the animation completes (position is animated). */
+      setTimeout(function () { showBadgeForMove(state.index - 1); }, ANIM_MS);
       dispatchMoveEvent(state.index);
 
       setTimeout(function () {
@@ -252,6 +278,7 @@ export function renderLocalPuzzle(
       state.index++;
       board.position(state.game.fen(), false);
       setCaptionForMoveIndex(state.index - 1);
+      requestAnimationFrame(function () { showBadgeForMove(state.index - 1); });
       dispatchMoveEvent(state.index);
 
       boardDiv.classList.remove("jc-fire-once");
@@ -290,6 +317,7 @@ export function renderLocalPuzzle(
         state.index = 1;
         state.solverSide = state.game.turn();
         setCaptionForMoveIndex(0);
+        setTimeout(function () { showBadgeForMove(0); }, ANIM_MS);
       }
     }
   }
@@ -321,6 +349,7 @@ export function jcPuzzleCreate(el, cfg) {
     {
       comments: parsed.comments || [],
       variations: parsed.variations || [],
+      glyphs: parsed.glyphs || [],
       captionEl: cfg.captionEl || null,
       initialCaption: cfg.initialCaption || "",
     },
