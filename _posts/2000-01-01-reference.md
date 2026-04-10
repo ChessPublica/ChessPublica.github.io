@@ -235,10 +235,10 @@ All required external libraries [Chess.js](https://github.com/jhlywa/chess.js/),
 
 
 {% if page.previous.url %}
-[{{page.previous.title}}&nbsp;&raquo;]({{page.previous.url}})
+[{{page.previous.title}}]({{page.previous.url}})
 {% endif %}
 {% if page.next.url %}
-[&laquo;&nbsp;{{page.next.title}}]({{page.next.url}})
+[{{page.next.title}}]({{page.next.url}})
 {% endif %}
 
 <style>
