@@ -235,7 +235,7 @@ All required external libraries [Chess.js](https://github.com/jhlywa/chess.js/),
 
 ---
 
-[{{ site.title }}]({{ site.url }})
+# [{{ site.title }}]({{ site.url }})
 
 ## 🧰 Elements
 

@@ -43,7 +43,7 @@ Static chess diagrams are handled by the `<fen>` element.
 
 ---
 
-[{{ site.title }}]({{ site.url }})
+# [{{ site.title }}]({{ site.url }})
 
 ## 🧰 Elements
 

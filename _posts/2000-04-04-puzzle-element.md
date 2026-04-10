@@ -34,7 +34,7 @@ Chess puzzles are handled by the `<puzzle>` element.
 
 ---
 
-[{{ site.title }}]({{ site.url }})
+# [{{ site.title }}]({{ site.url }})
 
 ## 🧰 Elements
 

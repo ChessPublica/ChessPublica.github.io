@@ -40,7 +40,7 @@ ChessPublica `<pgn>` element displays the game with comments, variations, annota
 
 ---
 
-[{{ site.title }}]({{ site.url }})
+# [{{ site.title }}]({{ site.url }})
 
 ## 🧰 Elements
 
