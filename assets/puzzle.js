@@ -32,23 +32,33 @@ export function renderLocalPuzzle(
   var captionEl = opts.captionEl || null;
   var initialCaption = opts.initialCaption || "";
 
+  /* The text slot lives inside captionEl as a sibling of the refresh
+     button, so rewriting its innerHTML never wipes the button. It is
+     populated by createPuzzleBoard and reassigned on each reset. */
+  var captionTextEl = null;
+
   /* Write a per-move comment into the caption slot. When no comment
      exists for the given move the caption is cleared (per spec: the
      initial caption is shown only before the first move; after that,
      only move comments appear). */
   function setCaptionForMoveIndex(moveIndex) {
-    if (!captionEl) return;
+    if (!captionTextEl) return;
     var cm = comments[moveIndex];
     if (cm) {
-      captionEl.innerHTML = formatComment(cm);
+      captionTextEl.innerHTML = formatComment(cm);
     } else {
-      captionEl.textContent = "";
+      captionTextEl.textContent = "";
     }
   }
 
   function resetCaption() {
-    if (!captionEl) return;
-    captionEl.innerHTML = initialCaption ? formatComment(initialCaption) : "";
+    if (!captionTextEl) return;
+    captionTextEl.innerHTML = initialCaption ? formatComment(initialCaption) : "";
+  }
+
+  function setCaptionHTML(html) {
+    if (!captionTextEl) return;
+    captionTextEl.innerHTML = html;
   }
 
   /* Show a move-quality badge on the destination square of the move
@@ -92,10 +102,11 @@ export function renderLocalPuzzle(
     boardWrap.appendChild(boardDiv);
 
     /* Refresh button — hidden by default. Shown once the puzzle is
-       solved (acts as "replay the puzzle"). Uses the same
-       .comment-play-btn class as <pgn-player> so it gets the same
-       circular replay-icon styling. Placed inside captionEl so it
-       sits at the bottom-right of the comment area. */
+       solved, or after a variation first-move is accepted (both act
+       as "replay the puzzle"). Uses the same .comment-play-btn class
+       as <pgn-player> so it gets the same circular replay-icon
+       styling. Placed inside captionEl as a sibling of the inner text
+       div so rewriting the text's innerHTML never removes the button. */
     var refreshBtn = document.createElement("button");
     refreshBtn.type = "button";
     refreshBtn.className = "comment-play-btn jc-puzzle-refresh";
@@ -107,8 +118,14 @@ export function renderLocalPuzzle(
       handleRefresh();
     });
     if (captionEl) {
+      captionEl.innerHTML = "";
       captionEl.style.position = "relative";
+      captionTextEl = document.createElement("div");
+      captionTextEl.className = "jc-puzzle-caption-text";
+      captionEl.appendChild(captionTextEl);
       captionEl.appendChild(refreshBtn);
+    } else {
+      captionTextEl = null;
     }
 
     function showRefreshButton() {
@@ -150,11 +167,11 @@ export function renderLocalPuzzle(
       );
     }
 
-    /* Replay the puzzle from scratch (shown only once solved). */
+    /* Replay the puzzle from scratch. Called when the user clicks
+       the replay button — shown after solving, or after playing a
+       variation first-move (which is treated as a dead end). */
     function handleRefresh() {
-      if (state.solved && container.reset) {
-        container.reset();
-      }
+      if (container.reset) container.reset();
     }
 
     function finishSolved() {
@@ -162,6 +179,7 @@ export function renderLocalPuzzle(
       board.position(state.game.fen(), false);
       boardDiv.classList.remove("jc-fire-once");
       boardDiv.classList.add("jc-fire-solved");
+      setCaptionHTML("\uD83C\uDFC6 Puzzle solved!");
       showRefreshButton();
 
       boardDiv.addEventListener(
@@ -236,22 +254,31 @@ export function renderLocalPuzzle(
            move of a variation attached to the current index. */
         var matchedVar = matchVariationFirstMove(move.san);
 
+        if (matchedVar) {
+          /* Accept the variation move: leave it on the board, lock
+             further input, display the variation's comments under the
+             board, and show the replay button (the variation is a
+             dead end — the user must reset to continue). */
+          board.position(state.game.fen(), false);
+          state.locked = true;
+
+          var allComments = (matchedVar.comments || []).filter(Boolean);
+          if (allComments.length) {
+            setCaptionHTML(formatComment(allComments.join(" ")));
+          } else {
+            setCaptionHTML("");
+          }
+
+          showRefreshButton();
+          return true;
+        }
+
         /* Wrong move — undo and shake. */
         state.game.undo();
         board.position(state.game.fen(), false);
         boardDiv.classList.remove("jc-shake");
         void boardDiv.offsetWidth;
         boardDiv.classList.add("jc-shake");
-
-        /* If a variation matched, collect all its comments and display
-           them in the caption so the solver sees the instructive line
-           even though the move is rejected. */
-        if (matchedVar && captionEl) {
-          var allComments = (matchedVar.comments || []).filter(Boolean);
-          if (allComments.length) {
-            captionEl.innerHTML = formatComment(allComments.join(" "));
-          }
-        }
 
         return "snapback";
       }
