@@ -300,7 +300,11 @@ export function initPuzzleElements() {
           showError(wrapper, "failed to load puzzle from " + src + ": " + e.message);
         });
     } else {
-      renderPuzzleFromText(oldEl.textContent, wrapper);
+      /* Read innerHTML (not textContent) so inline HTML the author
+         put inside comments — <br>, <strong>, Kramdown-produced
+         <em>…</em> — survives into the tokenizer and can be rendered
+         by the sanitizing formatComment() helper. */
+      renderPuzzleFromText(oldEl.innerHTML, wrapper);
     }
   });
 }

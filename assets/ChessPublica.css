@@ -52,6 +52,19 @@
 
 .jc-shake{animation: shake 0.5s ease-in-out;}
 
+/* Clickable SAN tokens inside a puzzle's side-line variation comment.
+   Rendered by formatCommentClickable() — clicking replays the line
+   from the variation start up to that move. */
+.jc-inline-move {
+  display: inline-block;
+  cursor: pointer;
+  padding: 0 2px;
+  border-radius: 2px;
+  transition: background 0.1s;
+}
+.jc-inline-move:hover  { background: #eee; color: #000; }
+.jc-inline-move.active { background: #c8e6c9; font-weight: bold; color: #000; }
+
 /* <pgn-player> element */
 
 /* WRAPPER */

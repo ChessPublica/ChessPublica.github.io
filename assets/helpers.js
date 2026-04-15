@@ -133,9 +133,16 @@ export function stripFigurines(s) {
    are stripped. */
 var ALLOWED_COMMENT_TAGS = {
   br: [], b: [], strong: [], i: [], em: [], u: [], s: [], del: [], ins: [],
-  code: [], kbd: [], mark: [], small: [], sub: [], sup: [], span: [],
+  code: [], kbd: [], mark: [], small: [], sub: [], sup: [],
+  span: ["class", "data-san"],
   a: ["href", "title"]
 };
+
+/* Classes that may appear on <span> in sanitized comments.  Arbitrary
+   class names are stripped to prevent style/layout injection via the
+   sanitizer, but our own inline-move spans need to keep their class
+   so the puzzle engine can style/target them. */
+var ALLOWED_SPAN_CLASSES = /^jc-inline-move$/;
 
 /* Only http(s), mailto, fragment and same-origin paths are allowed as
    link hrefs — blocks javascript: and data: URLs. */
@@ -240,6 +247,11 @@ function _sanitizeCommentDOM(root) {
             child.removeAttribute("href");
           }
         }
+        if (name === "class" && tag === "span") {
+          if (!ALLOWED_SPAN_CLASSES.test(attrs[a].value)) {
+            child.removeAttribute("class");
+          }
+        }
       }
       _sanitizeCommentDOM(child);
     } else {
@@ -266,6 +278,67 @@ export function formatComment(rawText) {
   var html = _applyInlineMarkdown(String(rawText));
   var tpl = document.createElement("template");
   tpl.innerHTML = html;
+  _sanitizeCommentDOM(tpl.content);
+  return tpl.innerHTML;
+}
+
+/* Wrap SAN tokens ("Re1", "e4", "Bxe5+", "O-O") in prose text with a
+   clickable <span class="jc-inline-move" data-san="…">…</span>.  The
+   first alternative (<[^>]*>) consumes HTML tags and attribute values
+   so SAN-shaped substrings inside those are not touched, mirroring
+   the tag-aware technique used by _applyFigurineNotation.  Must run
+   BEFORE figurine conversion so the data-san attribute keeps the
+   letter-based SAN that chess.js understands. */
+function _wrapInlineSanMoves(text) {
+  return text.replace(
+    /<[^>]*>|(\b(?:O-O-O|O-O|[KQRBN][a-h]?[1-8]?x?[a-h][1-8](?:=[QRBN])?[+#]?|[a-h](?:x[a-h])?[1-8](?:=[QRBN])?[+#]?)\b)/g,
+    function (m, san, offset, str) {
+      if (!san) return m;
+      if (offset > 0 && /[a-zA-Z0-9]/.test(str[offset - 1])) return m;
+      return '<span class="jc-inline-move" data-san="' + san + '">' + san + '</span>';
+    },
+  );
+}
+
+/**
+ * Like formatComment() but additionally wraps SAN move tokens inside
+ * the comment text in clickable spans so the caller can attach click
+ * handlers.  Used by the puzzle engine when a side-line variation is
+ * triggered — the variation's instructive move list is rendered as
+ * individually clickable spans that replay the line on the board.
+ */
+export function formatCommentClickable(rawText) {
+  if (rawText == null) return "";
+
+  /* Re-implement the _applyInlineMarkdown pipeline so the SAN wrap
+     step can slot in between the markdown transforms and the figurine
+     conversion.  Keeping formatComment() untouched avoids introducing
+     clickable spans into places that don't want them. */
+  var codes = [];
+  var text = String(rawText);
+
+  text = text.replace(/`([^`\n]+)`/g, function (_m, code) {
+    var idx = codes.push("<code>" + code + "</code>") - 1;
+    return "\u0000CODE" + idx + "\u0000";
+  });
+
+  text = text.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
+  text = text.replace(/__([^_\n]+)__/g, "<strong>$1</strong>");
+  text = text.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, "$1<em>$2</em>");
+  text = text.replace(/(^|[^_\w])_([^_\n]+)_(?!_)/g, "$1<em>$2</em>");
+  text = text.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, function (_m, label, url) {
+    return '<a href="' + url + '">' + label + "</a>";
+  });
+
+  text = _wrapInlineSanMoves(text);
+  text = _applyFigurineNotation(text);
+
+  text = text.replace(/\u0000CODE(\d+)\u0000/g, function (_m, i) {
+    return codes[+i];
+  });
+
+  var tpl = document.createElement("template");
+  tpl.innerHTML = text;
   _sanitizeCommentDOM(tpl.content);
   return tpl.innerHTML;
 }
@@ -328,6 +401,32 @@ export function tokenizeMoves(text) {
     .filter(function (t) { return t && !/^(1-0|0-1|1\/2-1\/2|\*)$/.test(t); });
 }
 
+/* Lichess-style inline annotations inside PGN comments:
+     [%csl Gc5,Rd5]      coloured squares
+     [%cal Ga2a4,Re4e5]  coloured arrows
+   Colour prefixes: R (red), G (green), B (blue), Y (yellow). */
+var _RE_CSL = /\[%csl\s+([^\]]+)\]/g;
+var _RE_CAL = /\[%cal\s+([^\]]+)\]/g;
+var _RE_BRACKET_ANNOT = /\[%[^\]]*\]/g;
+
+export function parseCSL(data) {
+  return String(data || "").split(",").map(function (entry) {
+    entry = entry.trim();
+    return { color: entry[0], square: entry.slice(1) };
+  }).filter(function (m) {
+    return m.color && /^[a-h][1-8]$/.test(m.square);
+  });
+}
+
+export function parseCAL(data) {
+  return String(data || "").split(",").map(function (entry) {
+    entry = entry.trim();
+    return { color: entry[0], from: entry.slice(1, 3), to: entry.slice(3, 5) };
+  }).filter(function (a) {
+    return a.color && /^[a-h][1-8]$/.test(a.from) && /^[a-h][1-8]$/.test(a.to);
+  });
+}
+
 /**
  * Parse PGN-ish move text into parallel arrays of SAN moves, the
  * comments attached to them, and any variations branching off them.
@@ -337,8 +436,13 @@ export function tokenizeMoves(text) {
  * mainline move they branch from — so variations[i] is either null or
  * an array of { moves, comments, variations } objects.
  *
- * Returns { moves, comments, variations, glyphs } with all four arrays
- * having length === moves.length.
+ * Inline [%csl …] / [%cal …] annotations inside a comment are pulled
+ * out and returned in parallel `squareMarks` / `arrows` arrays so
+ * consumers can render them as overlays.  The annotation text itself
+ * is stripped from the comment string.
+ *
+ * Returns { moves, comments, variations, glyphs, arrows, squareMarks }
+ * with all arrays having length === moves.length.
  */
 export function parseMovesWithComments(text) {
   var s = String(text || "").replace(/;[^\n]*/g, " ");
@@ -347,6 +451,8 @@ export function parseMovesWithComments(text) {
   var comments = [];
   var variations = [];
   var glyphs = [];
+  var arrows = [];
+  var squareMarks = [];
   var i = 0;
 
   while (i < s.length) {
@@ -359,10 +465,34 @@ export function parseMovesWithComments(text) {
     if (ch === "{") {
       var j = i + 1;
       while (j < s.length && s[j] !== "}") j++;
-      var cm = s.slice(i + 1, j).trim();
-      if (cm && moves.length > 0) {
+      var rawCm = s.slice(i + 1, j);
+
+      /* Extract annotations before cleaning the text. */
+      var newSquareMarks = [];
+      var newArrows = [];
+      var am;
+      _RE_CSL.lastIndex = 0;
+      while ((am = _RE_CSL.exec(rawCm))) {
+        newSquareMarks = newSquareMarks.concat(parseCSL(am[1]));
+      }
+      _RE_CAL.lastIndex = 0;
+      while ((am = _RE_CAL.exec(rawCm))) {
+        newArrows = newArrows.concat(parseCAL(am[1]));
+      }
+
+      var cm = rawCm.replace(_RE_BRACKET_ANNOT, "").replace(/\s+/g, " ").trim();
+
+      if (moves.length > 0) {
         var idx = moves.length - 1;
-        comments[idx] = comments[idx] ? comments[idx] + " " + cm : cm;
+        if (cm) {
+          comments[idx] = comments[idx] ? comments[idx] + " " + cm : cm;
+        }
+        if (newSquareMarks.length) {
+          squareMarks[idx] = (squareMarks[idx] || []).concat(newSquareMarks);
+        }
+        if (newArrows.length) {
+          arrows[idx] = (arrows[idx] || []).concat(newArrows);
+        }
       }
       i = j + 1;
       continue;
@@ -439,6 +569,8 @@ export function parseMovesWithComments(text) {
       comments.push(null);
       variations.push(null);
       glyphs.push(suffixMatch ? suffixMatch[0] : null);
+      arrows.push(null);
+      squareMarks.push(null);
       i += mv[0].length;
       continue;
     }
@@ -446,7 +578,14 @@ export function parseMovesWithComments(text) {
     i++;
   }
 
-  return { moves: moves, comments: comments, variations: variations, glyphs: glyphs };
+  return {
+    moves: moves,
+    comments: comments,
+    variations: variations,
+    glyphs: glyphs,
+    arrows: arrows,
+    squareMarks: squareMarks,
+  };
 }
 
 /* ================================================================
@@ -487,6 +626,8 @@ export function parseGame(pgn) {
         comments: new Array(moves.length).fill(null),
         variations: new Array(moves.length).fill(null),
         glyphs: new Array(moves.length).fill(null),
+        arrows: new Array(moves.length).fill(null),
+        squareMarks: new Array(moves.length).fill(null),
         firstMoveAuto: false,
         orientation: null,
       };
@@ -511,6 +652,8 @@ export function parseGame(pgn) {
     comments: parsedMoves.comments,
     variations: parsedMoves.variations || [],
     glyphs: parsedMoves.glyphs || [],
+    arrows: parsedMoves.arrows || [],
+    squareMarks: parsedMoves.squareMarks || [],
     firstMoveAuto: firstMoveAuto,
     orientation: orientation,
   };
