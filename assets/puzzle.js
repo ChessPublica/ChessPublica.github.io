@@ -203,7 +203,15 @@ export function renderLocalPuzzle(
       board.position(state.game.fen(), false);
       boardDiv.classList.remove("jc-fire-once");
       boardDiv.classList.add("jc-fire-solved");
-      setCaptionHTML("\uD83C\uDFC6 Puzzle solved!");
+      /* Append the solved banner on its own line without wiping the
+         last move's comment (if any). */
+      if (captionTextEl) {
+        var existing = captionTextEl.innerHTML.trim();
+        var solved = "\uD83C\uDFC6 Puzzle solved!";
+        captionTextEl.innerHTML = existing
+          ? existing + "<br>" + solved
+          : solved;
+      }
       showRefreshButton();
 
       boardDiv.addEventListener(
