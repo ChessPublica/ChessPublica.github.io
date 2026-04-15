@@ -16,13 +16,9 @@ title: Home
 1. Re2! e4 ( 1. Re1? { 🚫 Wrong move<br>A seemingly sensible move, Re1? would be a sad mistake. Black maintains the opposition after 1... e4 2. Ke7 Ke5 3. Kd7 Kd5 and manages to draw. 🤝 Please try again. } ) 2. Re1! Ke5 { Losing a move with 1. Re2! and 2. Re1! is the key! 🔑 } 3. Ke7 Kd4 {[%cal Ge7e6]} 4. Ke6 Kd3 {[%cal Ge6e5]} 5. Ke5 e3 {[%cal Ge5f4]} 6. Kf4 e2 {[%cal Gf4f3]} 7. Kf3 { Black will lose the pawn, and the game. 🪦}
 </puzzle>
 
----
-
 ## Complete Element Reference
 
 This document demonstrates **every custom HTML element** provided by **ChessPublica**, along with all supported usage patterns.
-
----
 
 ## 📋 Table of Contents
 
@@ -31,8 +27,6 @@ This document demonstrates **every custom HTML element** provided by **ChessPubl
 3. [`<pgn>`](#3-pgn--annotated-game-viewer)
 4. [`<pgn-player>`](#4-pgn-player--interactive-video-style-game-player) 
 5. [Setup & Dependencies](#5-setup--dependencies)
-
----
 
 ## 1. 🔲 `<fen>` — Static Diagram from FEN String
 
@@ -74,8 +68,6 @@ Renders a non-interactive chessboard diagram from a FEN string.
 [Orientation "Black"]
 </fen>
 
----
-
 ## 2. 🧩 `<puzzle>` — Single Interactive Puzzle
 
 Renders a drag-and-drop puzzle. The user must find the correct sequence of moves.
@@ -114,8 +106,6 @@ Renders a drag-and-drop puzzle. The user must find the correct sequence of moves
 | `FEN` | ✅ | Position |
 | `Orientation` | ❌ | `"white"` or `"black"` |
 | `FirstMoveAuto` | ❌ | `"true"` to auto-play first move |
-
----
 
 ## 3. `<pgn>` — Annotated Game for Blog Posts
 
@@ -166,8 +156,6 @@ Renders a complete annotated game with move numbers, comments, variations, NAGs,
 | Results | `1-0`, `0-1`, `1/2-1/2`, `*` | Game termination |
 | Diagrams | `[D]` in comment | Renders a diagram at that position |
 | | `[%cal]` and `[%csl]` tags in comment | Renders a diagram at that position |
-
----
 
 ## 4. ⚔️ `<pgn-player>` — Interactive Video-Style Game Player
 
@@ -235,8 +223,6 @@ Renders a video-style chess game player with play/pause controls, an eval bar, c
 | `<puzzle>` | Single puzzle or puzzle-pack | ✅ | Inline or `src` |
 | `<pgn>` | Annotated game with diagrams | ❌ | Inline or `src` |
 | `<pgn-player>` | Video-style PGN player | ✅ | Inline or `src` |
-
----
 
 ## 5. Setup & Dependencies
 
