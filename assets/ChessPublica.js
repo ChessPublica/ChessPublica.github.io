@@ -41,6 +41,7 @@ if (document.readyState === "loading") {
   var url = new URL("./pgn-player.js", import.meta.url).href;
   var s = document.createElement("script");
   s.src = url;
+  s.type = "module";
   s.dataset.chesspublicaPgnPlayer = "1";
   document.head.appendChild(s);
 })();
