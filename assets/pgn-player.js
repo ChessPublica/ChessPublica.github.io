@@ -1,5 +1,13 @@
 /* ChessPublica <pgn-player> element */
 
+import { parseCAL, parseCSL } from "./helpers.js";
+import {
+  renderAnnotations as applyBoardAnnotations,
+  clearAnnotations,
+  createGridOverlaySVG,
+  getSquareCenter,
+} from "./board.js";
+
 function loadPGN(pgn) {
 
   const chess = new Chess();
@@ -704,231 +712,6 @@ class GoodMove {
     }
   }
 }
-function initOverlay(boardDiv, moveNode) {
-
-  // Remove old annotation overlay (keep last-move overlay intact)
-  const old = boardDiv.querySelector(".board-overlay:not(.last-move-overlay)");
-  if (old) old.remove();
-
-  // Create SVG overlay and attach it inside the actual 8×8 grid so 100%/100%
-  // maps exactly to the square area — avoids sub-pixel offsets from the
-  // chessboard.js outer border.
-  const svg = createGridOverlaySVG(boardDiv);
-  if (!svg) return;
-
-  if (!moveNode) return;
-
-  const grid = svg.parentNode;
-
-  // Draw square highlights (circles)
-  moveNode.squareMarks?.forEach(mark => {
-    drawCircle(svg, grid, mark.square, mark.color);
-  });
-
-  // Draw arrows
-  moveNode.arrows?.forEach(arrow => {
-    drawArrow(svg, grid, arrow.from, arrow.to, arrow.color);
-  });
-}
-
-
-/* ================= UTIL ================= */
-
-/**
- * Locate the chessboard.js inner 8×8 grid element. All squares live directly
- * inside this element; attaching the SVG overlay here (instead of the outer
- * board wrapper) avoids any border/padding offsets and gives pixel-perfect
- * alignment without manual positioning math.
- */
-function getGridElement(boardDiv) {
-  return boardDiv.querySelector(".chessboard-63f37") || boardDiv;
-}
-
-/**
- * Create an SVG board-overlay element, attached inside the actual 8×8 grid,
- * sized 100%×100% so viewBox 0..100 maps exactly to the square area.
- */
-function createGridOverlaySVG(boardDiv, extraClass) {
-  const grid = getGridElement(boardDiv);
-  if (!grid) return null;
-
-  // Ensure the grid can host absolutely-positioned overlays.
-  if (grid !== boardDiv && getComputedStyle(grid).position === "static") {
-    grid.style.position = "relative";
-  }
-
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.classList.add("board-overlay");
-  if (extraClass) svg.classList.add(extraClass);
-  svg.setAttribute("viewBox", "0 0 100 100");
-  svg.setAttribute("preserveAspectRatio", "none");
-  svg.style.position = "absolute";
-  svg.style.left   = "0";
-  svg.style.top    = "0";
-  svg.style.width  = "100%";
-  svg.style.height = "100%";
-  svg.style.pointerEvents = "none";
-
-  grid.appendChild(svg);
-  return svg;
-}
-
-function getSquareCenter(svg, grid, square) {
-
-  const squareEl = grid.querySelector(`[data-square="${square}"]`);
-  if (!squareEl) return null;
-
-  // Compute the square's true center in screen-pixel space, then map it
-  // into the SVG's own user-coordinate system via the SVG's current
-  // transformation matrix. This is immune to border/padding/box-sizing
-  // differences on any ancestor, so the arrows and circles align exactly
-  // with the squares regardless of how chessboard.js lays out its DOM.
-  const ctm = svg.getScreenCTM();
-  if (!ctm) return null;
-  const inv = ctm.inverse();
-
-  const sr = squareEl.getBoundingClientRect();
-  const cx = sr.left + sr.width  / 2;
-  const cy = sr.top  + sr.height / 2;
-
-  const pt = svg.createSVGPoint();
-  pt.x = cx;  pt.y = cy;
-  const center = pt.matrixTransform(inv);
-
-  pt.x = cx + sr.width;  pt.y = cy;
-  const edge = pt.matrixTransform(inv);
-
-  return {
-    x:    center.x,
-    y:    center.y,
-    size: edge.x - center.x,   // full square width in SVG user units
-  };
-}
-
-function lichessColor(code, alpha = 0.85) {
-
-  const colors = {
-    R: [255,   0,   0],
-    Y: [255, 170,   0],
-    G: [  0, 170,   0],
-    B: [  0,   0, 255]
-  };
-
-  const rgb = colors[code] || colors.R;
-  return `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, ${alpha})`;
-}
-
-
-/* ================= CIRCLE ================= */
-
-function drawCircle(svg, boardDiv, square, color) {
-
-  const center = getSquareCenter(svg, boardDiv, square);
-  if (!center) return;
-
-  const strokeWidth = center.size * 0.09;
-  const radius      = (center.size / 2) - (strokeWidth / 2);
-
-  const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-
-  circle.setAttribute("cx",           center.x);
-  circle.setAttribute("cy",           center.y);
-  circle.setAttribute("r",            radius);
-  circle.setAttribute("fill",         "none");
-  circle.setAttribute("stroke",       lichessColor(color, 0.8));
-  circle.setAttribute("stroke-width", strokeWidth);
-
-  svg.appendChild(circle);
-}
-
-
-/* ================= ARROW ================= */
-/* FIX #5: arrow tip now reaches the exact centre of the destination square */
-
-function drawArrow(svg, boardDiv, fromSquare, toSquare, color) {
-
-  const start = getSquareCenter(svg, boardDiv, fromSquare);
-  const end   = getSquareCenter(svg, boardDiv, toSquare);
-
-  if (!start || !end) return;
-
-  const dx     = end.x - start.x;
-  const dy     = end.y - start.y;
-  const angle  = Math.atan2(dy, dx);
-  const length = Math.sqrt(dx * dx + dy * dy);
-
-  const bodyWidth  = start.size * 0.16;
-  const headWidth  = bodyWidth  * 3.5;
-  /* FIX #5: headLength sized so tip lands at the square center (end.x, end.y) */
-  let headLength = start.size * 0.55;
-  /* FIX #5: startInset only — no edgeInset shortening at the tip */
-  let startInset = start.size * 0.2;
-
-  /* Scale arrow parts down for short moves (e.g. adjacent-square pawn pushes)
-     so that every move always gets a visible arrow. */
-  const minBodyFraction = 0.15;
-  const totalInset = headLength + startInset;
-  if (totalInset >= length * (1 - minBodyFraction)) {
-    const scale = (length * (1 - minBodyFraction)) / totalInset;
-    headLength *= scale;
-    startInset *= scale;
-  }
-  const bodyLength = length - headLength - startInset;
-
-  const sin = Math.sin(angle);
-  const cos = Math.cos(angle);
-
-  const halfBody = bodyWidth / 2;
-  const halfHead = headWidth / 2;
-
-  const originX = start.x + startInset * cos;
-  const originY = start.y + startInset * sin;
-
-  // Body rectangle corners
-  const p1x = originX + halfBody * sin;
-  const p1y = originY - halfBody * cos;
-  const p2x = originX - halfBody * sin;
-  const p2y = originY + halfBody * cos;
-
-  const baseX = originX + bodyLength * cos;
-  const baseY = originY + bodyLength * sin;
-
-  const p3x = baseX - halfBody * sin;
-  const p3y = baseY + halfBody * cos;
-  const p7x = baseX + halfBody * sin;
-  const p7y = baseY - halfBody * cos;
-
-  // Head base
-  const p4x = baseX - halfHead * sin;
-  const p4y = baseY + halfHead * cos;
-  const p6x = baseX + halfHead * sin;
-  const p6y = baseY - halfHead * cos;
-
-  /* FIX #5: tip is exactly end.x / end.y — the square center, no inset */
-  const tipX = end.x;
-  const tipY = end.y;
-
-  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-
-  const d = [
-    `M ${p1x} ${p1y}`,
-    `L ${p2x} ${p2y}`,
-    `L ${p3x} ${p3y}`,
-    `L ${p4x} ${p4y}`,
-    `L ${tipX} ${tipY}`,
-    `L ${p6x} ${p6y}`,
-    `L ${p7x} ${p7y}`,
-    "Z"
-  ].join(" ");
-
-  path.setAttribute("d",    d);
-  path.setAttribute("fill", lichessColor(color, 0.85));
-
-  svg.appendChild(path);
-}
-
-// Expose at module scope so callers always find it
-window.initOverlay = initOverlay;
 /* video-engine.js */
 
 /* ---------------------------------------------------------------
@@ -1342,22 +1125,10 @@ class VideoEngine {
     this.clearOverlay();
     if (ann) {
       const node = { arrows: [], squareMarks: [] };
-      ann.cal?.forEach(entry => {
-        entry.split(",").forEach(item => {
-          if (item.length >= 5) {
-            node.arrows.push({ color: item[0], from: item.slice(1,3), to: item.slice(3,5) });
-          }
-        });
-      });
-      ann.csl?.forEach(entry => {
-        entry.split(",").forEach(item => {
-          if (item.length >= 3) {
-            node.squareMarks.push({ color: item[0], square: item.slice(1,3) });
-          }
-        });
-      });
+      ann.cal?.forEach(entry => node.arrows.push(...parseCAL(entry)));
+      ann.csl?.forEach(entry => node.squareMarks.push(...parseCSL(entry)));
       if (node.arrows.length || node.squareMarks.length) {
-        initOverlay(this.boardEl, node);
+        applyBoardAnnotations(this.boardEl, node);
       }
     }
   }
@@ -1407,34 +1178,26 @@ class VideoEngine {
   =========================== */
 
   clearOverlay() {
-    const old = this.boardEl.querySelector(".board-overlay:not(.last-move-overlay)");
-    if (old) old.remove();
+    clearAnnotations(this.boardEl);
   }
 
   buildMoveNode(moveIndex) {
-
     if (moveIndex < 0) return null;
     const ann = this.state.annotations?.[moveIndex];
     if (!ann) return null;
 
     const node = { arrows: [], squareMarks: [] };
+    ann.cal?.forEach(entry => node.arrows.push(...parseCAL(entry)));
+    ann.csl?.forEach(entry => node.squareMarks.push(...parseCSL(entry)));
 
-    ann.cal?.forEach(item => {
-      node.arrows.push({ color: item[0], from: item.slice(1,3), to: item.slice(3,5) });
-    });
-
-    ann.csl?.forEach(item => {
-      node.squareMarks.push({ color: item[0], square: item.slice(1,3) });
-    });
-
-    return node;
+    return (node.arrows.length || node.squareMarks.length) ? node : null;
   }
 
   renderAnnotations(moveIndex) {
     this.clearOverlay();
     if (moveIndex < 0) return;
     const node = this.buildMoveNode(moveIndex);
-    if (node) initOverlay(this.boardEl, node);
+    if (node) applyBoardAnnotations(this.boardEl, node);
   }
 
 
