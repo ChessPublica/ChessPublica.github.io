@@ -6,6 +6,7 @@
  */
 
 import { PIECE_THEME, normalizeSAN, parseGame, formatComment, getDestinationSquare, renderMoveQualityBadge, clearMoveQualityBadge } from "./helpers.js";
+import { renderAnnotations, clearAnnotations } from "./board.js";
 
 /* ================================================================
    1. PUZZLE ENGINE
@@ -29,6 +30,8 @@ export function renderLocalPuzzle(
   var comments = opts.comments || [];
   var variations = opts.variations || [];
   var pgnGlyphs = opts.glyphs || [];
+  var pgnArrows = opts.arrows || [];
+  var pgnSquareMarks = opts.squareMarks || [];
   var captionEl = opts.captionEl || null;
   var initialCaption = opts.initialCaption || "";
 
@@ -65,6 +68,7 @@ export function renderLocalPuzzle(
      at the given index.  The boardDiv reference is captured from the
      closure inside createPuzzleBoard. */
   var _boardDivRef = null;
+  var _boardWrapRef = null;
 
   function showBadgeForMove(moveIndex) {
     if (!_boardDivRef) return;
@@ -79,6 +83,25 @@ export function renderLocalPuzzle(
     var color = (moveIndex % 2 === 0) ? startTurn : (startTurn === "w" ? "b" : "w");
     var square = getDestinationSquare(san, color);
     if (square) renderMoveQualityBadge(_boardDivRef, square, glyph);
+  }
+
+  /* Draw the coloured squares / arrows attached to the move at the
+     given index (from [%csl …] / [%cal …] annotations inside its PGN
+     comment).  When the move has no annotations the overlay is
+     cleared, so stale arrows from a previous move don't linger. */
+  function showAnnotationsForMove(moveIndex) {
+    if (!_boardDivRef) return;
+    var arrows = pgnArrows[moveIndex];
+    var squareMarks = pgnSquareMarks[moveIndex];
+    if ((arrows && arrows.length) || (squareMarks && squareMarks.length)) {
+      renderAnnotations(
+        _boardDivRef,
+        { arrows: arrows || [], squareMarks: squareMarks || [] },
+        _boardWrapRef,
+      );
+    } else {
+      clearAnnotations(_boardDivRef, _boardWrapRef);
+    }
   }
 
   function createPuzzleBoard() {
@@ -96,6 +119,7 @@ export function renderLocalPuzzle(
     boardDiv.className = "jc-board";
     boardDiv.style.position = "relative";
     _boardDivRef = boardDiv;
+    _boardWrapRef = boardWrap;
     /* The wrapper already supplies the 1rem auto margin .jc-board uses
        on its own, so zero it here to avoid doubling the vertical gap. */
     boardDiv.style.margin = "0";
@@ -208,8 +232,12 @@ export function renderLocalPuzzle(
       state.index++;
       board.position(state.game.fen(), true);
       setCaptionForMoveIndex(state.index - 1);
-      /* Badge after the animation completes (position is animated). */
-      setTimeout(function () { showBadgeForMove(state.index - 1); }, ANIM_MS);
+      /* Badge + annotations after the animation completes (position is
+         animated and we want arrows to settle on the final squares). */
+      setTimeout(function () {
+        showBadgeForMove(state.index - 1);
+        showAnnotationsForMove(state.index - 1);
+      }, ANIM_MS);
       dispatchMoveEvent(state.index);
 
       setTimeout(function () {
@@ -269,6 +297,22 @@ export function renderLocalPuzzle(
             setCaptionHTML("");
           }
 
+          /* Render any [%csl …] / [%cal …] annotations attached to the
+             variation's first move, or clear stale arrows otherwise. */
+          var varArrows = (matchedVar.arrows && matchedVar.arrows[0]) || null;
+          var varMarks = (matchedVar.squareMarks && matchedVar.squareMarks[0]) || null;
+          requestAnimationFrame(function () {
+            if ((varArrows && varArrows.length) || (varMarks && varMarks.length)) {
+              renderAnnotations(
+                _boardDivRef,
+                { arrows: varArrows || [], squareMarks: varMarks || [] },
+                _boardWrapRef,
+              );
+            } else {
+              clearAnnotations(_boardDivRef, _boardWrapRef);
+            }
+          });
+
           showRefreshButton();
           return true;
         }
@@ -286,7 +330,10 @@ export function renderLocalPuzzle(
       state.index++;
       board.position(state.game.fen(), false);
       setCaptionForMoveIndex(state.index - 1);
-      requestAnimationFrame(function () { showBadgeForMove(state.index - 1); });
+      requestAnimationFrame(function () {
+        showBadgeForMove(state.index - 1);
+        showAnnotationsForMove(state.index - 1);
+      });
       dispatchMoveEvent(state.index);
 
       boardDiv.classList.remove("jc-fire-once");
@@ -325,7 +372,10 @@ export function renderLocalPuzzle(
         state.index = 1;
         state.solverSide = state.game.turn();
         setCaptionForMoveIndex(0);
-        setTimeout(function () { showBadgeForMove(0); }, ANIM_MS);
+        setTimeout(function () {
+          showBadgeForMove(0);
+          showAnnotationsForMove(0);
+        }, ANIM_MS);
       }
     }
   }
@@ -358,6 +408,8 @@ export function jcPuzzleCreate(el, cfg) {
       comments: parsed.comments || [],
       variations: parsed.variations || [],
       glyphs: parsed.glyphs || [],
+      arrows: parsed.arrows || [],
+      squareMarks: parsed.squareMarks || [],
       captionEl: cfg.captionEl || null,
       initialCaption: cfg.initialCaption || "",
     },

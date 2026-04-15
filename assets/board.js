@@ -50,7 +50,35 @@ function _nagToGlyph(nags) {
 }
 
 function initOverlay(wrapper, boardDiv, moveNode) {
+  renderAnnotations(boardDiv, moveNode, wrapper);
+}
+
+/**
+ * Render (or clear) Lichess-style square circles + arrows on a board.
+ *
+ * Removes any existing .jc-overlay SVG in the board's wrapper, then
+ * draws the supplied annotations.  Pass `null`/an empty object to
+ * clear the board.
+ *
+ * @param {HTMLElement} boardDiv    the .jc-board element
+ * @param {?Object}     annotations { squareMarks, arrows } — may be null
+ * @param {HTMLElement} [wrapper]   defaults to boardDiv.parentNode
+ */
+export function renderAnnotations(boardDiv, annotations, wrapper) {
+  wrapper = wrapper || boardDiv.parentNode;
+  if (!wrapper) return;
+
+  /* Remove any previously rendered overlay so repeated calls don't
+     stack circles/arrows on top of each other. */
+  var existing = wrapper.querySelectorAll(".jc-overlay");
+  for (var e = 0; e < existing.length; e++) existing[e].remove();
+
+  /* Square cache can go stale if the board is re-rendered between
+     calls (e.g. puzzle reset).  Always refresh. */
+  boardDiv.__squareCache = null;
+
   var size = boardDiv.getBoundingClientRect().width;
+  if (!size) return;
 
   var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.classList.add("jc-overlay");
@@ -60,19 +88,27 @@ function initOverlay(wrapper, boardDiv, moveNode) {
 
   wrapper.appendChild(svg);
 
-  if (!moveNode) return;
+  if (!annotations) return;
 
-  if (moveNode.squareMarks) {
-    moveNode.squareMarks.forEach(function (mark) {
+  if (annotations.squareMarks) {
+    annotations.squareMarks.forEach(function (mark) {
       drawCircle(svg, boardDiv, mark.square, mark.color);
     });
   }
 
-  if (moveNode.arrows) {
-    moveNode.arrows.forEach(function (arrow) {
+  if (annotations.arrows) {
+    annotations.arrows.forEach(function (arrow) {
       drawArrow(svg, boardDiv, arrow.from, arrow.to, arrow.color);
     });
   }
+}
+
+/** Remove any rendered annotation overlay from the board's wrapper. */
+export function clearAnnotations(boardDiv, wrapper) {
+  wrapper = wrapper || boardDiv.parentNode;
+  if (!wrapper) return;
+  var existing = wrapper.querySelectorAll(".jc-overlay");
+  for (var e = 0; e < existing.length; e++) existing[e].remove();
 }
 
 function getSquareCenter(boardDiv, square) {

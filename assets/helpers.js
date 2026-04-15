@@ -328,6 +328,32 @@ export function tokenizeMoves(text) {
     .filter(function (t) { return t && !/^(1-0|0-1|1\/2-1\/2|\*)$/.test(t); });
 }
 
+/* Lichess-style inline annotations inside PGN comments:
+     [%csl Gc5,Rd5]      coloured squares
+     [%cal Ga2a4,Re4e5]  coloured arrows
+   Colour prefixes: R (red), G (green), B (blue), Y (yellow). */
+var _RE_CSL = /\[%csl\s+([^\]]+)\]/g;
+var _RE_CAL = /\[%cal\s+([^\]]+)\]/g;
+var _RE_BRACKET_ANNOT = /\[%[^\]]*\]/g;
+
+export function parseCSL(data) {
+  return String(data || "").split(",").map(function (entry) {
+    entry = entry.trim();
+    return { color: entry[0], square: entry.slice(1) };
+  }).filter(function (m) {
+    return m.color && /^[a-h][1-8]$/.test(m.square);
+  });
+}
+
+export function parseCAL(data) {
+  return String(data || "").split(",").map(function (entry) {
+    entry = entry.trim();
+    return { color: entry[0], from: entry.slice(1, 3), to: entry.slice(3, 5) };
+  }).filter(function (a) {
+    return a.color && /^[a-h][1-8]$/.test(a.from) && /^[a-h][1-8]$/.test(a.to);
+  });
+}
+
 /**
  * Parse PGN-ish move text into parallel arrays of SAN moves, the
  * comments attached to them, and any variations branching off them.
@@ -337,8 +363,13 @@ export function tokenizeMoves(text) {
  * mainline move they branch from — so variations[i] is either null or
  * an array of { moves, comments, variations } objects.
  *
- * Returns { moves, comments, variations, glyphs } with all four arrays
- * having length === moves.length.
+ * Inline [%csl …] / [%cal …] annotations inside a comment are pulled
+ * out and returned in parallel `squareMarks` / `arrows` arrays so
+ * consumers can render them as overlays.  The annotation text itself
+ * is stripped from the comment string.
+ *
+ * Returns { moves, comments, variations, glyphs, arrows, squareMarks }
+ * with all arrays having length === moves.length.
  */
 export function parseMovesWithComments(text) {
   var s = String(text || "").replace(/;[^\n]*/g, " ");
@@ -347,6 +378,8 @@ export function parseMovesWithComments(text) {
   var comments = [];
   var variations = [];
   var glyphs = [];
+  var arrows = [];
+  var squareMarks = [];
   var i = 0;
 
   while (i < s.length) {
@@ -359,10 +392,34 @@ export function parseMovesWithComments(text) {
     if (ch === "{") {
       var j = i + 1;
       while (j < s.length && s[j] !== "}") j++;
-      var cm = s.slice(i + 1, j).trim();
-      if (cm && moves.length > 0) {
+      var rawCm = s.slice(i + 1, j);
+
+      /* Extract annotations before cleaning the text. */
+      var newSquareMarks = [];
+      var newArrows = [];
+      var am;
+      _RE_CSL.lastIndex = 0;
+      while ((am = _RE_CSL.exec(rawCm))) {
+        newSquareMarks = newSquareMarks.concat(parseCSL(am[1]));
+      }
+      _RE_CAL.lastIndex = 0;
+      while ((am = _RE_CAL.exec(rawCm))) {
+        newArrows = newArrows.concat(parseCAL(am[1]));
+      }
+
+      var cm = rawCm.replace(_RE_BRACKET_ANNOT, "").replace(/\s+/g, " ").trim();
+
+      if (moves.length > 0) {
         var idx = moves.length - 1;
-        comments[idx] = comments[idx] ? comments[idx] + " " + cm : cm;
+        if (cm) {
+          comments[idx] = comments[idx] ? comments[idx] + " " + cm : cm;
+        }
+        if (newSquareMarks.length) {
+          squareMarks[idx] = (squareMarks[idx] || []).concat(newSquareMarks);
+        }
+        if (newArrows.length) {
+          arrows[idx] = (arrows[idx] || []).concat(newArrows);
+        }
       }
       i = j + 1;
       continue;
@@ -439,6 +496,8 @@ export function parseMovesWithComments(text) {
       comments.push(null);
       variations.push(null);
       glyphs.push(suffixMatch ? suffixMatch[0] : null);
+      arrows.push(null);
+      squareMarks.push(null);
       i += mv[0].length;
       continue;
     }
@@ -446,7 +505,14 @@ export function parseMovesWithComments(text) {
     i++;
   }
 
-  return { moves: moves, comments: comments, variations: variations, glyphs: glyphs };
+  return {
+    moves: moves,
+    comments: comments,
+    variations: variations,
+    glyphs: glyphs,
+    arrows: arrows,
+    squareMarks: squareMarks,
+  };
 }
 
 /* ================================================================
@@ -487,6 +553,8 @@ export function parseGame(pgn) {
         comments: new Array(moves.length).fill(null),
         variations: new Array(moves.length).fill(null),
         glyphs: new Array(moves.length).fill(null),
+        arrows: new Array(moves.length).fill(null),
+        squareMarks: new Array(moves.length).fill(null),
         firstMoveAuto: false,
         orientation: null,
       };
@@ -511,6 +579,8 @@ export function parseGame(pgn) {
     comments: parsedMoves.comments,
     variations: parsedMoves.variations || [],
     glyphs: parsedMoves.glyphs || [],
+    arrows: parsedMoves.arrows || [],
+    squareMarks: parsedMoves.squareMarks || [],
     firstMoveAuto: firstMoveAuto,
     orientation: orientation,
   };
