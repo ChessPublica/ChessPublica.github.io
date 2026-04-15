@@ -41,12 +41,9 @@ Static chess diagrams are handled by the `<fen>` element.
 [Orientation "Black"]
 </fen>
 
-{% if page.previous.url %}
-[{{page.previous.title}}&nbsp;&raquo;]({{page.previous.url}})
-{% endif %}
-{% if page.next.url %}
-[&laquo;&nbsp;{{page.next.title}}]({{page.next.url}})
-{% endif %}
+## Other Elements
+
+{% if page.previous.url %}[{{page.previous.title}}&nbsp;&raquo;]({{page.previous.url}}){% endif %}{% if page.next.url %}[&laquo;&nbsp;{{page.next.title}}]({{page.next.url}}){% endif %}
 
 <style>
 h1 a {color:black;text-decoration:none;}

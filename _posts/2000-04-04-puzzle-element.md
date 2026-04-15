@@ -32,12 +32,9 @@ Chess puzzles are handled by the `<puzzle>` element.
 
 <puzzle src="/assets/pgn/sample-puzzle-pack.pgn"></puzzle>
 
-{% if page.previous.url %}
-[{{page.previous.title}}&nbsp;&raquo;]({{page.previous.url}})
-{% endif %}
-{% if page.next.url %}
-[&laquo;&nbsp;{{page.next.title}}]({{page.next.url}})
-{% endif %}
+## Other Elements
+
+{% if page.previous.url %}[{{page.previous.title}}&nbsp;&raquo;]({{page.previous.url}}){% endif %}{% if page.next.url %}[&laquo;&nbsp;{{page.next.title}}]({{page.next.url}}){% endif %}
 
 <style>
 h1 a {color:black;text-decoration:none;}
