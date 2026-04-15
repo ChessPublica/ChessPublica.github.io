@@ -26,7 +26,7 @@ ChessPublica `<pgn>` element displays the game with comments, variations, annota
 [Black "Black"]
 [Result "0-1"]
 
-1. g4?! { An eccentric opening (Grob’s Attack). It weakens the kingside badly, especially the diagonal e1–h4, and does little for development or king safety. } 1... e5! { Principled and strong. Black takes the center and immediately prepares to exploit the weakened diagonal. } 2. f3?? {[D]} { A blunder of the highest order. This move:<br>📌 Opens the e1–h4 diagonal completely<br>📌 Weakens the king further<br>📌 Blocks natural knight development: Nf3 } 2... Qh4# { Checkmate. The king on e1 has no escape squares, no pieces can block, and nothing can capture the queen. }
+1. g4?! { An eccentric opening -Grob’s Attack. It weakens the kingside badly, especially the diagonal e1–h4, and does little for development or king safety. } 1... e5! { Principled and strong. Black takes the center and immediately prepares to exploit the weakened diagonal. } 2. f3?? {[D]} { A blunder of the highest order. This move:<br>📌 Opens the e1–h4 diagonal completely<br>📌 Weakens the king further<br>📌 Blocks natural knight development: Nf3 } 2... Qh4# { Checkmate. The king on e1 has no escape squares, no pieces can block, and nothing can capture the queen. }
 </pgn>
 
 
