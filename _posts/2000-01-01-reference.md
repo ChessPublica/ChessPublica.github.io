@@ -24,27 +24,40 @@ This document demonstrates **every custom HTML element** provided by **ChessPubl
 
 Renders a non-interactive chessboard diagram from a FEN string.
 
-### Basic Usage
+## Single board diagram
 
 ```html
 <fen>rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</fen>
 ```
+
 <fen>rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</fen>
 
-or
+## Diagram with caption
 
 ```html
 <fen>
-[FEN "..."]
-[Orientation "..."]
-[Caption "..."]
+[FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"]
+[Caption "Starting position"]
 </fen>
 ```
 
 <fen>
-[FEN "rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2"]
+[FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"]
+[Caption "Starting position"]
+</fen>
+
+## Board orientation
+
+```html
+<fen>
+[FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"]
 [Orientation "Black"]
-[Caption "Sicilian Defence"]
+</fen>
+```
+
+<fen>
+[FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"]
+[Orientation "Black"]
 </fen>
 
 ---
@@ -53,47 +66,26 @@ or
 
 Renders a drag-and-drop puzzle. The user must find the correct sequence of moves.
 
-### Inline FEN
+## Single puzzle
 
 ```html
 <puzzle>
-[FEN "..."]
-
-1. ...
-</puzzle>
-```
-
-### Inline PGN Headers
-
-```html
-<puzzle>
-[White "..."]
-[Black "..."]
-[Event "..."]
-[Date "..."]
-[FEN "..."]
-[Orientation "..."]
-[Caption "..."]
-[FirstMoveAuto "..."]
-
-1. ...
-</puzzle>
-```
-
-<puzzle>
-[White "White"]
-[Black "Black"]
-[Event "Test"]
-[Date "2026"]
-[FEN "r1bqkbnr/pppp1ppp/2n5/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 3 3"]
-[Orientation "White"]
+[FEN "rnbqkbnr/pppp1ppp/8/4p3/6P1/5P2/PPPPP2P/RNBQKBNR b KQkq - 0 2"]
+[Orientation "Black"]
 [Caption "Mate in one"]
-[FirstMoveAuto "true"]
 
-3... Nf6?? 4. Qxf7#
+1... Qh4#
+</puzzle>
+```
+<puzzle>
+[FEN "rnbqkbnr/pppp1ppp/8/4p3/6P1/5P2/PPPPP2P/RNBQKBNR b KQkq - 0 2"]
+[Orientation "Black"]
+[Caption "Mate in one"]
+
+1... Qh4#
 </puzzle>
 
-### Load from File
+## Puzzle-pack from remote PGN file
 
 ```html
 <puzzle src="/assets/pgn/sample-puzzle-pack.pgn"></puzzle>
@@ -115,18 +107,16 @@ Renders a drag-and-drop puzzle. The user must find the correct sequence of moves
 
 Renders a complete annotated game with move numbers, comments, variations, NAGs, arrow/square annotations, and inline diagrams.
 
-### Inline PGN
-
 ```html
 <pgn>
-[Event "..."]
-[Site "..."]
-[Date "..."]
-[White "..."]
-[Black "..."]
-[Result "..."]
+[Event "Event"]
+[Site "Site"]
+[Date "2026"]
+[White "White"]
+[Black "Black"]
+[Result "0-1"]
 
-1. ...
+1. g4?! { An eccentric opening (Grob’s Attack). It weakens the kingside badly, especially the diagonal e1–h4, and does little for development or king safety. } 1... e5! { Principled and strong. Black takes the center and immediately prepares to exploit the weakened diagonal. } 2. f3?? {[D]} { A blunder of the highest order. This move:<br>📌 Opens the e1–h4 diagonal completely<br>📌 Weakens the king further<br>📌 Blocks natural knight development: Nf3 } 2... Qh4# { Checkmate. The king on e1 has no escape squares, no pieces can block, and nothing can capture the queen. }
 </pgn>
 ```
 
@@ -138,8 +128,9 @@ Renders a complete annotated game with move numbers, comments, variations, NAGs,
 [Black "Black"]
 [Result "0-1"]
 
-1. g4 e5 2. f3?? {[D]} {Black to move and mate in one.} 2... Qh4#
+1. g4?! { An eccentric opening -Grob’s Attack. It weakens the kingside badly, especially the diagonal e1–h4, and does little for development or king safety. } 1... e5! { Principled and strong. Black takes the center and immediately prepares to exploit the weakened diagonal. } 2. f3?? {[D]} { A blunder of the highest order. This move:<br>📌 Opens the e1–h4 diagonal completely<br>📌 Weakens the king further<br>📌 Blocks natural knight development: Nf3 } 2... Qh4# { Checkmate. The king on e1 has no escape squares, no pieces can block, and nothing can capture the queen. }
 </pgn>
+
 
 ### Load from File
 
@@ -168,19 +159,30 @@ Renders a complete annotated game with move numbers, comments, variations, NAGs,
 
 Renders a video-style chess game player with play/pause controls, an eval bar, clickable move list, comments, variations, move quality glyphs, and board annotations. Supports keyboard navigation and gesture controls.
 
-### Inline PGN
-
 ```html
 <pgn-player>
-[Event "..."]
-[Site "..."]
-[Date "..."]
-[White "..."]
-[Black "..."]
-[Result "..."]
-1. ...
+[Event "Event"]
+[Site "Site"]
+[Date "2026"]
+[White "White"]
+[Black "Black"]
+[Result "0-1"]
+
+1. g4?! {An eccentric opening (Grob’s Attack). It weakens the kingside badly, especially the diagonal e1–h4, and does little for development or king safety.} 1... e5! {Principled and strong. Black takes the center and immediately prepares to exploit the weakened diagonal.} 2. f3?? {[D]} {A blunder of the highest order. This move:} {📌 Opens the e1–h4 diagonal completely} {📌 Weakens the king further} {📌 Blocks natural knight development: Nf3} 2... Qh4# {Checkmate. The king on e1 has no escape squares, no pieces can block, and nothing can capture the queen.}
 </pgn-player>
 ```
+
+<pgn-player>
+[Event "Event"]
+[Site "Site"]
+[Date "2026"]
+[White "White"]
+[Black "Black"]
+[Result "0-1"]
+
+1. g4?! {An eccentric opening (Grob’s Attack). It weakens the kingside badly, especially the diagonal e1–h4, and does little for development or king safety.} 1... e5! {Principled and strong. Black takes the center and immediately prepares to exploit the weakened diagonal.} 2. f3?? {[D]} {A blunder of the highest order. This move:} {📌 Opens the e1–h4 diagonal completely} {📌 Weakens the king further} {📌 Blocks natural knight development: Nf3} 2... Qh4# {Checkmate. The king on e1 has no escape squares, no pieces can block, and nothing can capture the queen.}
+</pgn-player>
+
 
 ### Load from File
 
@@ -189,6 +191,14 @@ Renders a video-style chess game player with play/pause controls, an eval bar, c
 ```
 
 <pgn-player src="/assets/pgn/sample-game.pgn"></pgn-player>
+
+### Load from Remote URL (e.g. Lichess API URL)
+
+```html
+<pgn-player src="https://lichess.org/api/study/97di6JjX/Jzyakrf4.pgn"></pgn-player>
+```
+
+<pgn-player src="https://lichess.org/api/study/97di6JjX/Jzyakrf4.pgn"></pgn-player>
 
 ### Features
 
@@ -202,6 +212,15 @@ Renders a video-style chess game player with play/pause controls, an eval bar, c
 - **Board annotations**: Arrow `[%cal]` and square `[%csl]` highlights
 - **Settings toolbar**: Flip board, adjust playback speed (0.5x/1x/2x), download PGN
 - **Multiple players**: Each `<pgn-player>` on a page gets its own independent engine
+
+## Quick Reference
+
+| Element | Purpose | Interactive | Source |
+|---------|---------|-------------|--------|
+| `<fen>` | Static diagram with annotations | ❌ | Inline |
+| `<puzzle>` | Single puzzle or puzzle-pack | ✅ | Inline or `src` |
+| `<pgn>` | Annotated game with diagrams | ❌ | Inline or `src` |
+| `<pgn-player>` | Video-style PGN player | ✅ | Inline or `src` |
 
 ---
 
@@ -223,19 +242,6 @@ Setup requires only two lines of code:
 All required external libraries [Chess.js](https://github.com/jhlywa/chess.js/), [Chessboard.js](https://chessboardjs.com/), [jQuery](https://jquery.com/), and [Google Material Icons](https://fonts.google.com/icons) are automatically loaded.
 
 ---
-
-## Quick Reference
-
-| Element | Purpose | Interactive | Source |
-|---------|---------|-------------|--------|
-| `<fen>` | Static diagram with annotations | ❌ | Inline |
-| `<puzzle>` | Single puzzle or puzzle-pack | ✅ | Inline or `src` |
-| `<pgn>` | Annotated game with diagrams | ❌ | Inline or `src` |
-| `<pgn-player>` | Video-style PGN player | ✅ | Inline or `src` |
-
-## Other Elements
-
-{% if page.next.url %}[&laquo;&nbsp;{{page.next.title}}]({{page.next.url}}){% endif %} | {% if page.previous.url %}[{{page.previous.title}}&nbsp;&raquo;]({{page.previous.url}}){% endif %} 
 
 <style>
 h1 a {color:black;text-decoration:none;}
