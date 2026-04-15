@@ -179,6 +179,7 @@ export function renderLocalPuzzle(
       board.position(state.game.fen(), false);
       boardDiv.classList.remove("jc-fire-once");
       boardDiv.classList.add("jc-fire-solved");
+      setCaptionHTML("\uD83C\uDFC6 Puzzle solved!");
       showRefreshButton();
 
       boardDiv.addEventListener(
