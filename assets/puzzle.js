@@ -14,6 +14,72 @@ import { renderAnnotations, clearAnnotations } from "./board.js";
 
 var ANIM_MS = 250;
 
+/**
+ * Build a readable caption for a variation by interleaving its move
+ * notation between the prose comment fragments.
+ *
+ * The variation's `comments` array is keyed by move index: comments[0]
+ * is the prose attached to the variation's first move (already played on
+ * the board), comments[N] is prose attached to move N.  Moves that fall
+ * between two comment fragments need to be inserted so the reader sees:
+ *   "…after 1... e4 2. Ke7 Ke5 3. Kd7 Kd5 and manages to draw."
+ * instead of just the raw joined comments with the moves missing.
+ *
+ * @param {Object}  varObj    parsed variation { moves, comments }
+ * @param {string}  startFen  FEN immediately after the variation's first
+ *                            move has been played on the board
+ */
+function buildVariationComment(varObj, startFen) {
+  var moves    = varObj.moves    || [];
+  var comments = varObj.comments || [];
+
+  var parts = [];
+
+  /* Comment attached to the variation's first move (already on the board). */
+  if (comments[0]) parts.push(comments[0]);
+
+  /* Walk remaining moves (index 1+), tracking whose turn it is so we can
+     format move numbers correctly ("2. Ke7" for White, "1... e4" for the
+     first Black move in a sequence, bare SAN for Black moves that
+     immediately follow White moves in the same group). */
+  if (moves.length > 1) {
+    var chess        = new Chess(startFen);
+    var moveParts    = [];
+    var prevWasWhite = false;
+
+    for (var i = 1; i < moves.length; i++) {
+      var fenParts = chess.fen().split(" ");
+      var turn     = fenParts[1];                  /* 'w' | 'b' */
+      var fullMove = parseInt(fenParts[5], 10);
+
+      if (!chess.move(moves[i], { sloppy: true })) break;
+
+      var notation;
+      if (turn === "w") {
+        notation     = fullMove + ". " + moves[i];
+        prevWasWhite = true;
+      } else {
+        /* Black: prefix with "N..." only when not immediately after White. */
+        notation     = prevWasWhite ? moves[i] : fullMove + "... " + moves[i];
+        prevWasWhite = false;
+      }
+      moveParts.push(notation);
+
+      /* Flush accumulated moves whenever a comment follows this move. */
+      if (comments[i]) {
+        parts.push(moveParts.join(" "));
+        parts.push(comments[i]);
+        moveParts    = [];
+        prevWasWhite = false;   /* next Black move after a break needs "N..." */
+      }
+    }
+
+    if (moveParts.length) parts.push(moveParts.join(" "));
+  }
+
+  return parts.join(" ");
+}
+
 export function renderLocalPuzzle(
   container,
   fen,
@@ -368,10 +434,10 @@ export function renderLocalPuzzle(
           state.locked = false;
           state.variationStartFen = state.game.fen();
 
-          var allComments = (matchedVar.comments || []).filter(Boolean);
           if (captionTextEl) {
-            captionTextEl.innerHTML = allComments.length
-              ? formatCommentClickable(allComments.join(" "))
+            var varComment = buildVariationComment(matchedVar, state.variationStartFen);
+            captionTextEl.innerHTML = varComment
+              ? formatCommentClickable(varComment)
               : "";
             wireInlineMoveClicks();
           }
