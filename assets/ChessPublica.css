@@ -190,6 +190,11 @@
   user-select: none;
 }
 
+.move.pgn-result {
+  margin-left: 0.4em;
+  font-weight: bold;
+}
+
 .move .white-half {
   border-radius: 2px;
   margin-right: 0.3em;
@@ -271,9 +276,18 @@
 
 .comment-play-btn:hover {background: rgba(0,0,0,0.45);}
 
-.comment-play-btn .material-icons {
-  font-size: 1.25rem;
-  line-height: 1;
+.comment-play-btn .lucide-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+/* Lucide SVGs ship as black strokes. Flip them to white wherever they
+   sit on a dark button background. */
+.comment-play-btn .lucide-icon,
+.play .lucide-icon,
+.settings-toggle .lucide-icon,
+.settings-btn .lucide-icon {
+  filter: brightness(0) invert(1);
 }
 
 /* VARIATION BLOCK */
@@ -328,6 +342,8 @@
 
 .play.hidden { opacity: 0; pointer-events: none; }
 
+.play .lucide-icon { width: 2rem; height: 2rem; }
+
 /* BOARD SETTINGS TOOLBAR */
 
 .board-toolbar {
@@ -352,7 +368,7 @@
   transition: background 0.15s;
 }
 .settings-toggle:hover { background: rgba(0,0,0,0.45); }
-.settings-toggle .material-icons { font-size: 18px; }
+.settings-toggle .lucide-icon { width: 18px; height: 18px; }
 
 .settings-panel {
   display: flex; flex-direction: row; gap: 4px;
@@ -371,7 +387,7 @@
   transition: background 0.15s;
 }
 .settings-btn:hover { background: rgba(0,0,0,0.45); }
-.settings-btn .material-icons { font-size: 18px; }
+.settings-btn .lucide-icon { width: 18px; height: 18px; }
 
 .speed-label {
   position: absolute;

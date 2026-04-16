@@ -512,10 +512,11 @@ class VideoMoveList {
   }
 
   /**
-   * @param {string[]} moves  – SAN move array
-   * @param {string[]} glyphs – parallel glyph array from pgn-parser
+   * @param {string[]} moves   – SAN move array
+   * @param {string[]} glyphs  – parallel glyph array from pgn-parser
+   * @param {Object}   headers – PGN headers (for appending the Result)
    */
-  build(moves, glyphs = []) {
+  build(moves, glyphs = [], headers = {}) {
 
     if (!this.el) return;
 
@@ -550,6 +551,17 @@ class VideoMoveList {
       }
 
       this.el.appendChild(pairSpan);
+    }
+
+    /* Append the game result inline at the end of the move list, matching
+       the <pgn> renderer. Skip "*" (ongoing) and missing values. */
+    const rawResult = headers && headers.Result;
+    if (rawResult && rawResult !== "*") {
+      const label = rawResult === "1/2-1/2" ? "½-½" : rawResult;
+      const resultSpan = document.createElement("span");
+      resultSpan.className   = "move pgn-result";
+      resultSpan.textContent = label;
+      this.el.appendChild(resultSpan);
     }
 
   }
@@ -822,14 +834,14 @@ class VideoComment {
       const btn = document.createElement("button");
       btn.className = "comment-play-btn";
       if (isGameOver) {
-        btn.innerHTML = '<span class="material-icons">replay</span>';
+        btn.innerHTML = '<img class="lucide-icon" src="https://unpkg.com/lucide-static@latest/icons/rotate-ccw.svg" alt="Replay">';
         btn.onclick   = () => {
           this.el.querySelectorAll(".var-move").forEach(s => s.classList.remove("active"));
           this.engine.goTo(0);
           this.engine.showPlayBtn();
         };
       } else {
-        btn.innerHTML = '<span class="material-icons">play_arrow</span>';
+        btn.innerHTML = '<img class="lucide-icon" src="https://unpkg.com/lucide-static@latest/icons/play.svg" alt="Play">';
         btn.onclick   = () => {
           this.el.querySelectorAll(".var-move").forEach(s => s.classList.remove("active"));
           this.engine.play();
@@ -1019,7 +1031,7 @@ class VideoEngine {
     this.showPlayBtn();
 
     if (this.title)    this.title.build(this.state.headers);
-    if (this.moveList) this.moveList.build(this.state.moves, this.state.glyphs);
+    if (this.moveList) this.moveList.build(this.state.moves, this.state.glyphs, this.state.headers);
   }
 
 
@@ -1473,17 +1485,17 @@ class PgnPlayerElement extends HTMLElement {
       <div class="player-container">
         <div class="board-toolbar">
           <button class="settings-toggle">
-            <span class="material-icons">settings</span>
+            <img class="lucide-icon" src="https://unpkg.com/lucide-static@latest/icons/settings.svg" alt="Settings">
           </button>
           <div class="settings-panel hidden">
             <button class="settings-btn" data-action="download" title="Download PGN">
-              <span class="material-icons">download</span>
+              <img class="lucide-icon" src="https://unpkg.com/lucide-static@latest/icons/download.svg" alt="Download">
             </button>
             <button class="settings-btn" data-action="flip" title="Flip board">
-              <span class="material-icons">swap_vert</span>
+              <img class="lucide-icon" src="https://unpkg.com/lucide-static@latest/icons/arrow-up-down.svg" alt="Flip">
             </button>
             <button class="settings-btn" data-action="speed" title="Playback speed">
-              <span class="material-icons">speed</span>
+              <img class="lucide-icon" src="https://unpkg.com/lucide-static@latest/icons/gauge.svg" alt="Speed">
               <span class="speed-label">1x</span>
             </button>
           </div>
@@ -1492,7 +1504,7 @@ class PgnPlayerElement extends HTMLElement {
         <div class="board-wrap">
           <div class="board"></div>
           <div class="play">
-            <span class="material-icons">play_arrow</span>
+            <img class="lucide-icon" src="https://unpkg.com/lucide-static@latest/icons/play.svg" alt="Play">
           </div>
         </div>
 

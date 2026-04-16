@@ -1,7 +1,15 @@
 /* ChessPublica — Element Initializers */
 
-import { PIECE_THEME, fetchText, splitIntoPgnGames, toFigurine } from "./helpers.js";
+import {
+  PIECE_THEME,
+  fetchText,
+  splitIntoPgnGames,
+  toFigurine,
+  parseCAL,
+  parseCSL,
+} from "./helpers.js";
 import { renderFullPGN } from "./pgn.js";
+import { renderAnnotations } from "./board.js";
 import { jcPuzzleCreate } from "./puzzle.js";
 
 /* ── Error helper ─────────────────────────────────────────── */
@@ -133,7 +141,9 @@ export function initFenElements() {
         return;
       }
     } else {
-      fenStr = raw;
+      /* Raw-FEN form: strip any {brace blocks} so Lichess-style
+         annotation tags (e.g. {[%csl Ge4]}) may follow the FEN line. */
+      fenStr = raw.replace(/\{[^}]*\}/g, "").trim();
     }
 
     if (!validateFen(fenStr)) {
@@ -145,6 +155,17 @@ export function initFenElements() {
       showError(wrapper, 'invalid Orientation "' + orientation + '" — must be "white" or "black".');
       return;
     }
+
+    /* Parse [%csl ...] and [%cal ...] annotations from anywhere in the
+       raw element content. Both bracket-header and raw-FEN forms are
+       supported — tags may live inside {brace comments} or stand alone. */
+    var squareMarks = [];
+    var arrows = [];
+    var cslRe = /\[%csl\s+([^\]]+)\]/g;
+    var calRe = /\[%cal\s+([^\]]+)\]/g;
+    var m;
+    while ((m = cslRe.exec(raw))) squareMarks = squareMarks.concat(parseCSL(m[1]));
+    while ((m = calRe.exec(raw))) arrows = arrows.concat(parseCAL(m[1]));
 
     var boardDiv = document.createElement("div");
     boardDiv.className = "jc-board";
@@ -164,6 +185,12 @@ export function initFenElements() {
           orientation: orientation || "white",
           pieceTheme: PIECE_THEME,
         });
+        if (squareMarks.length || arrows.length) {
+          renderAnnotations(boardDiv, {
+            squareMarks: squareMarks,
+            arrows: arrows,
+          });
+        }
       } catch (e) {
         showError(wrapper, "failed to render board: " + e.message);
       }
