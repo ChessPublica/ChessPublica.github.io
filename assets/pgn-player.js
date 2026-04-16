@@ -900,6 +900,16 @@ class VideoEngine {
       moveSpeed:  200
     });
 
+    /* Keep eval-bar height in sync with the (responsive) board height */
+    const evalBarEl = container.querySelector(".eval-bar");
+    const syncEvalHeight = () => {
+      if (evalBarEl) evalBarEl.style.height = this.boardEl.offsetHeight + "px";
+    };
+    syncEvalHeight();
+    if (typeof ResizeObserver !== "undefined") {
+      new ResizeObserver(syncEvalHeight).observe(this.boardEl);
+    }
+
     /* Speed steps in moves-per-second */
     this._speedSteps = [0.5, 1.0, 2.0];
     this._speedIdx   = 1; // default: 1.0x

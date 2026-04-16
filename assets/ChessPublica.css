@@ -68,8 +68,8 @@
 /* WRAPPER */
 
 .player-wrapper {
-  width: 360px; /* 350px board + 10px eval bar */
-  max-width: 100vw;
+  width: 100%;
+  max-width: 360px; /* 350px board + 10px eval bar */
   min-height: 500px;
   position: relative;
   margin: 0;
@@ -78,7 +78,7 @@
 /* TITLE */
 
 .video-title {
-  max-width: 360px; /* 350px board + 10px eval bar */
+  max-width: 100%;
   margin: 0 0 1rem;
   display: flex;
   flex-direction: row;
@@ -109,20 +109,21 @@
   position: relative;
   display: flex;
   flex-direction: row;
-  width: 360px; /* 350px board + 10px eval bar */
+  width: 100%;
 }
 
 /* BOARD WRAP */
 
 .board-wrap {
-  width: 350px;
+  flex: 1;
+  min-width: 0;
   position: relative;
 }
 
 /* BOARD */
 
 .board {
-  width: 350px;
+  width: 100%;
   position: relative;
 }
 
@@ -130,7 +131,6 @@
 
 .eval-bar {
   width: 10px;
-  height: 350px;
   background: black;
   position: relative;
   overflow: hidden;
@@ -169,7 +169,7 @@
 /* MOVE LIST */
 
 .video-moves {
-  max-width: 350px;
+  max-width: 100%;
   overflow-x: auto;
   white-space: nowrap;
   padding-bottom: 2px;
@@ -223,7 +223,7 @@
 /* COMMENT AREA */
 
 .video-comment {
-  max-width: 360px; /* 350px board + 10px eval bar */
+  max-width: 100%;
   margin: 0.5rem 0;
   line-height: 1.5;
   position: relative;
