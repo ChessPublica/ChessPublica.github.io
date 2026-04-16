@@ -13,7 +13,7 @@ title: Home
 [Orientation "White"]
 [Caption "🏳️ White to move and win."]
 
-1. Re2! e4 ( 1. Re1? { 🚫 Wrong move<br>A seemingly sensible move, Re1? would be a sad mistake. Black maintains the opposition after 1... e4 2. Ke7 Ke5 3. Kd7 Kd5 and manages to draw. 🤝 Please try again. } ) 2. Re1! Ke5 { Losing a move with 1. Re2! and 2. Re1! is the key! 🔑 } 3. Ke7 Kd4 {[%cal Ge7e6]} 4. Ke6 Kd3 {[%cal Ge6e5]} 5. Ke5 e3 {[%cal Ge5f4]} 6. Kf4 e2 {[%cal Gf4f3]} 7. Kf3 { Black will lose the pawn, and the game. 🪦}
+1. Re2! e4 ( 1. Re1? { 🚫 Wrong move<br>A seemingly sensible move, Re1? would be a sad mistake. Black maintains the opposition after } 1... e4 2. Ke7 Ke5 3. Kd7 Kd5 { and manages to draw. 🤝 Please try again. } ) 2. Re1! Ke5 { Losing a move with 1. Re2! and 2. Re1! is the key! 🔑 } 3. Ke7 Kd4 {[%cal Ge7e6]} 4. Ke6 Kd3 {[%cal Ge6e5]} 5. Ke5 e3 {[%cal Ge5f4]} 6. Kf4 e2 {[%cal Gf4f3]} 7. Kf3 { Black will lose the pawn, and the game. 🪦}
 </puzzle>
 
 ## Complete Element Reference
@@ -226,20 +226,25 @@ Renders a video-style chess game player with play/pause controls, an eval bar, c
 
 ## 5. Setup & Dependencies
 
+### Required External Libraries
+
+Required external libraries [jQuery](https://jquery.com/), [Chess.js](https://github.com/jhlywa/chess.js/), and [Chessboard.js](https://chessboardjs.com/) must be loaded first.
+
+```html
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.0/chess.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css">
+```
+
 ### Setup
 
 Setup requires only two lines of code:
 
 ```html
-<!-- ChessPublica JS (all-in-one JavaScript code, includes <fen>, <puzzle>, <pgn>, and <pgn-player> elements.) -->
 <script src="ChessPublica.js"></script>
-
-<!-- ChessPublica CSS (required) -->
 <link rel="stylesheet" href="ChessPublica.css" />
 ```
-### Required External Libraries
-
-All required external libraries [Chess.js](https://github.com/jhlywa/chess.js/), [Chessboard.js](https://chessboardjs.com/), [jQuery](https://jquery.com/), and [Lucide icons](https://lucide.dev/) are automatically loaded.
 
 ---
 
