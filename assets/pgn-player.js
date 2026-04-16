@@ -1548,6 +1548,15 @@ class PgnPlayerElement extends HTMLElement {
     const container = wrapper.querySelector(".player-container");
     const engine    = new VideoEngine(container);
 
+    /* Pause when scrolled fully out of view */
+    if (typeof IntersectionObserver !== "undefined") {
+      new IntersectionObserver((entries) => {
+        if (!entries[0].isIntersecting && VideoEngine.activeEngine === engine && engine.state.playing) {
+          engine.pause();
+        }
+      }, { threshold: 0 }).observe(this);
+    }
+
     const showError = (msg) => {
       console.error("PGN load error:", msg);
       const titleEl = wrapper.querySelector(".video-title");
