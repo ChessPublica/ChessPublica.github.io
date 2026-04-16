@@ -243,6 +243,10 @@ Required external libraries [jQuery](https://jquery.com/), [Chess.js](https://gi
 
 <style>h1 a, h1 a:active, h1 a:hover {color:black;text-decoration:none;cursor:pointer;}</style>
 
+<script src="https://cdn.jsdelivr.net/gh/ChessPublica/ChessPublica.github.io@v1.0.0/dist/ChessPublica.all.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/ChessPublica/ChessPublica.github.io@v1.0.0/dist/ChessPublica.all.min.css">
+
+<!--
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.12.0/chess.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
@@ -250,3 +254,4 @@ Required external libraries [jQuery](https://jquery.com/), [Chess.js](https://gi
 
 <script type="module" src="/assets/ChessPublica.js"></script>
 <link rel="stylesheet" href="/assets/ChessPublica.css" />
+-->
