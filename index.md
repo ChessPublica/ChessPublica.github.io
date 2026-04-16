@@ -228,7 +228,7 @@ Renders a video-style chess game player with play/pause controls, an eval bar, c
 
 ### Required External Libraries
 
-Required external libraries [Chess.js](https://github.com/jhlywa/chess.js/), [Chessboard.js](https://chessboardjs.com/), [jQuery](https://jquery.com/), must be loaded first.
+Required external libraries [jQuery](https://jquery.com/), [Chess.js](https://github.com/jhlywa/chess.js/), and [Chessboard.js](https://chessboardjs.com/) must be loaded first.
 
 ```html
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
