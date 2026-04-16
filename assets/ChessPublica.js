@@ -12,6 +12,7 @@
  *   <puzzle>        — Single interactive puzzle
  */
 
+import "./pgn-player.js";
 import { toFigurine, parseGame } from "./helpers.js";
 import { createBoard } from "./board.js";
 import { buildMoveTree, parseHeaders, renderFullPGN } from "./pgn.js";
@@ -27,24 +28,6 @@ if (document.readyState === "loading") {
 } else {
   initAll();
 }
-
-/* ================================================================
-   LOAD <pgn-player> ELEMENT
-   pgn-player.js is a classic script that registers a custom element
-   on load. Inject it once, resolved relative to this module's URL,
-   so consumers only need to include ChessPublica.js.
-================================================================ */
-
-(function loadPgnPlayer() {
-  if (customElements.get("pgn-player")) return;
-  if (document.querySelector('script[data-chesspublica-pgn-player="1"]')) return;
-  var url = new URL("./pgn-player.js", import.meta.url).href;
-  var s = document.createElement("script");
-  s.src = url;
-  s.type = "module";
-  s.dataset.chesspublicaPgnPlayer = "1";
-  document.head.appendChild(s);
-})();
 
 /* ================================================================
    PUBLIC API (optional — for programmatic use)
