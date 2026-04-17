@@ -274,7 +274,7 @@
                             <div class="card-body space-y-4">
                                 <div class="input-group">
                                     <label class="label">FEN <span class="required">*</span></label>
-                                    <input id="sandbox-fen-fen" type="text" class="input" placeholder="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1">
+                                    <input id="sandbox-fen-fen" type="text" class="input">
                                 </div>
                                 <div class="input-group">
                                     <label class="label">Orientation <span class="optional">(optional)</span></label>
@@ -285,7 +285,7 @@
                                 </div>
                                 <div class="input-group">
                                     <label class="label">Caption <span class="optional">(optional, markdown)</span></label>
-                                    <input id="sandbox-fen-caption" type="text" class="input" placeholder="**Bold**, *italic*, `code`, [link](url)">
+                                    <input id="sandbox-fen-caption" type="text" class="input">
                                 </div>
                                 <div class="input-group">
                                     <label class="label">Square highlights <span class="optional">(optional, %csl)</span></label>
@@ -322,11 +322,11 @@
                                 </div>
                                 <div class="input-group">
                                     <label class="label">Starting FEN <span class="required">*</span></label>
-                                    <input id="sandbox-puzzle-fen" type="text" class="input" placeholder="r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3">
+                                    <input id="sandbox-puzzle-fen" type="text" class="input">
                                 </div>
                                 <div class="input-group">
                                     <label class="label">Solution Moves <span class="required">*</span></label>
-                                    <textarea id="sandbox-puzzle-solution" class="textarea" rows="4" placeholder="1. Re2! e4 2. Re1! Ke5 ..."></textarea>
+                                    <textarea id="sandbox-puzzle-solution" class="textarea" rows="4"></textarea>
                                 </div>
                                 <div class="field-grid-2">
                                     <div class="input-group">
@@ -346,23 +346,23 @@
                                 </div>
                                 <div class="input-group">
                                     <label class="label">White <span class="optional">(optional)</span></label>
-                                    <input id="sandbox-puzzle-white" type="text" class="input" placeholder="Carlsen, Magnus">
+                                    <input id="sandbox-puzzle-white" type="text" class="input">
                                 </div>
                                 <div class="input-group">
                                     <label class="label">Black <span class="optional">(optional)</span></label>
-                                    <input id="sandbox-puzzle-black" type="text" class="input" placeholder="Nepomniachtchi, Ian">
+                                    <input id="sandbox-puzzle-black" type="text" class="input">
                                 </div>
                                 <div class="input-group">
                                     <label class="label">Event <span class="optional">(optional)</span></label>
-                                    <input id="sandbox-puzzle-event" type="text" class="input" placeholder="World Championship">
+                                    <input id="sandbox-puzzle-event" type="text" class="input">
                                 </div>
                                 <div class="input-group">
                                     <label class="label">Date <span class="optional">(optional)</span></label>
-                                    <input id="sandbox-puzzle-date" type="text" class="input" placeholder="2021">
+                                    <input id="sandbox-puzzle-date" type="text" class="input">
                                 </div>
                                 <div class="input-group">
                                     <label class="label">Caption <span class="optional">(optional, markdown)</span></label>
-                                    <input id="sandbox-puzzle-caption" type="text" class="input" placeholder="**Black to move.** Find the best plan.">
+                                    <input id="sandbox-puzzle-caption" type="text" class="input">
                                 </div>
                                 <button id="update-puzzle-btn" class="button-full">Update Preview</button>
                                 <div class="sandbox-code-wrap">
@@ -392,21 +392,21 @@
                                 <div class="field-grid-2">
                                     <div class="input-group">
                                         <label class="label">White <span class="optional">(optional)</span></label>
-                                        <input id="sandbox-pgn-white" type="text" class="input" placeholder="Morphy, Paul">
+                                        <input id="sandbox-pgn-white" type="text" class="input">
                                     </div>
                                     <div class="input-group">
                                         <label class="label">Black <span class="optional">(optional)</span></label>
-                                        <input id="sandbox-pgn-black" type="text" class="input" placeholder="Duke of Brunswick">
+                                        <input id="sandbox-pgn-black" type="text" class="input">
                                     </div>
                                 </div>
                                 <div class="field-grid-2">
                                     <div class="input-group">
                                         <label class="label">Event <span class="optional">(optional)</span></label>
-                                        <input id="sandbox-pgn-event" type="text" class="input" placeholder="Paris Opera Box">
+                                        <input id="sandbox-pgn-event" type="text" class="input">
                                     </div>
                                     <div class="input-group">
                                         <label class="label">Date <span class="optional">(optional)</span></label>
-                                        <input id="sandbox-pgn-date" type="text" class="input" placeholder="1858">
+                                        <input id="sandbox-pgn-date" type="text" class="input">
                                     </div>
                                 </div>
                                 <div class="input-group">
@@ -423,7 +423,7 @@
                                         <label class="label">Movetext <span class="required">*</span></label>
                                         <button type="button" id="insert-diagram-btn" class="button-inline">+ Insert diagram {[D]}</button>
                                     </div>
-                                    <textarea id="sandbox-pgn-moves" class="textarea" rows="8" placeholder="1. e4 e5 2. Nf3 {A classic opening.} Nc6 ..."></textarea>
+                                    <textarea id="sandbox-pgn-moves" class="textarea" rows="8"></textarea>
                                 </div>
                                 <button id="update-pgn-btn" class="button-full">Update Preview</button>
                                 <div class="sandbox-code-wrap">
@@ -453,21 +453,21 @@
                                 <div class="field-grid-2">
                                     <div class="input-group">
                                         <label class="label">White <span class="optional">(optional)</span></label>
-                                        <input id="sandbox-player-white" type="text" class="input" placeholder="Carlsen, Magnus">
+                                        <input id="sandbox-player-white" type="text" class="input">
                                     </div>
                                     <div class="input-group">
                                         <label class="label">Black <span class="optional">(optional)</span></label>
-                                        <input id="sandbox-player-black" type="text" class="input" placeholder="Nepomniachtchi, Ian">
+                                        <input id="sandbox-player-black" type="text" class="input">
                                     </div>
                                 </div>
                                 <div class="field-grid-2">
                                     <div class="input-group">
                                         <label class="label">Event <span class="optional">(optional)</span></label>
-                                        <input id="sandbox-player-event" type="text" class="input" placeholder="World Championship">
+                                        <input id="sandbox-player-event" type="text" class="input">
                                     </div>
                                     <div class="input-group">
                                         <label class="label">Date <span class="optional">(optional)</span></label>
-                                        <input id="sandbox-player-date" type="text" class="input" placeholder="2021">
+                                        <input id="sandbox-player-date" type="text" class="input">
                                     </div>
                                 </div>
                                 <div class="input-group">
@@ -481,7 +481,7 @@
                                 </div>
                                 <div class="input-group">
                                     <label class="label">Movetext <span class="required">*</span></label>
-                                    <textarea id="sandbox-player-moves" class="textarea" rows="8" placeholder="1. e4 e5 2. Nf3 Nc6 ..."></textarea>
+                                    <textarea id="sandbox-player-moves" class="textarea" rows="8"></textarea>
                                 </div>
                                 <button id="update-player-btn" class="button-full">Update Preview</button>
                                 <div class="sandbox-code-wrap">
