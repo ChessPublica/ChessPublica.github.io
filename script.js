@@ -5,6 +5,17 @@ const val = (id) => ($(id) ? $(id).value.trim() : '');
 
 /* ── Tab switching ────────────────────────────────────────── */
 
+const renderedTabs = new Set();
+
+function renderTabBoard(tabId) {
+    switch (tabId) {
+        case 'fen':    { const h = $('sandbox-fen-board');      if (h) updateFen(h); break; }
+        case 'puzzle': { const h = $('sandbox-puzzle-container'); if (h) updatePuzzle(h); break; }
+        case 'pgn':    { const h = $('sandbox-pgn-container');    if (h) updatePgn(h); break; }
+        case 'player': { const h = $('sandbox-player-container'); if (h) updatePgnPlayer(h); break; }
+    }
+}
+
 window.showTab = (tabId) => {
     document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
     const targetTab = document.getElementById(`tab-${tabId}`);
@@ -13,6 +24,11 @@ window.showTab = (tabId) => {
     document.querySelectorAll('.tab-trigger').forEach(t => {
         t.classList.toggle('active', t.dataset.tab === tabId);
     });
+
+    if (!renderedTabs.has(tabId)) {
+        renderedTabs.add(tabId);
+        renderTabBoard(tabId);
+    }
 };
 
 document.addEventListener('click', (e) => {
@@ -349,26 +365,17 @@ function wireCopyButton(buttonId, codeId) {
 function initSandbox() {
     setDefaults();
 
-    const fenHost = $('sandbox-fen-board');
     const fenBtn = $('update-fen-btn');
-    if (fenHost && fenBtn) {
-        fenBtn.addEventListener('click', () => updateFen(fenHost));
-        updateFen(fenHost);
-    }
+    if (fenBtn) fenBtn.addEventListener('click', () => updateFen($('sandbox-fen-board')));
 
-    const puzzleHost = $('sandbox-puzzle-container');
     const puzzleBtn = $('update-puzzle-btn');
-    if (puzzleHost && puzzleBtn) {
-        puzzleBtn.addEventListener('click', () => updatePuzzle(puzzleHost));
-        updatePuzzle(puzzleHost);
-    }
+    if (puzzleBtn) puzzleBtn.addEventListener('click', () => updatePuzzle($('sandbox-puzzle-container')));
 
-    const pgnHost = $('sandbox-pgn-container');
     const pgnBtn = $('update-pgn-btn');
-    if (pgnHost && pgnBtn) {
-        pgnBtn.addEventListener('click', () => updatePgn(pgnHost));
-        updatePgn(pgnHost);
-    }
+    if (pgnBtn) pgnBtn.addEventListener('click', () => updatePgn($('sandbox-pgn-container')));
+
+    const playerBtn = $('update-player-btn');
+    if (playerBtn) playerBtn.addEventListener('click', () => updatePgnPlayer($('sandbox-player-container')));
 
     const insertDiagramBtn = $('insert-diagram-btn');
     const pgnMovesEl = $('sandbox-pgn-moves');
@@ -376,17 +383,22 @@ function initSandbox() {
         insertDiagramBtn.addEventListener('click', () => insertDiagramAtCaret(pgnMovesEl));
     }
 
-    const playerHost = $('sandbox-player-container');
-    const playerBtn = $('update-player-btn');
-    if (playerHost && playerBtn) {
-        playerBtn.addEventListener('click', () => updatePgnPlayer(playerHost));
-        updatePgnPlayer(playerHost);
-    }
-
     wireCopyButton('copy-fen-btn', 'sandbox-fen-code');
     wireCopyButton('copy-puzzle-btn', 'sandbox-puzzle-code');
     wireCopyButton('copy-pgn-btn', 'sandbox-pgn-code');
     wireCopyButton('copy-player-btn', 'sandbox-player-code');
+
+    /* Populate every code block immediately so the Copy Code button works
+       even for tabs the user hasn't opened yet. Passing null for the host
+       skips board rendering — hidden tabs would render at zero width. */
+    updateFen(null);
+    updatePuzzle(null);
+    updatePgn(null);
+    updatePgnPlayer(null);
+
+    /* Render the initially visible (FEN) tab's board. */
+    renderedTabs.add('fen');
+    renderTabBoard('fen');
 }
 
 function init() {
