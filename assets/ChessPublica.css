@@ -72,8 +72,7 @@
 /* WRAPPER */
 
 .player-wrapper {
-  width: 360px; /* 350px board + 10px eval bar */
-  max-width: calc(var(--board-size) + 10px) !important;
+  width: calc(var(--board-size) + 10px);
   min-height: 500px;
   position: relative;
   margin: 0;
