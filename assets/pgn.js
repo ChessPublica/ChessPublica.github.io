@@ -119,6 +119,9 @@ export function buildMoveTree(pgnText) {
   var chess = new Chess();
   var root = { next: null, fen: chess.fen() };
   parseSequence(tokens, chess, root, pgnText);
+  if (root.preComments && root.next) {
+    root.next.preComments = root.preComments;
+  }
   return root.next;
 }
 
@@ -186,6 +189,12 @@ function parseSequence(tokens, chess, parentNode, originalPgn) {
     if (token.type === "comment") {
       if (lastMoveNode) {
         processComment(token.value, lastMoveNode, current, parentNode, chess, originalPgn);
+      } else {
+        var cleaned = stripCommentAnnotations(token.value);
+        if (cleaned.length) {
+          if (!parentNode.preComments) parentNode.preComments = [];
+          parentNode.preComments.push(cleaned);
+        }
       }
       i++;
       continue;
@@ -401,6 +410,16 @@ export function renderHeaders(headers, container) {
 export function renderMoveTree(rootNode, container, headers) {
   var movesDiv = document.createElement("div");
   movesDiv.className = "pgn-moves";
+
+  if (rootNode.preComments && rootNode.preComments.length) {
+    for (var pc = 0; pc < rootNode.preComments.length; pc++) {
+      var preP = document.createElement("p");
+      preP.className = "pgn-comment";
+      preP.innerHTML = formatComment(rootNode.preComments[pc]);
+      movesDiv.appendChild(preP);
+    }
+  }
+
   renderLine(rootNode, movesDiv, false);
 
   /* Append the game result (1-0 / 0-1 / ½-½) inline at the end of
