@@ -110,8 +110,11 @@ function updatePuzzle(host) {
         renderBlankBoard(host);
         return;
     }
+    const firstMoveAuto = $('sandbox-puzzle-firstmoveauto');
     const headers = buildHeaders([
         ['FEN', fen],
+        ['Orientation', val('sandbox-puzzle-orientation')],
+        ['FirstMoveAuto', firstMoveAuto && firstMoveAuto.checked ? 'true' : ''],
         ['White', val('sandbox-puzzle-white')],
         ['Black', val('sandbox-puzzle-black')],
         ['Event', val('sandbox-puzzle-event')],
