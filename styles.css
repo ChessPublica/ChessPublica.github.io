@@ -1390,4 +1390,4 @@ body {
 }
 
 .button-secondary-full { margin-top: 1rem; }
-.sandbox-code-wrap { max-width: 100%; }
+.sandbox-code-wrap { max-width: var(--board-size, 400px); }
