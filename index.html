@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChessPublica - Minimal Chess Publishing Engine</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <nav class="nav-bar">
+        <div class="container nav-container">
+            <a href="/" class="nav-logo">
+                <div class="nav-logo-icon">
+                    <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/chess-rook.svg" class="h-5 w-5 brightness-0 invert" alt="pawn" referrerPolicy="no-referrer">
+                </div>
+                <span class="nav-logo-text">ChessPublica</span>
+            </a>
+            <div class="nav-links">
+                <a href="#page-reference" class="nav-link">Reference</a>
+                <a href="#page-sandbox" class="nav-link">Sandbox</a>
+                <a href="https://chesspublica.github.io" class="nav-link">Docs</a>
+            </div>
+            <div class="nav-actions">
+                <a href="https://github.com/ChessPublica/ChessPublica.github.io" class="icon-button">
+                    <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/github.svg" class="h-5 w-5 opacity-60" alt="github" referrerPolicy="no-referrer">
+                </a>
+                <a href="#page-sandbox" class="nav-button">
+                    Get Started
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="container">
+        <!-- Home Page -->
+        <section id="page-home" class="page-content">
+            <!-- Hero Section -->
+            <div class="hero-section">
+                <div class="hero-content">
+                    <div class="hero-badge">
+                        <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/zap.svg" class="h-1 w-1 mr-3 opacity-70" alt="zap" referrerPolicy="no-referrer">
+                        Minimal Chess Publishing Engine
+                    </div>
+                    <h1 class="hero-title">
+                        Turn chess <br class="mobile-break">
+                        games into <br class="mobile-break">
+                        <span>content</span> in <br class="mobile-break">
+                        seconds.
+                    </h1>
+                    <p class="hero-description">
+                        Transform raw notation into diagrams, puzzles, and interactive studies directly in the browser. Built for chess creators and educators.
+                    </p>
+                    <div class="hero-actions">
+                        <a href="#page-sandbox" class="button-primary">
+                            Try the Sandbox
+                        </a>
+                        <a href="#page-reference" class="button-secondary">
+                            View Reference
+                        </a>
+                    </div>
+                </div>
+                <!-- Background Decorative Elements -->
+                <div class="hero-bg-decor">
+                    <div class="blur-circle-1"></div>
+                    <div class="blur-circle-2"></div>
+                </div>
+            </div>
+
+            <!-- Features Grid -->
+            <div class="features-section">
+                <div class="container">
+                    <div class="features-grid">
+                        <div class="feature-card">
+                            <div class="feature-icon-wrapper">
+                                <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/grid-2x2-check.svg" class="h-6 w-6" alt="grid-2x2-check" referrerPolicy="no-referrer">
+                            </div>
+                            <h3 class="feature-title">Static Diagrams</h3>
+                            <p class="feature-description">
+                                Generate high-quality diagrams from FEN strings. Perfect for blog posts and newsletters.
+                            </p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon-wrapper">
+                                <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/puzzle.svg" class="h-6 w-6" alt="puzzle" referrerPolicy="no-referrer">
+                            </div>
+                            <h3 class="feature-title">Interactive Puzzles</h3>
+                            <p class="feature-description">
+                                Create playable puzzles with move validation. Engage your audience with interactive challenges.
+                            </p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon-wrapper">
+                                <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/text-initial.svg" class="h-6 w-6" alt="file-text" referrerPolicy="no-referrer">
+                            </div>
+                            <h3 class="feature-title">Annotated Games</h3>
+                            <p class="feature-description">
+                                Full PGN support with move lists and static board displays for game analysis.
+                            </p>
+                        </div>
+                        <div class="feature-card">
+                            <div class="feature-icon-wrapper">
+                                <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/play-circle.svg" class="h-6 w-6" alt="play-circle" referrerPolicy="no-referrer">
+                            </div>
+                            <h3 class="feature-title">Game Player</h3>
+                            <p class="feature-description">
+                                Interactive video-style player for PGN games with full navigation controls.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Reference Page -->
+        <section id="page-reference" class="reference-section">
+            <div class="section-header">
+                <h2 class="section-title">Component Reference</h2>
+                <p class="section-description">
+                    A comprehensive guide to the core ChessPublica components.
+                </p>
+            </div>
+
+            <!-- FEN Section -->
+            <section class="element-section">
+                <div class="element-header">
+                    <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/grid-2x2-check.svg" class="h-6 w-6 opacity-40" alt="grid-2x2-check" referrerPolicy="no-referrer">
+                    <h2>1. Static Diagrams <code>&lt;fen&gt;</code></h2>
+                </div>
+                <div class="element-grid">
+                    <div class="element-info">
+                        <p class="text-zinc-600">
+                            The <code class="code-inline">fen</code> element renders a non-interactive board from a FEN string.
+                        </p>
+                        <div class="code-block">&lt;fen&gt;...&lt;fen&gt;</div>
+                    </div>
+                    <div class="preview-container">
+                        <fen>rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1</fen>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Puzzle Section -->
+            <section class="element-section">
+                <div class="element-header">
+                    <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/puzzle.svg" class="h-6 w-6 opacity-40" alt="puzzle" referrerPolicy="no-referrer">
+                    <h2>2. Interactive Puzzles <code>&lt;puzzle&gt;</code></h2>
+                </div>
+                <div class="element-grid">
+                    <div class="element-info">
+                        <p class="text-zinc-600">
+                            The <code class="code-inline">puzzle</code> element provides a self-contained interactive challenge.
+                        </p>
+                        <div class="code-block">&lt;puzzle&gt;
+[FEN "..."]
+1. ...
+&lt;/puzzle&gt;</div>
+                    </div>
+                    <div class="preview-container">
+                        <puzzle>
+                            [FEN "rnbqkbnr/pppp1ppp/8/4p3/6P1/5P2/PPPPP2P/RNBQKBNR b KQkq - 0 2"]
+                            1... Qxf7#
+                        </puzzle>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PGN Section -->
+            <section class="element-section">
+                <div class="element-header">
+                    <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/text-initial.svg" class="h-6 w-6 opacity-40" alt="file-text" referrerPolicy="no-referrer">
+                    <h2>3. Annotated Games <code>&lt;pgn&gt;</code></h2>
+                </div>
+                <div class="element-grid">
+                    <div class="element-info">
+                    <p class="text-zinc-600">
+                        The <code class="code-inline">pgn</code> element displays a full game with a move list.
+                    </p>
+                    <div class="code-block">&lt;pgn&gt;
+[Event "..."]
+[Site "..."]
+[Date "..."]
+[White "..."]
+[Black "..."]
+[Result "..."]
+
+1. ...
+&lt;/pgn&gt;</div>
+                    </div>
+                    <div class="preview-container">
+                        <pgn>
+[Event "Event"]
+[Site "Site"]
+[Date "2026"]
+[White "White"]
+[Black "Black"]
+[Result "0-1"]
+
+1. g4?! { An eccentric opening. It weakens the kingside badly, especially the diagonal e1–h4, and does little for development or king safety. } 1... e5! { Principled and strong. Black takes the center and immediately prepares to exploit the weakened diagonal. } 2. f3?? {[D]} { A blunder of the highest order. This move:<br>📌 Opens the e1–h4 diagonal completely<br>📌 Weakens the king further<br>📌 Blocks natural knight development: Nf3 } 2... Qh4# { Checkmate. The king on e1 has no escape squares, no pieces can block, and nothing can capture the queen. }
+                        </pgn>
+                    </div>
+                </div>
+            </section>
+
+            <!-- PGN Player Section -->
+            <section class="element-section">
+                <div class="element-header">
+                    <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/play-circle.svg" class="h-6 w-6 opacity-40" alt="play-circle" referrerPolicy="no-referrer">
+                    <h2>4. Game Player <code>&lt;pgn-player&gt;</code></h2>
+                </div>
+                <div class="element-grid">
+                    <div class="element-info">
+                        <p class="text-zinc-600">
+                            The <code class="code-inline">pgn-player</code> is a full-featured video-style player.
+                        </p>
+                        <div class="code-block">&lt;pgn-player&gt;
+[Event "..."]
+[Site "..."]
+[Date "..."]
+[White "..."]
+[Black "..."]
+[Result "..."]
+
+1. ...
+&lt;/pgn-player&gt;</div>
+                    </div>
+
+                    <div class="preview-container">
+                        <pgn-player>
+                            [Event "Event"]
+                            [Site "Site"]
+                            [Date "2026"]
+                            [White "White"]
+                            [Black "Black"]
+                            [Result "0-1"]
+
+                            1. g4?! {An eccentric opening. It weakens the kingside badly, especially the diagonal e1–h4, and does little for development or king safety.} 1... e5! {Principled and strong. Black takes the center and immediately prepares to exploit the weakened diagonal.} 2. f3?? {[D]} {A blunder of the highest order. This move:} {📌 Opens the e1–h4 diagonal completely} {📌 Weakens the king further} {📌 Blocks natural knight development: Nf3} 2... Qh4# {Checkmate. The king on e1 has no escape squares, no pieces can block, and nothing can capture the queen.}
+                        </pgn-player>
+                    </div>
+                </div>
+            </section>
+        </section>
+
+        <!-- Sandbox Page -->
+        <section id="page-sandbox" class="sandbox-section">
+            <div class="section-header">
+                <h2 class="section-title">Element Sandbox</h2>
+                <p class="section-description">
+                    Experiment with ChessPublica elements in real-time. Input your own data to see how it renders.
+                </p>
+            </div>
+
+            <div class="sandbox-container">
+                <!-- Tabs List -->
+                <div class="tab-list">
+                    <button class="tab-trigger active" data-tab="fen">
+                        <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/grid-2x2-check.svg" class="h-4 w-4 opacity-70" alt="grid-2x2-check" referrerPolicy="no-referrer"> <span class="hidden sm:inline">Static Diagrams</span>
+                    </button>
+                    <button class="tab-trigger" data-tab="puzzle">
+                        <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/puzzle.svg" class="h-4 w-4 opacity-70" alt="puzzle" referrerPolicy="no-referrer"> <span class="hidden sm:inline">Interactive Puzzles</span>
+                    </button>
+                    <button class="tab-trigger" data-tab="pgn">
+                        <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/text-initial.svg" class="h-4 w-4 opacity-70" alt="file-text" referrerPolicy="no-referrer"> <span class="hidden sm:inline">Annotated Games</span>
+                    </button>
+                    <button class="tab-trigger" data-tab="player">
+                        <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/play-circle.svg" class="h-4 w-4 opacity-70" alt="play-circle" referrerPolicy="no-referrer"> <span class="hidden sm:inline">Game Player</span>
+                    </button>
+                </div>
+
+                <!-- Tab Contents -->
+                <div id="tab-fen" class="tab-content">
+                    <div class="sandbox-grid">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>FEN Input</h3>
+                                <p>Enter a Forsyth-Edwards Notation string.</p>
+                            </div>
+                            <div class="card-body">
+                                <textarea id="sandbox-fen-input" class="textarea" rows="5" placeholder='<fen>
+[FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"]
+[Orientation "Black"]
+[Caption "Starting position"]
+</fen>'></textarea>
+                            </div>
+                        </div>
+                        <div class="preview-panel">
+                            <div id="sandbox-fen-board" class="board-wrapper"></div>
+                            <p id="sandbox-fen-label" class="preview-label">Live Preview</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-puzzle" class="tab-content hidden">
+                    <div class="sandbox-grid">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>Puzzle Configuration</h3>
+                                <p>Set the starting position and the correct solution moves.</p>
+                            </div>
+                            <div class="card-body space-y-4">
+                                <div class="input-group">
+                                    <label class="label">Starting FEN</label>
+                                    <input id="sandbox-puzzle-fen" type="text" class="input" value="r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3">
+                                </div>
+                                <div class="input-group">
+                                    <label class="label">Solution Moves (space separated)</label>
+                                    <input id="sandbox-puzzle-solution" type="text" class="input" value="a6">
+                                </div>
+                                <button id="update-puzzle-btn" class="button-full">Update Puzzle</button>
+                            </div>
+                        </div>
+                        <div id="sandbox-puzzle-container"></div>
+                    </div>
+                </div>
+
+                <div id="tab-pgn" class="tab-content hidden">
+                    <div class="sandbox-grid">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>PGN Input</h3>
+                                <p>Enter Portable Game Notation.</p>
+                            </div>
+                            <div class="card-body">
+                                <textarea id="sandbox-pgn-input" class="textarea" rows="8" placeholder="1. e4 e5..."></textarea>
+                            </div>
+                        </div>
+                        <div id="sandbox-pgn-container"></div>
+                    </div>
+                </div>
+
+                <div id="tab-player" class="tab-content hidden">
+                    <div class="sandbox-grid">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>PGN Input</h3>
+                                <p>Enter Portable Game Notation for the player.</p>
+                            </div>
+                            <div class="card-body">
+                                <textarea id="sandbox-player-input" class="textarea" rows="8" placeholder="1. e4 e5..."></textarea>
+                            </div>
+                        </div>
+                        <div id="sandbox-player-container"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-container">
+                <div class="footer-logo">
+                    <div class="footer-logo-icon">
+                        <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/chess-rook.svg" class="h-4 w-4 brightness-0 invert" alt="pawn" referrerPolicy="no-referrer">
+                    </div>
+                    <span class="footer-logo-text">ChessPublica</span>
+                </div>
+                <div class="footer-links">
+                    <a href="/" class="footer-link">Home</a>
+                    <a href="#page-reference" class="footer-link">Reference</a>
+                    <a href="#page-sandbox" class="footer-link">Sandbox</a>
+                </div>
+                <div class="footer-social">
+                    <a href="https://github.com/ChessPublica/ChessPublica.github.io" class="icon-button">
+                        <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/github.svg" class="h-5 w-5 opacity-40" alt="github" referrerPolicy="no-referrer">
+                    </a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                © <span id="current-year"></span> ChessPublica. Built with Chess.js & Chessboard.js
+            </div>
+        </div>
+    </footer>
+
+    <script type="module" src="/script.js"></script>
+</body>
+</html>
