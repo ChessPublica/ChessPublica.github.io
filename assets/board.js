@@ -200,7 +200,7 @@ var _COLOR_MAP = {
 };
 
 function lichessColor(code, alpha) {
-  return (_COLOR_MAP[code] || _COLOR_MAP.R) + (alpha === undefined ? 0.85 : alpha) + ")";
+  return (_COLOR_MAP[code] || _COLOR_MAP.R) + (alpha === undefined ? 0.55 : alpha) + ")";
 }
 
 function drawCircle(svg, boardDiv, square, color) {
@@ -215,7 +215,7 @@ function drawCircle(svg, boardDiv, square, color) {
   circle.setAttribute("cy",           center.y);
   circle.setAttribute("r",            radius);
   circle.setAttribute("fill",         "none");
-  circle.setAttribute("stroke",       lichessColor(color, 0.8));
+  circle.setAttribute("stroke",       lichessColor(color, 0.55));
   circle.setAttribute("stroke-width", strokeWidth);
 
   svg.appendChild(circle);
@@ -284,7 +284,7 @@ function drawArrow(svg, boardDiv, fromSquare, toSquare, color) {
 
   var path = document.createElementNS("http://www.w3.org/2000/svg", "path");
   path.setAttribute("d",    d);
-  path.setAttribute("fill", lichessColor(color, 0.85));
+  path.setAttribute("fill", lichessColor(color, 0.55));
 
   svg.appendChild(path);
 }
