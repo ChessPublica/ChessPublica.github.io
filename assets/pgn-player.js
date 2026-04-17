@@ -317,8 +317,9 @@ function loadPGN(pgn) {
     const wTitle = headers.WhiteTitle || "";
     const bTitle = headers.BlackTitle || "";
 
-    const white = headers.White || "White";
-    const black = headers.Black || "Black";
+    const hasPlayers = !!(headers.White || headers.Black);
+    const white = headers.White || "";
+    const black = headers.Black || "";
 
     const wElo = headers.WhiteElo ? ` (${headers.WhiteElo})` : "";
     const bElo = headers.BlackElo ? ` (${headers.BlackElo})` : "";
@@ -326,10 +327,10 @@ function loadPGN(pgn) {
     const event = headers.Event || "";
     const date  = (headers.Date || "").replace(/\.\?+/g, ""); // strip trailing .??
 
-    // Line 1: "WTitle White (elo) – BTitle Black (elo)"
+    // Line 1: "WTitle White (elo) – BTitle Black (elo)" (only when at least one is present)
     const leftSide  = `${wTitle ? wTitle + " " : ""}${white}${wElo}`.trim();
     const rightSide = `${bTitle ? bTitle + " " : ""}${black}${bElo}`.trim();
-    const players   = `${leftSide} – ${rightSide}`;
+    const players   = hasPlayers ? `${leftSide || "?"} – ${rightSide || "?"}` : "";
 
     // Line 2: event and/or date
     let eventLine = "";
@@ -353,16 +354,23 @@ function loadPGN(pgn) {
     const textDiv = document.createElement("div");
     textDiv.className = "video-title-text";
 
-    const playersDiv = document.createElement("div");
-    playersDiv.className   = "video-title-players";
-    playersDiv.textContent = players;
-    textDiv.appendChild(playersDiv);
+    if (hasPlayers) {
+      const playersDiv = document.createElement("div");
+      playersDiv.className   = "video-title-players";
+      playersDiv.textContent = players;
+      textDiv.appendChild(playersDiv);
 
-    if (eventLine) {
-      const eventDiv = document.createElement("div");
-      eventDiv.className   = "video-title-event";
-      eventDiv.textContent = eventLine;
-      textDiv.appendChild(eventDiv);
+      if (eventLine) {
+        const eventDiv = document.createElement("div");
+        eventDiv.className   = "video-title-event";
+        eventDiv.textContent = eventLine;
+        textDiv.appendChild(eventDiv);
+      }
+    } else if (eventLine) {
+      const eventOnly = document.createElement("div");
+      eventOnly.className   = "video-title-players";
+      eventOnly.textContent = eventLine;
+      textDiv.appendChild(eventOnly);
     }
 
     this.titleEl.appendChild(textDiv);

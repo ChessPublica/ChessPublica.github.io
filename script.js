@@ -37,9 +37,19 @@ function buildHeaders(fields) {
     return out;
 }
 
+function escapeAttr(value) {
+    return (value || '').replace(/"/g, '&quot;');
+}
+
 /* ── Sandbox renderers ────────────────────────────────────── */
 
 const BLANK_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+
+function runInitAll() {
+    if (window.JekyllChess && typeof window.JekyllChess.initAll === 'function') {
+        window.JekyllChess.initAll();
+    }
+}
 
 function renderBlankBoard(host) {
     if (!host) return;
@@ -47,9 +57,7 @@ function renderBlankBoard(host) {
     const el = document.createElement('fen');
     el.textContent = BLANK_FEN;
     host.appendChild(el);
-    if (window.JekyllChess && typeof window.JekyllChess.initAll === 'function') {
-        window.JekyllChess.initAll();
-    }
+    runInitAll();
 }
 
 function renderInline(host, tagName, content) {
@@ -63,9 +71,16 @@ function renderInline(host, tagName, content) {
     const el = document.createElement(tagName);
     el.textContent = trimmed;
     host.appendChild(el);
-    if (window.JekyllChess && typeof window.JekyllChess.initAll === 'function') {
-        window.JekyllChess.initAll();
-    }
+    runInitAll();
+}
+
+function renderFromSrc(host, tagName, src) {
+    if (!host) return;
+    host.innerHTML = '';
+    const el = document.createElement(tagName);
+    el.setAttribute('src', src);
+    host.appendChild(el);
+    runInitAll();
 }
 
 function renderPlayer(host, content) {
@@ -81,14 +96,76 @@ function renderPlayer(host, content) {
     host.appendChild(el);
 }
 
+function renderPlayerFromSrc(host, src) {
+    if (!host) return;
+    host.innerHTML = '';
+    const el = document.createElement('pgn-player');
+    el.setAttribute('src', src);
+    host.appendChild(el);
+}
+
+/* ── Code block helpers ───────────────────────────────────── */
+
+function indent(text, spaces) {
+    const pad = ' '.repeat(spaces);
+    return text
+        .split('\n')
+        .map(line => (line.length ? pad + line : line))
+        .join('\n');
+}
+
+function wrapTag(tagName, body, { src } = {}) {
+    if (src) {
+        return `<${tagName} src="${escapeAttr(src)}"></${tagName}>`;
+    }
+    const trimmed = (body || '').replace(/\s+$/g, '');
+    if (!trimmed) return `<${tagName}></${tagName}>`;
+    return `<${tagName}>\n${indent(trimmed, 2)}\n</${tagName}>`;
+}
+
+function setCode(codeId, text) {
+    const el = $(codeId);
+    if (el) el.textContent = text;
+}
+
+function flashCopyFeedback(button) {
+    if (!button) return;
+    const original = button.dataset.originalLabel || button.textContent;
+    button.dataset.originalLabel = original;
+    button.textContent = 'Copied!';
+    button.disabled = true;
+    setTimeout(() => {
+        button.textContent = original;
+        button.disabled = false;
+    }, 1500);
+}
+
+async function copyToClipboard(text, button) {
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(text);
+        } else {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.setAttribute('readonly', '');
+            ta.style.position = 'absolute';
+            ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+        }
+        flashCopyFeedback(button);
+    } catch (err) {
+        console.error('Copy failed:', err);
+    }
+}
+
 /* ── Tab-specific composers ───────────────────────────────── */
 
-function updateFen(host) {
+function composeFen() {
     const fen = val('sandbox-fen-fen');
-    if (!fen) {
-        renderBlankBoard(host);
-        return;
-    }
+    if (!fen) return '';
     let body = buildHeaders([
         ['FEN', fen],
         ['Orientation', val('sandbox-fen-orientation')],
@@ -100,16 +177,23 @@ function updateFen(host) {
     if (csl) annots.push(`[%csl ${csl}]`);
     if (cal) annots.push(`[%cal ${cal}]`);
     if (annots.length) body += `\n{${annots.join(' ')}}`;
-    renderInline(host, 'fen', body);
+    return body;
 }
 
-function updatePuzzle(host) {
-    const fen = val('sandbox-puzzle-fen');
-    const moves = val('sandbox-puzzle-solution');
-    if (!fen || !moves) {
+function updateFen(host) {
+    const body = composeFen();
+    setCode('sandbox-fen-code', wrapTag('fen', body));
+    if (!body) {
         renderBlankBoard(host);
         return;
     }
+    renderInline(host, 'fen', body);
+}
+
+function composePuzzle() {
+    const fen = val('sandbox-puzzle-fen');
+    const moves = val('sandbox-puzzle-solution');
+    if (!fen || !moves) return '';
     const firstMoveAuto = $('sandbox-puzzle-firstmoveauto');
     const headers = buildHeaders([
         ['FEN', fen],
@@ -121,43 +205,117 @@ function updatePuzzle(host) {
         ['Date', val('sandbox-puzzle-date')],
         ['Caption', val('sandbox-puzzle-caption')],
     ]);
-    renderInline(host, 'puzzle', `${headers}\n${moves}`);
+    return `${headers}\n${moves}`;
+}
+
+function updatePuzzle(host) {
+    const src = val('sandbox-puzzle-src');
+    if (src) {
+        setCode('sandbox-puzzle-code', wrapTag('puzzle', '', { src }));
+        renderFromSrc(host, 'puzzle', src);
+        return;
+    }
+    const body = composePuzzle();
+    setCode('sandbox-puzzle-code', wrapTag('puzzle', body));
+    if (!body) {
+        renderBlankBoard(host);
+        return;
+    }
+    renderInline(host, 'puzzle', body);
+}
+
+function composePgn() {
+    const moves = val('sandbox-pgn-moves');
+    if (!moves) return '';
+    const headers = buildHeaders([
+        ['White', val('sandbox-pgn-white')],
+        ['Black', val('sandbox-pgn-black')],
+        ['Event', val('sandbox-pgn-event')],
+        ['Date', val('sandbox-pgn-date')],
+        ['Result', val('sandbox-pgn-result')],
+    ]);
+    return headers ? `${headers}\n${moves}` : moves;
+}
+
+function updatePgn(host) {
+    const src = val('sandbox-pgn-src');
+    if (src) {
+        setCode('sandbox-pgn-code', wrapTag('pgn', '', { src }));
+        renderFromSrc(host, 'pgn', src);
+        return;
+    }
+    const body = composePgn();
+    setCode('sandbox-pgn-code', wrapTag('pgn', body));
+    if (!body) {
+        renderBlankBoard(host);
+        return;
+    }
+    renderInline(host, 'pgn', body);
+}
+
+function composePlayer() {
+    const moves = val('sandbox-player-moves');
+    if (!moves) return '';
+    const headers = buildHeaders([
+        ['White', val('sandbox-player-white')],
+        ['Black', val('sandbox-player-black')],
+        ['Event', val('sandbox-player-event')],
+        ['Date', val('sandbox-player-date')],
+        ['Result', val('sandbox-player-result')],
+    ]);
+    return headers ? `${headers}\n${moves}` : moves;
+}
+
+function updatePgnPlayer(host) {
+    const src = val('sandbox-player-src');
+    if (src) {
+        setCode('sandbox-player-code', wrapTag('pgn-player', '', { src }));
+        renderPlayerFromSrc(host, src);
+        return;
+    }
+    const body = composePlayer();
+    setCode('sandbox-player-code', wrapTag('pgn-player', body));
+    if (!body) {
+        renderBlankBoard(host);
+        return;
+    }
+    renderPlayer(host, body);
 }
 
 /* ── Defaults ─────────────────────────────────────────────── */
 
+const NIMZOWITSCH_MOVES =
+    '{ **_A pawn move must not in itself be regarded as a developing move, but merely as an aid to development._** } ' +
+    '{ An important rule for the beginner is the following: if it were possible to develop the pieces without the aid of pawn moves, the pawnless advance would be the correct one, for, as suggested, the pawn is not a fighting unit in the sense that his crossing of the frontier is to be feared by the enemy, since obviously the attacking force of the pawns is smail compared with that of the pieces. The pawnless advance, however, is in reality impossible of execution, since the enemy pawn center, thanks to its inherent aggressiveness, would drive back the pieces we had developed. For this reason we should, in order to safeguard the development of our pieces, first build up a pawn center. By center we mean the four squares which enclose the midpoint - the squares e4, e5, d4, d5. } ' +
+    '{ The wrecking of a pawnless advance is illustrated by the following: } ' +
+    '1. Nf3 Nc6 2.e3 { Since the pawn has not been moved to the center, we may still regard the advance as pawnless in our sense. } ' +
+    '2... e5 3. Nc3 Nf6 4. Bc4? d5 { Now the faultiness of White\'s development may be seen; the Black pawns have a demobilizing effect. } ' +
+    '5. Bb3 { Bad at the outset, a piece moved twice. } ' +
+    '5... d4 {[D]} { and White is uncomfortably placed, at any rate from the point of view of the player with little fighting experience. }';
+
+const RETI_SOLUTION =
+    '1. Re2! e4 ( 1. Re1? { 🚫 Wrong move<br>A seemingly sensible move, Re1? would be a sad mistake. Black maintains the opposition after } 1... e4 2. Ke7 Ke5 3. Kd7 Kd5 { and manages to draw. Try again. } ) ' +
+    '2. Re1! Ke5 { Losing a move with 1. Re2! and 2. Re1! is the key! } ' +
+    '3. Ke7 Kd4 {[%cal Ge7e6]} 4. Ke6 Kd3 {[%cal Ge6e5]} 5. Ke5 e3 {[%cal Ge5f4]} 6. Kf4 e2 {[%cal Gf4f3]} 7. Kf3 { Black will lose the pawn, and the game. }';
+
 function setDefaults() {
     const defaults = {
-        'sandbox-fen-fen': 'rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2',
+        'sandbox-fen-fen': '7k/1p1b1Qp1/1r6/p1r2pq1/1b1Np2p/4P3/K1BNR1PP/3R4 b - - 3 35',
         'sandbox-fen-orientation': 'black',
-        'sandbox-fen-caption': "**Sicilian Defense** — Black's most popular reply to 1.e4.",
-        'sandbox-fen-csl': 'Gc5,Ge4',
-        'sandbox-fen-cal': 'Gf3e5',
+        'sandbox-fen-caption': '**GM Praggnanandhaa R. - GM Sindarov, Javokhir** FIDE Candidates Tournament, 2026.',
+        'sandbox-fen-csl': 'Ra2,Rf7',
+        'sandbox-fen-cal': 'Gd7e6',
 
-        'sandbox-puzzle-fen': 'r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3',
-        'sandbox-puzzle-solution': 'a6',
-        'sandbox-puzzle-caption': '**Black to move.** How should Black respond to the Ruy Lopez pin?',
+        'sandbox-puzzle-fen': '8/5K2/8/4pk2/4R3/8/8/8 w - - 0 1',
+        'sandbox-puzzle-solution': RETI_SOLUTION,
+        'sandbox-puzzle-orientation': 'white',
+        'sandbox-puzzle-event': 'Study by Richard Réti, Münchner Neueste Nachrichten, 1928',
+        'sandbox-puzzle-caption': 'White to move and win.',
 
-        'sandbox-pgn-white': 'Morphy, Paul',
-        'sandbox-pgn-black': 'Duke of Brunswick',
-        'sandbox-pgn-event': 'Paris Opera Box',
-        'sandbox-pgn-date': '1858',
-        'sandbox-pgn-result': '1-0',
-        'sandbox-pgn-moves':
-            '1. e4 e5 2. Nf3 d6 3. d4 Bg4 {A pin that proves costly.} 4. dxe5 Bxf3 5. Qxf3 dxe5\n' +
-            '6. Bc4 Nf6 7. Qb3 Qe7 8. Nc3 c6 9. Bg5 b5 10. Nxb5 cxb5 11. Bxb5+ Nbd7\n' +
-            '12. O-O-O Rd8 13. Rxd7 Rxd7 14. Rd1 Qe6 15. Bxd7+ Nxd7 16. Qb8+ Nxb8 17. Rd8#',
+        'sandbox-pgn-event': 'Nimzowitsch, A. (1994) My System. Original work published 1925-1927',
+        'sandbox-pgn-moves': NIMZOWITSCH_MOVES,
 
-        'sandbox-player-white': 'Carlsen, Magnus',
-        'sandbox-player-black': 'Nepomniachtchi, Ian',
-        'sandbox-player-event': 'World Championship',
-        'sandbox-player-date': '2021',
-        'sandbox-player-result': '1-0',
-        'sandbox-player-moves':
-            '1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 7. Bb3 O-O\n' +
-            '8. h3 Na5 9. Nxe5 Nxb3 10. axb3 Bb7 11. d3 d5 12. exd5 Qxd5 13. Qf3 Bd6\n' +
-            '14. Kf1 Rfb8 15. Qxd5 Nxd5 16. Bd2 c5 17. Nf3 Rd8 18. Nc3 Nb4 19. Rec1 Rac8\n' +
-            '20. Ne2 Nc6 21. Be3 Ne7 22. Bf4 Bxf4 23. Nxf4 Rxd3 24. Ra3 Rxa3 25. bxa3 g5',
+        'sandbox-player-src': 'https://lichess.org/api/study/97di6JjX/Jzyakrf4.pgn',
     };
     for (const [id, v] of Object.entries(defaults)) {
         const el = $(id);
@@ -166,38 +324,6 @@ function setDefaults() {
 }
 
 /* ── Init ─────────────────────────────────────────────────── */
-
-function updatePgn(host) {
-    const moves = val('sandbox-pgn-moves');
-    if (!moves) {
-        renderBlankBoard(host);
-        return;
-    }
-    const headers = buildHeaders([
-        ['White', val('sandbox-pgn-white')],
-        ['Black', val('sandbox-pgn-black')],
-        ['Event', val('sandbox-pgn-event')],
-        ['Date', val('sandbox-pgn-date')],
-        ['Result', val('sandbox-pgn-result')],
-    ]);
-    renderInline(host, 'pgn', headers ? `${headers}\n${moves}` : moves);
-}
-
-function updatePgnPlayer(host) {
-    const moves = val('sandbox-player-moves');
-    if (!moves) {
-        renderBlankBoard(host);
-        return;
-    }
-    const headers = buildHeaders([
-        ['White', val('sandbox-player-white')],
-        ['Black', val('sandbox-player-black')],
-        ['Event', val('sandbox-player-event')],
-        ['Date', val('sandbox-player-date')],
-        ['Result', val('sandbox-player-result')],
-    ]);
-    renderPlayer(host, headers ? `${headers}\n${moves}` : moves);
-}
 
 function insertDiagramAtCaret(textarea) {
     const marker = '{[D]}';
@@ -211,6 +337,13 @@ function insertDiagramAtCaret(textarea) {
     const caret = pos + insert.length;
     textarea.focus();
     textarea.setSelectionRange(caret, caret);
+}
+
+function wireCopyButton(buttonId, codeId) {
+    const btn = $(buttonId);
+    const code = $(codeId);
+    if (!btn || !code) return;
+    btn.addEventListener('click', () => copyToClipboard(code.textContent || '', btn));
 }
 
 function initSandbox() {
@@ -249,6 +382,11 @@ function initSandbox() {
         playerBtn.addEventListener('click', () => updatePgnPlayer(playerHost));
         updatePgnPlayer(playerHost);
     }
+
+    wireCopyButton('copy-fen-btn', 'sandbox-fen-code');
+    wireCopyButton('copy-puzzle-btn', 'sandbox-puzzle-code');
+    wireCopyButton('copy-pgn-btn', 'sandbox-pgn-code');
+    wireCopyButton('copy-player-btn', 'sandbox-player-code');
 }
 
 function init() {

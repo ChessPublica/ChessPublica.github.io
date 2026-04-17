@@ -296,6 +296,10 @@
                                     <input id="sandbox-fen-cal" type="text" class="input" placeholder="Ge2e4,Rd8h4 — &lt;color&gt;&lt;from&gt;&lt;to&gt;">
                                 </div>
                                 <button id="update-fen-btn" class="button-full">Update Preview</button>
+                                <div class="sandbox-code-wrap">
+                                    <pre class="sandbox-code"><code id="sandbox-fen-code"></code></pre>
+                                    <button id="copy-fen-btn" class="button-secondary-full" type="button">Copy Code</button>
+                                </div>
                             </div>
                         </div>
                         <div class="preview-panel">
@@ -313,12 +317,16 @@
                             </div>
                             <div class="card-body space-y-4">
                                 <div class="input-group">
+                                    <label class="label">Source URL <span class="optional">(optional — loads PGN from URL)</span></label>
+                                    <input id="sandbox-puzzle-src" type="text" class="input" placeholder="https://example.com/puzzle.pgn">
+                                </div>
+                                <div class="input-group">
                                     <label class="label">Starting FEN <span class="required">*</span></label>
                                     <input id="sandbox-puzzle-fen" type="text" class="input" placeholder="r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3">
                                 </div>
                                 <div class="input-group">
                                     <label class="label">Solution Moves <span class="required">*</span></label>
-                                    <input id="sandbox-puzzle-solution" type="text" class="input" placeholder="a6 Bxc6 bxc6">
+                                    <textarea id="sandbox-puzzle-solution" class="textarea" rows="4" placeholder="1. Re2! e4 2. Re1! Ke5 ..."></textarea>
                                 </div>
                                 <div class="field-grid-2">
                                     <div class="input-group">
@@ -358,6 +366,10 @@
                                     <input id="sandbox-puzzle-caption" type="text" class="input" placeholder="**Black to move.** Find the best plan.">
                                 </div>
                                 <button id="update-puzzle-btn" class="button-full">Update Preview</button>
+                                <div class="sandbox-code-wrap">
+                                    <pre class="sandbox-code"><code id="sandbox-puzzle-code"></code></pre>
+                                    <button id="copy-puzzle-btn" class="button-secondary-full" type="button">Copy Code</button>
+                                </div>
                             </div>
                         </div>
                         <div class="preview-panel">
@@ -374,6 +386,10 @@
                                 <p>Fill in game metadata and movetext to render an annotated game.</p>
                             </div>
                             <div class="card-body space-y-4">
+                                <div class="input-group">
+                                    <label class="label">Source URL <span class="optional">(optional — loads PGN from URL)</span></label>
+                                    <input id="sandbox-pgn-src" type="text" class="input" placeholder="https://example.com/game.pgn">
+                                </div>
                                 <div class="field-grid-2">
                                     <div class="input-group">
                                         <label class="label">White <span class="optional">(optional)</span></label>
@@ -412,6 +428,10 @@
                                     <textarea id="sandbox-pgn-moves" class="textarea" rows="8" placeholder="1. e4 e5 2. Nf3 {A classic opening.} Nc6 ..."></textarea>
                                 </div>
                                 <button id="update-pgn-btn" class="button-full">Update Preview</button>
+                                <div class="sandbox-code-wrap">
+                                    <pre class="sandbox-code"><code id="sandbox-pgn-code"></code></pre>
+                                    <button id="copy-pgn-btn" class="button-secondary-full" type="button">Copy Code</button>
+                                </div>
                             </div>
                         </div>
                         <div class="preview-panel">
@@ -428,6 +448,10 @@
                                 <p>Fill in metadata and movetext to render the interactive player.</p>
                             </div>
                             <div class="card-body space-y-4">
+                                <div class="input-group">
+                                    <label class="label">Source URL <span class="optional">(optional — loads PGN from URL)</span></label>
+                                    <input id="sandbox-player-src" type="text" class="input" placeholder="https://lichess.org/api/study/.../chapter.pgn">
+                                </div>
                                 <div class="field-grid-2">
                                     <div class="input-group">
                                         <label class="label">White <span class="optional">(optional)</span></label>
@@ -463,6 +487,10 @@
                                     <textarea id="sandbox-player-moves" class="textarea" rows="8" placeholder="1. e4 e5 2. Nf3 Nc6 ..."></textarea>
                                 </div>
                                 <button id="update-player-btn" class="button-full">Update Preview</button>
+                                <div class="sandbox-code-wrap">
+                                    <pre class="sandbox-code"><code id="sandbox-player-code"></code></pre>
+                                    <button id="copy-player-btn" class="button-secondary-full" type="button">Copy Code</button>
+                                </div>
                             </div>
                         </div>
                         <div class="preview-panel">
