@@ -226,9 +226,10 @@ function renderPuzzleHeader(wrapper, raw, packInfo) {
       line1 = line2;
       line2 = "";
     }
+    if (!line1) line1 = "Puzzle";
   }
 
-  if (line1 || line2) {
+  {
     var title = document.createElement("div");
     title.className = "video-title jc-puzzle-title";
 

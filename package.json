@@ -1,11 +1,13 @@
 {
   "type": "module",
   "scripts": {
-    "build": "node build.js"
+    "build": "node build.js",
+    "watch": "chokidar \"assets/**/*\" \"build.js\" -c \"npm run build\" --initial"
   },
   "devDependencies": {
     "@chrisoakman/chessboardjs": "1.0.0",
     "chess.js": "0.12.0",
+    "chokidar-cli": "^3.0.0",
     "jquery": "3.7.1"
   }
 }

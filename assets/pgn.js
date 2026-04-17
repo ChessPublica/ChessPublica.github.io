@@ -347,26 +347,55 @@ export function parseHeaders(pgnText) {
 ================================================================ */
 
 export function renderHeaders(headers, container) {
-  var div = document.createElement("div");
-  div.className = "pgn-headers";
+  var wTitle = headers.WhiteTitle || "";
+  var bTitle = headers.BlackTitle || "";
 
-  if (headers.White && headers.Black) {
-    var players = document.createElement("div");
-    players.className = "pgn-players";
-    players.textContent = headers.White + " – " + headers.Black;
-    div.appendChild(players);
+  var white = headers.White || "White";
+  var black = headers.Black || "Black";
+
+  var wElo = headers.WhiteElo ? " (" + headers.WhiteElo + ")" : "";
+  var bElo = headers.BlackElo ? " (" + headers.BlackElo + ")" : "";
+
+  var event = headers.Event || "";
+  var date = (headers.Date || "").replace(/\.\?+/g, "");
+
+  var leftSide = ((wTitle ? wTitle + " " : "") + white + wElo).trim();
+  var rightSide = ((bTitle ? bTitle + " " : "") + black + bElo).trim();
+  var players = leftSide + " – " + rightSide;
+
+  var eventLine = "";
+  if (event && date) eventLine = event + ", " + date;
+  else if (event) eventLine = event;
+  else if (date) eventLine = date;
+
+  var title = document.createElement("div");
+  title.className = "video-title pgn-title";
+
+  var emojiSpan = document.createElement("span");
+  emojiSpan.className = "video-title-emoji lucide-icon";
+  emojiSpan.style.setProperty(
+    "--icon",
+    "url(https://unpkg.com/lucide-static@latest/icons/swords.svg)",
+  );
+  title.appendChild(emojiSpan);
+
+  var textDiv = document.createElement("div");
+  textDiv.className = "video-title-text";
+
+  var playersDiv = document.createElement("div");
+  playersDiv.className = "video-title-players";
+  playersDiv.textContent = players;
+  textDiv.appendChild(playersDiv);
+
+  if (eventLine) {
+    var eventDiv = document.createElement("div");
+    eventDiv.className = "video-title-event";
+    eventDiv.textContent = eventLine;
+    textDiv.appendChild(eventDiv);
   }
 
-  if (headers.Site || headers.Date) {
-    var meta = document.createElement("div");
-    meta.className = "pgn-meta";
-    var site = headers.Site || "";
-    var date = headers.Date || "";
-    meta.textContent = site && date ? site + ", " + date : site || date;
-    div.appendChild(meta);
-  }
-
-  container.appendChild(div);
+  title.appendChild(textDiv);
+  container.appendChild(title);
 }
 
 export function renderMoveTree(rootNode, container, headers) {
