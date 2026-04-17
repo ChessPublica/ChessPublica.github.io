@@ -375,7 +375,7 @@ export function renderHeaders(headers, container) {
   emojiSpan.className = "video-title-emoji lucide-icon";
   emojiSpan.style.setProperty(
     "--icon",
-    "url(https://unpkg.com/lucide-static@latest/icons/swords.svg)",
+    "url(https://unpkg.com/lucide-static@latest/icons/text-initial.svg)",
   );
   title.appendChild(emojiSpan);
 
