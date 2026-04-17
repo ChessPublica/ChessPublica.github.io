@@ -320,6 +320,23 @@
                                     <label class="label">Solution Moves <span class="required">*</span></label>
                                     <input id="sandbox-puzzle-solution" type="text" class="input" placeholder="a6 Bxc6 bxc6">
                                 </div>
+                                <div class="field-grid-2">
+                                    <div class="input-group">
+                                        <label class="label">Orientation <span class="optional">(optional)</span></label>
+                                        <select id="sandbox-puzzle-orientation" class="input">
+                                            <option value="">auto (from FEN)</option>
+                                            <option value="white">white</option>
+                                            <option value="black">black</option>
+                                        </select>
+                                    </div>
+                                    <div class="input-group">
+                                        <label class="label">First move auto <span class="optional">(optional)</span></label>
+                                        <label class="checkbox-row">
+                                            <input id="sandbox-puzzle-firstmoveauto" type="checkbox">
+                                            <span>Auto-play the first move</span>
+                                        </label>
+                                    </div>
+                                </div>
                                 <div class="input-group">
                                     <label class="label">White <span class="optional">(optional)</span></label>
                                     <input id="sandbox-puzzle-white" type="text" class="input" placeholder="Carlsen, Magnus">
