@@ -287,6 +287,14 @@
                                     <label class="label">Caption <span class="optional">(optional, markdown)</span></label>
                                     <input id="sandbox-fen-caption" type="text" class="input" placeholder="**Bold**, *italic*, `code`, [link](url)">
                                 </div>
+                                <div class="input-group">
+                                    <label class="label">Square highlights <span class="optional">(optional, %csl)</span></label>
+                                    <input id="sandbox-fen-csl" type="text" class="input" placeholder="Ge4,Rd5 — G=green, R=red, Y=yellow, B=blue">
+                                </div>
+                                <div class="input-group">
+                                    <label class="label">Arrows <span class="optional">(optional, %cal)</span></label>
+                                    <input id="sandbox-fen-cal" type="text" class="input" placeholder="Ge2e4,Rd8h4 — &lt;color&gt;&lt;from&gt;&lt;to&gt;">
+                                </div>
                                 <button id="update-fen-btn" class="button-full">Update Preview</button>
                             </div>
                         </div>
@@ -380,7 +388,10 @@
                                     </select>
                                 </div>
                                 <div class="input-group">
-                                    <label class="label">Movetext <span class="required">*</span></label>
+                                    <div class="label-row">
+                                        <label class="label">Movetext <span class="required">*</span></label>
+                                        <button type="button" id="insert-diagram-btn" class="button-inline">+ Insert diagram {[D]}</button>
+                                    </div>
                                     <textarea id="sandbox-pgn-moves" class="textarea" rows="8" placeholder="1. e4 e5 2. Nf3 {A classic opening.} Nc6 ..."></textarea>
                                 </div>
                                 <button id="update-pgn-btn" class="button-full">Update Preview</button>

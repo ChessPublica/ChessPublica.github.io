@@ -89,11 +89,17 @@ function updateFen(host) {
         renderBlankBoard(host);
         return;
     }
-    const body = buildHeaders([
+    let body = buildHeaders([
         ['FEN', fen],
         ['Orientation', val('sandbox-fen-orientation')],
         ['Caption', val('sandbox-fen-caption')],
     ]);
+    const csl = val('sandbox-fen-csl');
+    const cal = val('sandbox-fen-cal');
+    const annots = [];
+    if (csl) annots.push(`[%csl ${csl}]`);
+    if (cal) annots.push(`[%cal ${cal}]`);
+    if (annots.length) body += `\n{${annots.join(' ')}}`;
     renderInline(host, 'fen', body);
 }
 
@@ -122,6 +128,8 @@ function setDefaults() {
         'sandbox-fen-fen': 'rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2',
         'sandbox-fen-orientation': 'black',
         'sandbox-fen-caption': "**Sicilian Defense** — Black's most popular reply to 1.e4.",
+        'sandbox-fen-csl': 'Gc5,Ge4',
+        'sandbox-fen-cal': 'Gf3e5',
 
         'sandbox-puzzle-fen': 'r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3',
         'sandbox-puzzle-solution': 'a6',
@@ -156,6 +164,52 @@ function setDefaults() {
 
 /* ── Init ─────────────────────────────────────────────────── */
 
+function updatePgn(host) {
+    const moves = val('sandbox-pgn-moves');
+    if (!moves) {
+        renderBlankBoard(host);
+        return;
+    }
+    const headers = buildHeaders([
+        ['White', val('sandbox-pgn-white')],
+        ['Black', val('sandbox-pgn-black')],
+        ['Event', val('sandbox-pgn-event')],
+        ['Date', val('sandbox-pgn-date')],
+        ['Result', val('sandbox-pgn-result')],
+    ]);
+    renderInline(host, 'pgn', headers ? `${headers}\n${moves}` : moves);
+}
+
+function updatePgnPlayer(host) {
+    const moves = val('sandbox-player-moves');
+    if (!moves) {
+        renderBlankBoard(host);
+        return;
+    }
+    const headers = buildHeaders([
+        ['White', val('sandbox-player-white')],
+        ['Black', val('sandbox-player-black')],
+        ['Event', val('sandbox-player-event')],
+        ['Date', val('sandbox-player-date')],
+        ['Result', val('sandbox-player-result')],
+    ]);
+    renderPlayer(host, headers ? `${headers}\n${moves}` : moves);
+}
+
+function insertDiagramAtCaret(textarea) {
+    const marker = '{[D]}';
+    const pos = textarea.selectionStart ?? textarea.value.length;
+    const end = textarea.selectionEnd ?? pos;
+    const before = textarea.value.slice(0, pos);
+    const after = textarea.value.slice(end);
+    const pad = before && !/\s$/.test(before) ? ' ' : '';
+    const insert = pad + marker + ' ';
+    textarea.value = before + insert + after;
+    const caret = pos + insert.length;
+    textarea.focus();
+    textarea.setSelectionRange(caret, caret);
+}
+
 function initSandbox() {
     setDefaults();
 
@@ -163,50 +217,34 @@ function initSandbox() {
     const fenBtn = $('update-fen-btn');
     if (fenHost && fenBtn) {
         fenBtn.addEventListener('click', () => updateFen(fenHost));
-        renderBlankBoard(fenHost);
+        updateFen(fenHost);
     }
 
     const puzzleHost = $('sandbox-puzzle-container');
     const puzzleBtn = $('update-puzzle-btn');
     if (puzzleHost && puzzleBtn) {
         puzzleBtn.addEventListener('click', () => updatePuzzle(puzzleHost));
-        renderBlankBoard(puzzleHost);
+        updatePuzzle(puzzleHost);
     }
 
     const pgnHost = $('sandbox-pgn-container');
     const pgnBtn = $('update-pgn-btn');
     if (pgnHost && pgnBtn) {
-        pgnBtn.addEventListener('click', () => {
-            const moves = val('sandbox-pgn-moves');
-            if (!moves) return renderBlankBoard(pgnHost);
-            const headers = buildHeaders([
-                ['White', val('sandbox-pgn-white')],
-                ['Black', val('sandbox-pgn-black')],
-                ['Event', val('sandbox-pgn-event')],
-                ['Date', val('sandbox-pgn-date')],
-                ['Result', val('sandbox-pgn-result')],
-            ]);
-            renderInline(pgnHost, 'pgn', headers ? `${headers}\n${moves}` : moves);
-        });
-        renderBlankBoard(pgnHost);
+        pgnBtn.addEventListener('click', () => updatePgn(pgnHost));
+        updatePgn(pgnHost);
+    }
+
+    const insertDiagramBtn = $('insert-diagram-btn');
+    const pgnMovesEl = $('sandbox-pgn-moves');
+    if (insertDiagramBtn && pgnMovesEl) {
+        insertDiagramBtn.addEventListener('click', () => insertDiagramAtCaret(pgnMovesEl));
     }
 
     const playerHost = $('sandbox-player-container');
     const playerBtn = $('update-player-btn');
     if (playerHost && playerBtn) {
-        playerBtn.addEventListener('click', () => {
-            const moves = val('sandbox-player-moves');
-            if (!moves) return renderBlankBoard(playerHost);
-            const headers = buildHeaders([
-                ['White', val('sandbox-player-white')],
-                ['Black', val('sandbox-player-black')],
-                ['Event', val('sandbox-player-event')],
-                ['Date', val('sandbox-player-date')],
-                ['Result', val('sandbox-player-result')],
-            ]);
-            renderPlayer(playerHost, headers ? `${headers}\n${moves}` : moves);
-        });
-        renderBlankBoard(playerHost);
+        playerBtn.addEventListener('click', () => updatePgnPlayer(playerHost));
+        updatePgnPlayer(playerHost);
     }
 }
 
