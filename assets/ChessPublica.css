@@ -126,7 +126,7 @@
 /* BOARD */
 
 .board {
-  width: 100%;
+  width: var(--board-size);
   position: relative;
 }
 
