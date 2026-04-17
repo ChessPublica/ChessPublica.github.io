@@ -107,7 +107,7 @@ function tokenize(text) {
 }
 
 function extractMovetext(pgnText) {
-  return pgnText.split(/\n\n/).slice(1).join(" ").trim();
+  return pgnText.split(/\r?\n[ \t]*\r?\n/).slice(1).join(" ").trim();
 }
 
 /* ================================================================
