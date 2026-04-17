@@ -1388,3 +1388,5 @@ body {
 .move-list-scroll::-webkit-scrollbar-thumb:hover {
     background: #d4d4d8;
 }
+
+.button-secondary-full { margin-top: 1rem; }
