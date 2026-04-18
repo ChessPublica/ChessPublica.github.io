@@ -282,12 +282,22 @@
 /* Lucide icons are rendered as CSS masks so the SVG silhouette is
    painted in the element's currentColor. This avoids the filter:invert
    hack and works against any background. Each caller sets the SVG URL
-   via the --icon custom property. */
+   via the --icon custom property.
+
+   iOS Safari/Chrome (WebKit) does not reliably honor the `mask`
+   shorthand with a CSS custom property + `/size` syntax, so each
+   sub-property is written longhand. */
 .lucide-icon {
   display: inline-block;
   background-color: currentColor;
-  -webkit-mask: var(--icon) no-repeat center / contain;
-          mask: var(--icon) no-repeat center / contain;
+  -webkit-mask-image: var(--icon);
+          mask-image: var(--icon);
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+          mask-position: center;
+  -webkit-mask-size: contain;
+          mask-size: contain;
   vertical-align: middle;
   flex-shrink: 0;
 }
