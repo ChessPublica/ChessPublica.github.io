@@ -18,6 +18,15 @@
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
 }
 
+/* Shrink the board on narrow viewports so chess elements never overflow.
+   The engine's default is 400px; cap it to the viewport minus container +
+   preview-panel padding so boards always fit. */
+@media (max-width: 640px) {
+    :root {
+        --board-size: min(400px, calc(100vw - 5rem));
+    }
+}
+
 html {
     scroll-behavior: smooth;
     box-sizing: border-box;
@@ -841,6 +850,53 @@ body {
     width: 1rem;
     height: 1rem;
     cursor: pointer;
+}
+
+/* Mobile-first: tighten sandbox layout on narrow viewports */
+@media (max-width: 640px) {
+    .sandbox-section {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+        gap: 2rem;
+    }
+
+    .sandbox-grid {
+        gap: 1.25rem;
+    }
+
+    .tab-list {
+        margin-bottom: 1.25rem;
+    }
+
+    .tab-trigger {
+        padding: 0.5rem 0.25rem;
+    }
+
+    .card-header,
+    .card-body {
+        padding: 1rem;
+    }
+
+    .preview-panel {
+        padding: 1rem;
+        gap: 0.5rem;
+    }
+
+    .sandbox-host {
+        max-width: 100%;
+    }
+
+    .sandbox-host > .fen-container,
+    .sandbox-host > .jc-puzzle,
+    .sandbox-host > .pgn-container,
+    .sandbox-host > pgn-player {
+        max-width: 100%;
+    }
+
+    .sandbox-code {
+        font-size: 0.75rem;
+        padding: 0.75rem;
+    }
 }
 
 /* Setup Section */
