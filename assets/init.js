@@ -117,7 +117,11 @@ export function initFenElements() {
     if (el.dataset.jcRendered === "1") return;
     el.dataset.jcRendered = "1";
 
-    var raw = el.textContent.trim();
+    /* Read innerHTML (not textContent) so inline HTML the author put
+       inside a [Caption "..."] header — e.g. <br>, <strong> — survives
+       into parseHeader(). The caption is passed through the sanitizing
+       formatComment() before being inserted into the DOM. */
+    var raw = el.innerHTML.trim();
     var wrapper = document.createElement("div");
     wrapper.className = "fen-container";
     el.replaceWith(wrapper);
