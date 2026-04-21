@@ -346,7 +346,7 @@ function loadPGN(pgn) {
     emojiSpan.className = "video-title-emoji lucide-icon";
     emojiSpan.style.setProperty(
       "--icon",
-      "url(https://unpkg.com/lucide-static@latest/icons/swords.svg)",
+      "url(https://unpkg.com/lucide-static@1.8.0/icons/swords.svg)",
     );
     this.titleEl.appendChild(emojiSpan);
 
@@ -755,7 +755,7 @@ class VideoComment {
       icon.className = "comment-icon lucide-icon";
       icon.style.setProperty(
         "--icon",
-        "url(https://unpkg.com/lucide-static@latest/icons/message-square.svg)",
+        "url(https://unpkg.com/lucide-static@1.8.0/icons/message-square.svg)",
       );
 
       /* Wrap body in a column div */
@@ -788,7 +788,7 @@ class VideoComment {
         icon.className = "variation-icon lucide-icon";
         icon.style.setProperty(
           "--icon",
-          "url(https://unpkg.com/lucide-static@latest/icons/search.svg)",
+          "url(https://unpkg.com/lucide-static@1.8.0/icons/search.svg)",
         );
 
         const content = document.createElement("div");
@@ -865,14 +865,14 @@ class VideoComment {
       const btn = document.createElement("button");
       btn.className = "comment-play-btn";
       if (isGameOver) {
-        btn.innerHTML = '<span class="lucide-icon" style="--icon:url(https://unpkg.com/lucide-static@latest/icons/rotate-ccw.svg)" aria-label="Replay"></span>';
+        btn.innerHTML = '<span class="lucide-icon" style="--icon:url(https://unpkg.com/lucide-static@1.8.0/icons/rotate-ccw.svg)" aria-label="Replay"></span>';
         btn.onclick   = () => {
           this.el.querySelectorAll(".var-move").forEach(s => s.classList.remove("active"));
           this.engine.goTo(0);
           this.engine.showPlayBtn();
         };
       } else {
-        btn.innerHTML = '<span class="lucide-icon" style="--icon:url(https://unpkg.com/lucide-static@latest/icons/play.svg)" aria-label="Play"></span>';
+        btn.innerHTML = '<span class="lucide-icon" style="--icon:url(https://unpkg.com/lucide-static@1.8.0/icons/play.svg)" aria-label="Play"></span>';
         btn.onclick   = () => {
           this.el.querySelectorAll(".var-move").forEach(s => s.classList.remove("active"));
           this.engine.play();
@@ -1527,17 +1527,17 @@ class PgnPlayerElement extends HTMLElement {
       <div class="player-container">
         <div class="board-toolbar">
           <button class="settings-toggle" aria-label="Settings">
-            <span class="lucide-icon" style="--icon:url(https://unpkg.com/lucide-static@latest/icons/settings.svg)"></span>
+            <span class="lucide-icon" style="--icon:url(https://unpkg.com/lucide-static@1.8.0/icons/settings.svg)"></span>
           </button>
           <div class="settings-panel hidden">
             <button class="settings-btn" data-action="download" title="Download PGN" aria-label="Download PGN">
-              <span class="lucide-icon" style="--icon:url(https://unpkg.com/lucide-static@latest/icons/download.svg)"></span>
+              <span class="lucide-icon" style="--icon:url(https://unpkg.com/lucide-static@1.8.0/icons/download.svg)"></span>
             </button>
             <button class="settings-btn" data-action="flip" title="Flip board" aria-label="Flip board">
-              <span class="lucide-icon" style="--icon:url(https://unpkg.com/lucide-static@latest/icons/arrow-up-down.svg)"></span>
+              <span class="lucide-icon" style="--icon:url(https://unpkg.com/lucide-static@1.8.0/icons/arrow-up-down.svg)"></span>
             </button>
             <button class="settings-btn" data-action="speed" title="Playback speed" aria-label="Playback speed">
-              <span class="lucide-icon" style="--icon:url(https://unpkg.com/lucide-static@latest/icons/gauge.svg)"></span>
+              <span class="lucide-icon" style="--icon:url(https://unpkg.com/lucide-static@1.8.0/icons/gauge.svg)"></span>
               <span class="speed-label">1x</span>
             </button>
           </div>
@@ -1546,7 +1546,7 @@ class PgnPlayerElement extends HTMLElement {
         <div class="board-wrap">
           <div class="board"></div>
           <div class="play" aria-label="Play">
-            <span class="lucide-icon" style="--icon:url(https://unpkg.com/lucide-static@latest/icons/play.svg)"></span>
+            <span class="lucide-icon" style="--icon:url(https://unpkg.com/lucide-static@1.8.0/icons/play.svg)"></span>
           </div>
         </div>
 

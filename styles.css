@@ -29,6 +29,8 @@
 
 html {
     scroll-behavior: smooth;
+    /* Sticky nav is 4rem tall — keep anchor targets out from under it. */
+    scroll-padding-top: 4rem;
     box-sizing: border-box;
 }
 
@@ -124,6 +126,11 @@ body {
 
 .nav-link:hover {
     color: var(--zinc-900);
+}
+
+.nav-link.active {
+    color: var(--zinc-900);
+    font-weight: 600;
 }
 
 .nav-actions {

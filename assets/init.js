@@ -241,7 +241,7 @@ function renderPuzzleHeader(wrapper, raw, packInfo) {
     emojiSpan.className = "video-title-emoji lucide-icon";
     emojiSpan.style.setProperty(
       "--icon",
-      "url(https://unpkg.com/lucide-static@latest/icons/puzzle.svg)",
+      "url(https://unpkg.com/lucide-static@1.8.0/icons/puzzle.svg)",
     );
     title.appendChild(emojiSpan);
 

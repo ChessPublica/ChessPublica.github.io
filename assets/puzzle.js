@@ -214,7 +214,7 @@ export function renderLocalPuzzle(
     refreshBtn.className = "comment-play-btn jc-puzzle-refresh";
     refreshBtn.setAttribute("aria-label", "Reset puzzle");
     refreshBtn.title = "Reset puzzle";
-    refreshBtn.innerHTML = '<span class="lucide-icon" style="--icon:url(https://unpkg.com/lucide-static@latest/icons/rotate-ccw.svg)"></span>';
+    refreshBtn.innerHTML = '<span class="lucide-icon" style="--icon:url(https://unpkg.com/lucide-static@1.8.0/icons/rotate-ccw.svg)"></span>';
     refreshBtn.style.display = "none";
     refreshBtn.addEventListener("click", function () {
       handleRefresh();

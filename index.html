@@ -37,11 +37,52 @@
     <!-- <style>:root {--board-size: 400px;}</style> -->
 </head>
 <body>
+    <!-- Inline Lucide icon sprite — avoids ~15 HTTP round-trips to
+         cdn.jsdelivr.net/npm/lucide-static on first paint and pins
+         the icon set to the exact shape below (lucide-static@1.8.0).
+         Consumers reference a symbol via <svg><use href="#icon-X"/></svg>;
+         stroke="currentColor" makes them inherit the parent's color. -->
+    <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+        <symbol id="icon-chess-rook" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 20a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v1a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1z"/>
+            <path d="M10 2v2"/>
+            <path d="M14 2v2"/>
+            <path d="m17 18-1-9"/>
+            <path d="M6 2v5a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V2"/>
+            <path d="M6 4h12"/>
+            <path d="m7 18 1-9"/>
+        </symbol>
+        <symbol id="icon-zap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/>
+        </symbol>
+        <symbol id="icon-grid-2x2-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3v17a1 1 0 0 1-1 1H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6a1 1 0 0 1-1 1H3"/>
+            <path d="m16 19 2 2 4-4"/>
+        </symbol>
+        <symbol id="icon-puzzle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15.39 4.39a1 1 0 0 0 1.68-.474 2.5 2.5 0 1 1 3.014 3.015 1 1 0 0 0-.474 1.68l1.683 1.682a2.414 2.414 0 0 1 0 3.414L19.61 15.39a1 1 0 0 1-1.68-.474 2.5 2.5 0 1 0-3.014 3.015 1 1 0 0 1 .474 1.68l-1.683 1.682a2.414 2.414 0 0 1-3.414 0L8.61 19.61a1 1 0 0 0-1.68.474 2.5 2.5 0 1 1-3.014-3.015 1 1 0 0 0 .474-1.68l-1.683-1.682a2.414 2.414 0 0 1 0-3.414L4.39 8.61a1 1 0 0 1 1.68.474 2.5 2.5 0 1 0 3.014-3.015 1 1 0 0 1-.474-1.68l1.683-1.682a2.414 2.414 0 0 1 3.414 0z"/>
+        </symbol>
+        <symbol id="icon-text-initial" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 5h6"/>
+            <path d="M15 12h6"/>
+            <path d="M3 19h18"/>
+            <path d="m3 12 3.553-7.724a.5.5 0 0 1 .894 0L11 12"/>
+            <path d="M3.92 10h6.16"/>
+        </symbol>
+        <symbol id="icon-play-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 9.003a1 1 0 0 1 1.517-.859l4.997 2.997a1 1 0 0 1 0 1.718l-4.997 2.997A1 1 0 0 1 9 14.996z"/>
+            <circle cx="12" cy="12" r="10"/>
+        </symbol>
+        <symbol id="icon-github" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+        </symbol>
+    </svg>
+
     <nav class="nav-bar">
         <div class="container nav-container">
             <a href="/" class="nav-logo">
                 <div class="nav-logo-icon">
-                    <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/chess-rook.svg" class="h-5 w-5 brightness-0 invert" alt="chessrook" referrerPolicy="no-referrer">
+                    <svg class="h-5 w-5" aria-hidden="true"><use href="#icon-chess-rook"/></svg>
                 </div>
                 <span class="nav-logo-text">ChessPublica</span>
             </a>
@@ -51,8 +92,8 @@
                 <a href="#page-setup" class="nav-link">Setup</a>
             </div>
             <div class="nav-actions">
-                <a href="https://github.com/ChessPublica/ChessPublica.github.io" class="icon-button">
-                    <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/github.svg" class="h-5 w-5 opacity-60" alt="github" referrerPolicy="no-referrer">
+                <a href="https://github.com/ChessPublica/ChessPublica.github.io" class="icon-button" aria-label="GitHub">
+                    <svg class="h-5 w-5 opacity-60" aria-hidden="true"><use href="#icon-github"/></svg>
                 </a>
                 <a href="#page-sandbox" class="nav-button">
                     Get Started
@@ -68,7 +109,7 @@
             <div class="hero-section">
                 <div class="hero-content">
                     <div class="hero-badge">
-                        <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/zap.svg" class="h-1 w-1 mr-3 opacity-70" alt="zap" referrerPolicy="no-referrer">
+                        <svg class="h-4 w-4 opacity-70" style="margin-right:0.5rem" aria-hidden="true"><use href="#icon-zap"/></svg>
                         Minimal Chess Publishing Engine
                     </div>
                     <h1 class="hero-title">
@@ -102,7 +143,7 @@
                     <div class="features-grid">
                         <div class="feature-card">
                             <div class="feature-icon-wrapper">
-                                <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/grid-2x2-check.svg" class="h-6 w-6" alt="grid-2x2-check" referrerPolicy="no-referrer">
+                                <svg class="h-6 w-6" aria-hidden="true"><use href="#icon-grid-2x2-check"/></svg>
                             </div>
                             <h3 class="feature-title">Static Diagrams</h3>
                             <p class="feature-description">
@@ -111,7 +152,7 @@
                         </div>
                         <div class="feature-card">
                             <div class="feature-icon-wrapper">
-                                <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/puzzle.svg" class="h-6 w-6" alt="puzzle" referrerPolicy="no-referrer">
+                                <svg class="h-6 w-6" aria-hidden="true"><use href="#icon-puzzle"/></svg>
                             </div>
                             <h3 class="feature-title">Interactive Puzzles</h3>
                             <p class="feature-description">
@@ -120,7 +161,7 @@
                         </div>
                         <div class="feature-card">
                             <div class="feature-icon-wrapper">
-                                <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/text-initial.svg" class="h-6 w-6" alt="file-text" referrerPolicy="no-referrer">
+                                <svg class="h-6 w-6" aria-hidden="true"><use href="#icon-text-initial"/></svg>
                             </div>
                             <h3 class="feature-title">Annotated Games</h3>
                             <p class="feature-description">
@@ -129,7 +170,7 @@
                         </div>
                         <div class="feature-card">
                             <div class="feature-icon-wrapper">
-                                <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/play-circle.svg" class="h-6 w-6" alt="play-circle" referrerPolicy="no-referrer">
+                                <svg class="h-6 w-6" aria-hidden="true"><use href="#icon-play-circle"/></svg>
                             </div>
                             <h3 class="feature-title">Game Player</h3>
                             <p class="feature-description">
@@ -139,7 +180,7 @@
                     </div>
                 </div>
             </div>
-        </section>
+        </section> <!-- /#page-home -->
 
         <!-- Reference Page -->
         <section id="page-reference" class="reference-section">
@@ -153,7 +194,7 @@
             <!-- FEN Section -->
             <section class="element-section">
                 <div class="element-header">
-                    <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/grid-2x2-check.svg" class="h-6 w-6 opacity-40" alt="grid-2x2-check" referrerPolicy="no-referrer">
+                    <svg class="h-6 w-6 opacity-40" aria-hidden="true"><use href="#icon-grid-2x2-check"/></svg>
                     <h2>1. Static Diagrams <code>&lt;fen&gt;</code></h2>
                 </div>
                 <div class="element-grid">
@@ -177,7 +218,7 @@
             <!-- Puzzle Section -->
             <section class="element-section">
                 <div class="element-header">
-                    <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/puzzle.svg" class="h-6 w-6 opacity-40" alt="puzzle" referrerPolicy="no-referrer">
+                    <svg class="h-6 w-6 opacity-40" aria-hidden="true"><use href="#icon-puzzle"/></svg>
                     <h2>2. Interactive Puzzles <code>&lt;puzzle&gt;</code></h2>
                 </div>
                 <div class="element-grid">
@@ -206,7 +247,7 @@
             <!-- PGN Section -->
             <section class="element-section">
                 <div class="element-header">
-                    <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/text-initial.svg" class="h-6 w-6 opacity-40" alt="file-text" referrerPolicy="no-referrer">
+                    <svg class="h-6 w-6 opacity-40" aria-hidden="true"><use href="#icon-text-initial"/></svg>
                     <h2>3. Annotated Games <code>&lt;pgn&gt;</code></h2>
                 </div>
                 <div class="element-grid">
@@ -238,7 +279,7 @@
             <!-- PGN Player Section -->
             <section class="element-section">
                 <div class="element-header">
-                    <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/play-circle.svg" class="h-6 w-6 opacity-40" alt="play-circle" referrerPolicy="no-referrer">
+                    <svg class="h-6 w-6 opacity-40" aria-hidden="true"><use href="#icon-play-circle"/></svg>
                     <h2>4. Game Player <code>&lt;pgn-player&gt;</code></h2>
                 </div>
                 <div class="element-grid">
@@ -262,8 +303,8 @@
                         <pgn-player src="https://lichess.org/api/study/97di6JjX/Jzyakrf4.pgn"></pgn-player>
                     </div>
                 </div>
-            </section>
-        </section>
+            </section> <!-- /.element-section (pgn-player) -->
+        </section> <!-- /#page-reference -->
 
         <!-- Sandbox Page -->
         <section id="page-sandbox" class="sandbox-section">
@@ -276,23 +317,23 @@
 
             <div class="sandbox-container">
                 <!-- Tabs List -->
-                <div class="tab-list">
-                    <button class="tab-trigger active" data-tab="fen">
-                        <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/grid-2x2-check.svg" class="h-4 w-4 opacity-70" alt="grid-2x2-check" referrerPolicy="no-referrer"> <span class="hidden sm:inline">Static Diagrams</span>
+                <div class="tab-list" role="tablist" aria-label="Sandbox elements">
+                    <button type="button" id="tab-trigger-fen" class="tab-trigger active" data-tab="fen" role="tab" aria-selected="true" aria-controls="tab-fen" tabindex="0">
+                        <svg class="h-4 w-4 opacity-70" aria-hidden="true"><use href="#icon-grid-2x2-check"/></svg> <span class="hidden sm:inline">Static Diagrams</span>
                     </button>
-                    <button class="tab-trigger" data-tab="puzzle">
-                        <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/puzzle.svg" class="h-4 w-4 opacity-70" alt="puzzle" referrerPolicy="no-referrer"> <span class="hidden sm:inline">Interactive Puzzles</span>
+                    <button type="button" id="tab-trigger-puzzle" class="tab-trigger" data-tab="puzzle" role="tab" aria-selected="false" aria-controls="tab-puzzle" tabindex="-1">
+                        <svg class="h-4 w-4 opacity-70" aria-hidden="true"><use href="#icon-puzzle"/></svg> <span class="hidden sm:inline">Interactive Puzzles</span>
                     </button>
-                    <button class="tab-trigger" data-tab="pgn">
-                        <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/text-initial.svg" class="h-4 w-4 opacity-70" alt="file-text" referrerPolicy="no-referrer"> <span class="hidden sm:inline">Annotated Games</span>
+                    <button type="button" id="tab-trigger-pgn" class="tab-trigger" data-tab="pgn" role="tab" aria-selected="false" aria-controls="tab-pgn" tabindex="-1">
+                        <svg class="h-4 w-4 opacity-70" aria-hidden="true"><use href="#icon-text-initial"/></svg> <span class="hidden sm:inline">Annotated Games</span>
                     </button>
-                    <button class="tab-trigger" data-tab="player">
-                        <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/play-circle.svg" class="h-4 w-4 opacity-70" alt="play-circle" referrerPolicy="no-referrer"> <span class="hidden sm:inline">Game Player</span>
+                    <button type="button" id="tab-trigger-player" class="tab-trigger" data-tab="player" role="tab" aria-selected="false" aria-controls="tab-player" tabindex="-1">
+                        <svg class="h-4 w-4 opacity-70" aria-hidden="true"><use href="#icon-play-circle"/></svg> <span class="hidden sm:inline">Game Player</span>
                     </button>
                 </div>
 
                 <!-- Tab Contents -->
-                <div id="tab-fen" class="tab-content">
+                <div id="tab-fen" class="tab-content" role="tabpanel" aria-labelledby="tab-trigger-fen" tabindex="0">
                     <div class="sandbox-grid">
                         <div class="card">
                             <div class="card-header">
@@ -301,26 +342,26 @@
                             </div>
                             <div class="card-body space-y-4">
                                 <div class="input-group">
-                                    <label class="label">FEN <span class="required">*</span></label>
+                                    <label class="label" for="sandbox-fen-fen">FEN <span class="required">*</span></label>
                                     <input id="sandbox-fen-fen" type="text" class="input">
                                 </div>
                                 <div class="input-group">
-                                    <label class="label">Orientation <span class="optional">(optional)</span></label>
+                                    <label class="label" for="sandbox-fen-orientation">Orientation <span class="optional">(optional)</span></label>
                                     <select id="sandbox-fen-orientation" class="input">
                                         <option value="">white</option>
                                         <option value="black">black</option>
                                     </select>
                                 </div>
                                 <div class="input-group">
-                                    <label class="label">Caption <span class="optional">(optional, markdown)</span></label>
+                                    <label class="label" for="sandbox-fen-caption">Caption <span class="optional">(optional, markdown)</span></label>
                                     <input id="sandbox-fen-caption" type="text" class="input">
                                 </div>
                                 <div class="input-group">
-                                    <label class="label">Square highlights <span class="optional">(optional, %csl)</span></label>
+                                    <label class="label" for="sandbox-fen-csl">Square highlights <span class="optional">(optional, %csl)</span></label>
                                     <input id="sandbox-fen-csl" type="text" class="input" placeholder="Ge4,Rd5 — G=green, R=red, Y=yellow, B=blue">
                                 </div>
                                 <div class="input-group">
-                                    <label class="label">Arrows <span class="optional">(optional, %cal)</span></label>
+                                    <label class="label" for="sandbox-fen-cal">Arrows <span class="optional">(optional, %cal)</span></label>
                                     <input id="sandbox-fen-cal" type="text" class="input" placeholder="Ge2e4,Rd8h4 — &lt;color&gt;&lt;from&gt;&lt;to&gt;">
                                 </div>
                                 <button id="update-fen-btn" class="button-full">Update</button>
@@ -336,7 +377,7 @@
                     </div>
                 </div>
 
-                <div id="tab-puzzle" class="tab-content hidden">
+                <div id="tab-puzzle" class="tab-content hidden" role="tabpanel" aria-labelledby="tab-trigger-puzzle" tabindex="0">
                     <div class="sandbox-grid">
                         <div class="card">
                             <div class="card-header">
@@ -345,51 +386,51 @@
                             </div>
                             <div class="card-body space-y-4">
                                 <div class="input-group">
-                                    <label class="label">Source URL <span class="optional">(optional — loads PGN from URL)</span></label>
+                                    <label class="label" for="sandbox-puzzle-src">Source URL <span class="optional">(optional — loads PGN from URL)</span></label>
                                     <input id="sandbox-puzzle-src" type="text" class="input" placeholder="https://example.com/puzzle.pgn">
                                 </div>
                                 <div class="input-group">
-                                    <label class="label">Starting FEN <span class="required">*</span></label>
+                                    <label class="label" for="sandbox-puzzle-fen">Starting FEN <span class="required">*</span></label>
                                     <input id="sandbox-puzzle-fen" type="text" class="input">
                                 </div>
                                 <div class="input-group">
-                                    <label class="label">Solution Moves <span class="required">*</span></label>
+                                    <label class="label" for="sandbox-puzzle-solution">Solution Moves <span class="required">*</span></label>
                                     <textarea id="sandbox-puzzle-solution" class="textarea" rows="4"></textarea>
                                 </div>
                                 <div class="field-grid-2">
                                     <div class="input-group">
-                                        <label class="label">Orientation <span class="optional">(optional)</span></label>
+                                        <label class="label" for="sandbox-puzzle-orientation">Orientation <span class="optional">(optional)</span></label>
                                         <select id="sandbox-puzzle-orientation" class="input">
                                             <option value="">white</option>
                                             <option value="black">black</option>
                                         </select>
                                     </div>
                                     <div class="input-group">
-                                        <label class="label">First move auto <span class="optional">(optional)</span></label>
-                                        <label class="checkbox-row">
+                                        <span class="label">First move auto <span class="optional">(optional)</span></span>
+                                        <label class="checkbox-row" for="sandbox-puzzle-firstmoveauto">
                                             <input id="sandbox-puzzle-firstmoveauto" type="checkbox">
                                             <span>Auto-play the first move</span>
                                         </label>
                                     </div>
                                 </div>
                                 <div class="input-group">
-                                    <label class="label">White <span class="optional">(optional)</span></label>
+                                    <label class="label" for="sandbox-puzzle-white">White <span class="optional">(optional)</span></label>
                                     <input id="sandbox-puzzle-white" type="text" class="input">
                                 </div>
                                 <div class="input-group">
-                                    <label class="label">Black <span class="optional">(optional)</span></label>
+                                    <label class="label" for="sandbox-puzzle-black">Black <span class="optional">(optional)</span></label>
                                     <input id="sandbox-puzzle-black" type="text" class="input">
                                 </div>
                                 <div class="input-group">
-                                    <label class="label">Event <span class="optional">(optional)</span></label>
+                                    <label class="label" for="sandbox-puzzle-event">Event <span class="optional">(optional)</span></label>
                                     <input id="sandbox-puzzle-event" type="text" class="input">
                                 </div>
                                 <div class="input-group">
-                                    <label class="label">Date <span class="optional">(optional)</span></label>
+                                    <label class="label" for="sandbox-puzzle-date">Date <span class="optional">(optional)</span></label>
                                     <input id="sandbox-puzzle-date" type="text" class="input">
                                 </div>
                                 <div class="input-group">
-                                    <label class="label">Caption <span class="optional">(optional, markdown)</span></label>
+                                    <label class="label" for="sandbox-puzzle-caption">Caption <span class="optional">(optional, markdown)</span></label>
                                     <input id="sandbox-puzzle-caption" type="text" class="input">
                                 </div>
                                 <button id="update-puzzle-btn" class="button-full">Update</button>
@@ -405,7 +446,7 @@
                     </div>
                 </div>
 
-                <div id="tab-pgn" class="tab-content hidden">
+                <div id="tab-pgn" class="tab-content hidden" role="tabpanel" aria-labelledby="tab-trigger-pgn" tabindex="0">
                     <div class="sandbox-grid">
                         <div class="card">
                             <div class="card-header">
@@ -414,31 +455,31 @@
                             </div>
                             <div class="card-body space-y-4">
                                 <div class="input-group">
-                                    <label class="label">Source URL <span class="optional">(optional — loads PGN from URL)</span></label>
+                                    <label class="label" for="sandbox-pgn-src">Source URL <span class="optional">(optional — loads PGN from URL)</span></label>
                                     <input id="sandbox-pgn-src" type="text" class="input" placeholder="https://example.com/game.pgn">
                                 </div>
                                 <div class="field-grid-2">
                                     <div class="input-group">
-                                        <label class="label">White <span class="optional">(optional)</span></label>
+                                        <label class="label" for="sandbox-pgn-white">White <span class="optional">(optional)</span></label>
                                         <input id="sandbox-pgn-white" type="text" class="input">
                                     </div>
                                     <div class="input-group">
-                                        <label class="label">Black <span class="optional">(optional)</span></label>
+                                        <label class="label" for="sandbox-pgn-black">Black <span class="optional">(optional)</span></label>
                                         <input id="sandbox-pgn-black" type="text" class="input">
                                     </div>
                                 </div>
                                 <div class="field-grid-2">
                                     <div class="input-group">
-                                        <label class="label">Event <span class="optional">(optional)</span></label>
+                                        <label class="label" for="sandbox-pgn-event">Event <span class="optional">(optional)</span></label>
                                         <input id="sandbox-pgn-event" type="text" class="input">
                                     </div>
                                     <div class="input-group">
-                                        <label class="label">Date <span class="optional">(optional)</span></label>
+                                        <label class="label" for="sandbox-pgn-date">Date <span class="optional">(optional)</span></label>
                                         <input id="sandbox-pgn-date" type="text" class="input">
                                     </div>
                                 </div>
                                 <div class="input-group">
-                                    <label class="label">Result <span class="optional">(optional)</span></label>
+                                    <label class="label" for="sandbox-pgn-result">Result <span class="optional">(optional)</span></label>
                                     <select id="sandbox-pgn-result" class="input">
                                         <option value="">none</option>
                                         <option value="1-0">1-0 (White wins)</option>
@@ -448,7 +489,7 @@
                                 </div>
                                 <div class="input-group">
                                     <div class="label-row">
-                                        <label class="label">Movetext <span class="required">*</span></label>
+                                        <label class="label" for="sandbox-pgn-moves">Movetext <span class="required">*</span></label>
                                         <button type="button" id="insert-diagram-btn" class="button-inline">+ Insert diagram {[D]}</button>
                                     </div>
                                     <textarea id="sandbox-pgn-moves" class="textarea" rows="8"></textarea>
@@ -466,7 +507,7 @@
                     </div>
                 </div>
 
-                <div id="tab-player" class="tab-content hidden">
+                <div id="tab-player" class="tab-content hidden" role="tabpanel" aria-labelledby="tab-trigger-player" tabindex="0">
                     <div class="sandbox-grid">
                         <div class="card">
                             <div class="card-header">
@@ -475,31 +516,31 @@
                             </div>
                             <div class="card-body space-y-4">
                                 <div class="input-group">
-                                    <label class="label">Source URL <span class="optional">(optional — loads PGN from URL)</span></label>
+                                    <label class="label" for="sandbox-player-src">Source URL <span class="optional">(optional — loads PGN from URL)</span></label>
                                     <input id="sandbox-player-src" type="text" class="input" placeholder="https://lichess.org/api/study/.../chapter.pgn">
                                 </div>
                                 <div class="field-grid-2">
                                     <div class="input-group">
-                                        <label class="label">White <span class="optional">(optional)</span></label>
+                                        <label class="label" for="sandbox-player-white">White <span class="optional">(optional)</span></label>
                                         <input id="sandbox-player-white" type="text" class="input">
                                     </div>
                                     <div class="input-group">
-                                        <label class="label">Black <span class="optional">(optional)</span></label>
+                                        <label class="label" for="sandbox-player-black">Black <span class="optional">(optional)</span></label>
                                         <input id="sandbox-player-black" type="text" class="input">
                                     </div>
                                 </div>
                                 <div class="field-grid-2">
                                     <div class="input-group">
-                                        <label class="label">Event <span class="optional">(optional)</span></label>
+                                        <label class="label" for="sandbox-player-event">Event <span class="optional">(optional)</span></label>
                                         <input id="sandbox-player-event" type="text" class="input">
                                     </div>
                                     <div class="input-group">
-                                        <label class="label">Date <span class="optional">(optional)</span></label>
+                                        <label class="label" for="sandbox-player-date">Date <span class="optional">(optional)</span></label>
                                         <input id="sandbox-player-date" type="text" class="input">
                                     </div>
                                 </div>
                                 <div class="input-group">
-                                    <label class="label">Result <span class="optional">(optional)</span></label>
+                                    <label class="label" for="sandbox-player-result">Result <span class="optional">(optional)</span></label>
                                     <select id="sandbox-player-result" class="input">
                                         <option value="">none</option>
                                         <option value="1-0">1-0 (White wins)</option>
@@ -508,7 +549,7 @@
                                     </select>
                                 </div>
                                 <div class="input-group">
-                                    <label class="label">Movetext <span class="required">*</span></label>
+                                    <label class="label" for="sandbox-player-moves">Movetext <span class="required">*</span></label>
                                     <textarea id="sandbox-player-moves" class="textarea" rows="8"></textarea>
                                 </div>
                                 <button id="update-player-btn" class="button-full">Update</button>
@@ -524,7 +565,7 @@
                     </div>
                 </div>
             </div>
-        </section>
+        </section> <!-- /#page-sandbox -->
 
         <!-- Setup Page -->
         <section id="page-setup" class="setup-section">
@@ -541,8 +582,8 @@
                     <p class="setup-card-description">
                         Paste the following into your page's <code class="code-inline">&lt;head&gt;</code> (or before the closing <code class="code-inline">&lt;/body&gt;</code>). The all-in-one bundle includes jQuery, Chess.js, and Chessboard.js — no extra <code class="code-inline">&lt;script&gt;</code> tags needed.
                     </p>
-                    <div class="code-block">&lt;script src="https://cdn.jsdelivr.net/gh/ChessPublica/ChessPublica.github.io@main/dist/ChessPublica.all.min.js"&gt;&lt;/script&gt;
-&lt;link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/ChessPublica/ChessPublica.github.io@main/dist/ChessPublica.all.min.css"&gt;</div>
+                    <div class="code-block">&lt;script src="https://cdn.jsdelivr.net/gh/ChessPublica/ChessPublica.github.io@v0.1.0/dist/ChessPublica.all.min.js"&gt;&lt;/script&gt;
+&lt;link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/ChessPublica/ChessPublica.github.io@v0.1.0/dist/ChessPublica.all.min.css"&gt;</div>
                 </div>
 
                 <div class="setup-card">
@@ -618,7 +659,7 @@ Hello, world! Here's a mate-in-one from my last blitz game:
                     </p>
                 </div>
             </div>
-        </section>
+        </section> <!-- /#page-setup -->
     </main>
 
     <footer class="footer">
@@ -626,7 +667,7 @@ Hello, world! Here's a mate-in-one from my last blitz game:
             <div class="footer-container">
                 <div class="footer-logo">
                     <div class="footer-logo-icon">
-                        <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/chess-rook.svg" class="h-4 w-4 brightness-0 invert" alt="pawn" referrerPolicy="no-referrer">
+                        <svg class="h-4 w-4" aria-hidden="true"><use href="#icon-chess-rook"/></svg>
                     </div>
                     <span class="footer-logo-text">ChessPublica</span>
                 </div>
@@ -637,8 +678,8 @@ Hello, world! Here's a mate-in-one from my last blitz game:
                     <a href="#page-setup" class="footer-link">Setup</a>
                 </div>
                 <div class="footer-social">
-                    <a href="https://github.com/ChessPublica/ChessPublica.github.io" class="icon-button">
-                        <img src="https://cdn.jsdelivr.net/npm/lucide-static@latest/icons/github.svg" class="h-5 w-5 opacity-40" alt="github" referrerPolicy="no-referrer">
+                    <a href="https://github.com/ChessPublica/ChessPublica.github.io" class="icon-button" aria-label="GitHub">
+                        <svg class="h-5 w-5 opacity-40" aria-hidden="true"><use href="#icon-github"/></svg>
                     </a>
                 </div>
             </div>
