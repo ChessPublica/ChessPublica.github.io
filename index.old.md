@@ -231,8 +231,8 @@ Renders a video-style chess game player with play/pause controls, an eval bar, c
 Setup requires only two lines of code:
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/ChessPublica/ChessPublica.github.io@main/dist/ChessPublica.all.min.js"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/ChessPublica/ChessPublica.github.io@main/dist/ChessPublica.all.min.css">
+<script src="https://cdn.jsdelivr.net/gh/ChessPublica/ChessPublica.github.io@v0.1.0/dist/ChessPublica.all.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/ChessPublica/ChessPublica.github.io@v0.1.0/dist/ChessPublica.all.min.css">
 ```
 
 ### Required External Libraries
@@ -243,8 +243,8 @@ Required external libraries [jQuery](https://jquery.com/), [Chess.js](https://gi
 
 <style>h1 a, h1 a:active, h1 a:hover {color:black;text-decoration:none;cursor:pointer;}</style>
 
-<script src="https://cdn.jsdelivr.net/gh/ChessPublica/ChessPublica.github.io@main/dist/ChessPublica.all.min.js"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/ChessPublica/ChessPublica.github.io@main/dist/ChessPublica.all.min.css">
+<script src="https://cdn.jsdelivr.net/gh/ChessPublica/ChessPublica.github.io@v0.1.0/dist/ChessPublica.all.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/ChessPublica/ChessPublica.github.io@v0.1.0/dist/ChessPublica.all.min.css">
 
 <!--
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
