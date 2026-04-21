@@ -318,23 +318,23 @@
 
             <div class="sandbox-container">
                 <!-- Tabs List -->
-                <div class="tab-list">
-                    <button class="tab-trigger active" data-tab="fen">
+                <div class="tab-list" role="tablist" aria-label="Sandbox elements">
+                    <button type="button" id="tab-trigger-fen" class="tab-trigger active" data-tab="fen" role="tab" aria-selected="true" aria-controls="tab-fen" tabindex="0">
                         <svg class="h-4 w-4 opacity-70" aria-hidden="true"><use href="#icon-grid-2x2-check"/></svg> <span class="hidden sm:inline">Static Diagrams</span>
                     </button>
-                    <button class="tab-trigger" data-tab="puzzle">
+                    <button type="button" id="tab-trigger-puzzle" class="tab-trigger" data-tab="puzzle" role="tab" aria-selected="false" aria-controls="tab-puzzle" tabindex="-1">
                         <svg class="h-4 w-4 opacity-70" aria-hidden="true"><use href="#icon-puzzle"/></svg> <span class="hidden sm:inline">Interactive Puzzles</span>
                     </button>
-                    <button class="tab-trigger" data-tab="pgn">
+                    <button type="button" id="tab-trigger-pgn" class="tab-trigger" data-tab="pgn" role="tab" aria-selected="false" aria-controls="tab-pgn" tabindex="-1">
                         <svg class="h-4 w-4 opacity-70" aria-hidden="true"><use href="#icon-text-initial"/></svg> <span class="hidden sm:inline">Annotated Games</span>
                     </button>
-                    <button class="tab-trigger" data-tab="player">
+                    <button type="button" id="tab-trigger-player" class="tab-trigger" data-tab="player" role="tab" aria-selected="false" aria-controls="tab-player" tabindex="-1">
                         <svg class="h-4 w-4 opacity-70" aria-hidden="true"><use href="#icon-play-circle"/></svg> <span class="hidden sm:inline">Game Player</span>
                     </button>
                 </div>
 
                 <!-- Tab Contents -->
-                <div id="tab-fen" class="tab-content">
+                <div id="tab-fen" class="tab-content" role="tabpanel" aria-labelledby="tab-trigger-fen" tabindex="0">
                     <div class="sandbox-grid">
                         <div class="card">
                             <div class="card-header">
@@ -343,26 +343,26 @@
                             </div>
                             <div class="card-body space-y-4">
                                 <div class="input-group">
-                                    <label class="label">FEN <span class="required">*</span></label>
+                                    <label class="label" for="sandbox-fen-fen">FEN <span class="required">*</span></label>
                                     <input id="sandbox-fen-fen" type="text" class="input">
                                 </div>
                                 <div class="input-group">
-                                    <label class="label">Orientation <span class="optional">(optional)</span></label>
+                                    <label class="label" for="sandbox-fen-orientation">Orientation <span class="optional">(optional)</span></label>
                                     <select id="sandbox-fen-orientation" class="input">
                                         <option value="">white</option>
                                         <option value="black">black</option>
                                     </select>
                                 </div>
                                 <div class="input-group">
-                                    <label class="label">Caption <span class="optional">(optional, markdown)</span></label>
+                                    <label class="label" for="sandbox-fen-caption">Caption <span class="optional">(optional, markdown)</span></label>
                                     <input id="sandbox-fen-caption" type="text" class="input">
                                 </div>
                                 <div class="input-group">
-                                    <label class="label">Square highlights <span class="optional">(optional, %csl)</span></label>
+                                    <label class="label" for="sandbox-fen-csl">Square highlights <span class="optional">(optional, %csl)</span></label>
                                     <input id="sandbox-fen-csl" type="text" class="input" placeholder="Ge4,Rd5 — G=green, R=red, Y=yellow, B=blue">
                                 </div>
                                 <div class="input-group">
-                                    <label class="label">Arrows <span class="optional">(optional, %cal)</span></label>
+                                    <label class="label" for="sandbox-fen-cal">Arrows <span class="optional">(optional, %cal)</span></label>
                                     <input id="sandbox-fen-cal" type="text" class="input" placeholder="Ge2e4,Rd8h4 — &lt;color&gt;&lt;from&gt;&lt;to&gt;">
                                 </div>
                                 <button id="update-fen-btn" class="button-full">Update</button>
@@ -382,7 +382,7 @@
                     </div>
                 </div>
 
-                <div id="tab-puzzle" class="tab-content hidden">
+                <div id="tab-puzzle" class="tab-content hidden" role="tabpanel" aria-labelledby="tab-trigger-puzzle" tabindex="0">
                     <div class="sandbox-grid">
                         <div class="card">
                             <div class="card-header">
@@ -391,51 +391,51 @@
                             </div>
                             <div class="card-body space-y-4">
                                 <div class="input-group">
-                                    <label class="label">Source URL <span class="optional">(optional — loads PGN from URL)</span></label>
+                                    <label class="label" for="sandbox-puzzle-src">Source URL <span class="optional">(optional — loads PGN from URL)</span></label>
                                     <input id="sandbox-puzzle-src" type="text" class="input" placeholder="https://example.com/puzzle.pgn">
                                 </div>
                                 <div class="input-group">
-                                    <label class="label">Starting FEN <span class="required">*</span></label>
+                                    <label class="label" for="sandbox-puzzle-fen">Starting FEN <span class="required">*</span></label>
                                     <input id="sandbox-puzzle-fen" type="text" class="input">
                                 </div>
                                 <div class="input-group">
-                                    <label class="label">Solution Moves <span class="required">*</span></label>
+                                    <label class="label" for="sandbox-puzzle-solution">Solution Moves <span class="required">*</span></label>
                                     <textarea id="sandbox-puzzle-solution" class="textarea" rows="4"></textarea>
                                 </div>
                                 <div class="field-grid-2">
                                     <div class="input-group">
-                                        <label class="label">Orientation <span class="optional">(optional)</span></label>
+                                        <label class="label" for="sandbox-puzzle-orientation">Orientation <span class="optional">(optional)</span></label>
                                         <select id="sandbox-puzzle-orientation" class="input">
                                             <option value="">white</option>
                                             <option value="black">black</option>
                                         </select>
                                     </div>
                                     <div class="input-group">
-                                        <label class="label">First move auto <span class="optional">(optional)</span></label>
-                                        <label class="checkbox-row">
+                                        <span class="label">First move auto <span class="optional">(optional)</span></span>
+                                        <label class="checkbox-row" for="sandbox-puzzle-firstmoveauto">
                                             <input id="sandbox-puzzle-firstmoveauto" type="checkbox">
                                             <span>Auto-play the first move</span>
                                         </label>
                                     </div>
                                 </div>
                                 <div class="input-group">
-                                    <label class="label">White <span class="optional">(optional)</span></label>
+                                    <label class="label" for="sandbox-puzzle-white">White <span class="optional">(optional)</span></label>
                                     <input id="sandbox-puzzle-white" type="text" class="input">
                                 </div>
                                 <div class="input-group">
-                                    <label class="label">Black <span class="optional">(optional)</span></label>
+                                    <label class="label" for="sandbox-puzzle-black">Black <span class="optional">(optional)</span></label>
                                     <input id="sandbox-puzzle-black" type="text" class="input">
                                 </div>
                                 <div class="input-group">
-                                    <label class="label">Event <span class="optional">(optional)</span></label>
+                                    <label class="label" for="sandbox-puzzle-event">Event <span class="optional">(optional)</span></label>
                                     <input id="sandbox-puzzle-event" type="text" class="input">
                                 </div>
                                 <div class="input-group">
-                                    <label class="label">Date <span class="optional">(optional)</span></label>
+                                    <label class="label" for="sandbox-puzzle-date">Date <span class="optional">(optional)</span></label>
                                     <input id="sandbox-puzzle-date" type="text" class="input">
                                 </div>
                                 <div class="input-group">
-                                    <label class="label">Caption <span class="optional">(optional, markdown)</span></label>
+                                    <label class="label" for="sandbox-puzzle-caption">Caption <span class="optional">(optional, markdown)</span></label>
                                     <input id="sandbox-puzzle-caption" type="text" class="input">
                                 </div>
                                 <button id="update-puzzle-btn" class="button-full">Update</button>
@@ -455,7 +455,7 @@
                     </div>
                 </div>
 
-                <div id="tab-pgn" class="tab-content hidden">
+                <div id="tab-pgn" class="tab-content hidden" role="tabpanel" aria-labelledby="tab-trigger-pgn" tabindex="0">
                     <div class="sandbox-grid">
                         <div class="card">
                             <div class="card-header">
@@ -464,31 +464,31 @@
                             </div>
                             <div class="card-body space-y-4">
                                 <div class="input-group">
-                                    <label class="label">Source URL <span class="optional">(optional — loads PGN from URL)</span></label>
+                                    <label class="label" for="sandbox-pgn-src">Source URL <span class="optional">(optional — loads PGN from URL)</span></label>
                                     <input id="sandbox-pgn-src" type="text" class="input" placeholder="https://example.com/game.pgn">
                                 </div>
                                 <div class="field-grid-2">
                                     <div class="input-group">
-                                        <label class="label">White <span class="optional">(optional)</span></label>
+                                        <label class="label" for="sandbox-pgn-white">White <span class="optional">(optional)</span></label>
                                         <input id="sandbox-pgn-white" type="text" class="input">
                                     </div>
                                     <div class="input-group">
-                                        <label class="label">Black <span class="optional">(optional)</span></label>
+                                        <label class="label" for="sandbox-pgn-black">Black <span class="optional">(optional)</span></label>
                                         <input id="sandbox-pgn-black" type="text" class="input">
                                     </div>
                                 </div>
                                 <div class="field-grid-2">
                                     <div class="input-group">
-                                        <label class="label">Event <span class="optional">(optional)</span></label>
+                                        <label class="label" for="sandbox-pgn-event">Event <span class="optional">(optional)</span></label>
                                         <input id="sandbox-pgn-event" type="text" class="input">
                                     </div>
                                     <div class="input-group">
-                                        <label class="label">Date <span class="optional">(optional)</span></label>
+                                        <label class="label" for="sandbox-pgn-date">Date <span class="optional">(optional)</span></label>
                                         <input id="sandbox-pgn-date" type="text" class="input">
                                     </div>
                                 </div>
                                 <div class="input-group">
-                                    <label class="label">Result <span class="optional">(optional)</span></label>
+                                    <label class="label" for="sandbox-pgn-result">Result <span class="optional">(optional)</span></label>
                                     <select id="sandbox-pgn-result" class="input">
                                         <option value="">none</option>
                                         <option value="1-0">1-0 (White wins)</option>
@@ -498,7 +498,7 @@
                                 </div>
                                 <div class="input-group">
                                     <div class="label-row">
-                                        <label class="label">Movetext <span class="required">*</span></label>
+                                        <label class="label" for="sandbox-pgn-moves">Movetext <span class="required">*</span></label>
                                         <button type="button" id="insert-diagram-btn" class="button-inline">+ Insert diagram {[D]}</button>
                                     </div>
                                     <textarea id="sandbox-pgn-moves" class="textarea" rows="8"></textarea>
@@ -520,7 +520,7 @@
                     </div>
                 </div>
 
-                <div id="tab-player" class="tab-content hidden">
+                <div id="tab-player" class="tab-content hidden" role="tabpanel" aria-labelledby="tab-trigger-player" tabindex="0">
                     <div class="sandbox-grid">
                         <div class="card">
                             <div class="card-header">
@@ -529,31 +529,31 @@
                             </div>
                             <div class="card-body space-y-4">
                                 <div class="input-group">
-                                    <label class="label">Source URL <span class="optional">(optional — loads PGN from URL)</span></label>
+                                    <label class="label" for="sandbox-player-src">Source URL <span class="optional">(optional — loads PGN from URL)</span></label>
                                     <input id="sandbox-player-src" type="text" class="input" placeholder="https://lichess.org/api/study/.../chapter.pgn">
                                 </div>
                                 <div class="field-grid-2">
                                     <div class="input-group">
-                                        <label class="label">White <span class="optional">(optional)</span></label>
+                                        <label class="label" for="sandbox-player-white">White <span class="optional">(optional)</span></label>
                                         <input id="sandbox-player-white" type="text" class="input">
                                     </div>
                                     <div class="input-group">
-                                        <label class="label">Black <span class="optional">(optional)</span></label>
+                                        <label class="label" for="sandbox-player-black">Black <span class="optional">(optional)</span></label>
                                         <input id="sandbox-player-black" type="text" class="input">
                                     </div>
                                 </div>
                                 <div class="field-grid-2">
                                     <div class="input-group">
-                                        <label class="label">Event <span class="optional">(optional)</span></label>
+                                        <label class="label" for="sandbox-player-event">Event <span class="optional">(optional)</span></label>
                                         <input id="sandbox-player-event" type="text" class="input">
                                     </div>
                                     <div class="input-group">
-                                        <label class="label">Date <span class="optional">(optional)</span></label>
+                                        <label class="label" for="sandbox-player-date">Date <span class="optional">(optional)</span></label>
                                         <input id="sandbox-player-date" type="text" class="input">
                                     </div>
                                 </div>
                                 <div class="input-group">
-                                    <label class="label">Result <span class="optional">(optional)</span></label>
+                                    <label class="label" for="sandbox-player-result">Result <span class="optional">(optional)</span></label>
                                     <select id="sandbox-player-result" class="input">
                                         <option value="">none</option>
                                         <option value="1-0">1-0 (White wins)</option>
@@ -562,7 +562,7 @@
                                     </select>
                                 </div>
                                 <div class="input-group">
-                                    <label class="label">Movetext <span class="required">*</span></label>
+                                    <label class="label" for="sandbox-player-moves">Movetext <span class="required">*</span></label>
                                     <textarea id="sandbox-player-moves" class="textarea" rows="8"></textarea>
                                 </div>
                                 <button id="update-player-btn" class="button-full">Update</button>

@@ -16,13 +16,17 @@ function renderTabBoard(tabId) {
     }
 }
 
-window.showTab = (tabId) => {
+window.showTab = (tabId, { focus = false } = {}) => {
     document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
     const targetTab = document.getElementById(`tab-${tabId}`);
     if (targetTab) targetTab.classList.remove('hidden');
 
     document.querySelectorAll('.tab-trigger').forEach(t => {
-        t.classList.toggle('active', t.dataset.tab === tabId);
+        const selected = t.dataset.tab === tabId;
+        t.classList.toggle('active', selected);
+        t.setAttribute('aria-selected', selected ? 'true' : 'false');
+        t.setAttribute('tabindex', selected ? '0' : '-1');
+        if (selected && focus) t.focus();
     });
 
     if (!renderedTabs.has(tabId)) {
@@ -37,6 +41,27 @@ document.addEventListener('click', (e) => {
         e.preventDefault();
         window.showTab(trigger.dataset.tab);
     }
+});
+
+/* Arrow-key navigation within the tablist (WAI-ARIA Authoring Practices):
+   ←/→ cycle, Home/End jump to first/last. Activation is automatic so the
+   newly focused tab also becomes the selected one. */
+document.addEventListener('keydown', (e) => {
+    const trigger = e.target.closest('.tab-trigger');
+    if (!trigger) return;
+    const tabs = Array.from(document.querySelectorAll('.tab-trigger'));
+    const i = tabs.indexOf(trigger);
+    if (i < 0) return;
+    let next = -1;
+    switch (e.key) {
+        case 'ArrowRight': next = (i + 1) % tabs.length; break;
+        case 'ArrowLeft':  next = (i - 1 + tabs.length) % tabs.length; break;
+        case 'Home':       next = 0; break;
+        case 'End':        next = tabs.length - 1; break;
+        default: return;
+    }
+    e.preventDefault();
+    window.showTab(tabs[next].dataset.tab, { focus: true });
 });
 
 /* ── PGN helpers ──────────────────────────────────────────── */
