@@ -211,6 +211,14 @@ function _applyInlineMarkdown(text) {
     return "\u0000CODE" + idx + "\u0000";
   });
 
+  /* Hard line break: any run of 2+ spaces (optionally followed by a
+     newline) becomes <br>. This covers CommonMark's "two trailing
+     spaces + newline" rule and a pragmatic extension for single-line
+     [Caption "..."] headers where no real newline is available. Runs
+     before the other markdown transforms so the inserted <br> survives
+     the later replacements untouched. */
+  text = text.replace(/ {2,}\n?/g, "<br>");
+
   /* Bold: **text** and __text__ */
   text = text.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
   text = text.replace(/__([^_\n]+)__/g, "<strong>$1</strong>");
@@ -342,6 +350,8 @@ export function formatCommentClickable(rawText) {
     return "\u0000CODE" + idx + "\u0000";
   });
 
+  /* Keep this pipeline in lockstep with _applyInlineMarkdown(). */
+  text = text.replace(/ {2,}\n?/g, "<br>");
   text = text.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
   text = text.replace(/__([^_\n]+)__/g, "<strong>$1</strong>");
   text = text.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, "$1<em>$2</em>");
