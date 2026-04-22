@@ -211,8 +211,12 @@ function _applyInlineMarkdown(text) {
     return "\u0000CODE" + idx + "\u0000";
   });
 
-  /* Line breaks: two or more spaces at end of line followed by newline */
-  text = text.replace(/  +\n/g, "<br>\n");
+  /* Convert literal \n escape sequences to actual newlines */
+  text = text.replace(/\\n/g, "\n");
+
+  /* Line breaks: two or more spaces at end of line followed by newline,
+     or a single newline (from converted \n or actual line in PGN) */
+  text = text.replace(/  +\n|\n/g, "<br>\n");
 
   /* Bold: **text** and __text__ */
   text = text.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
@@ -345,8 +349,12 @@ export function formatCommentClickable(rawText) {
     return "\u0000CODE" + idx + "\u0000";
   });
 
-  /* Line breaks: two or more spaces at end of line followed by newline */
-  text = text.replace(/  +\n/g, "<br>\n");
+  /* Convert literal \n escape sequences to actual newlines */
+  text = text.replace(/\\n/g, "\n");
+
+  /* Line breaks: two or more spaces at end of line followed by newline,
+     or a single newline (from converted \n or actual line in PGN) */
+  text = text.replace(/  +\n|\n/g, "<br>\n");
 
   text = text.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
   text = text.replace(/__([^_\n]+)__/g, "<strong>$1</strong>");
