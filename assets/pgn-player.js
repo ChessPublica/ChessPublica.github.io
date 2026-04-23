@@ -415,6 +415,11 @@ function loadPGN(pgn) {
     // Don't hijack keys while the user is typing in a form control
     if (isTypingTarget(e.target)) return;
 
+    // Only handle arrow keys if the player is visible in the viewport
+    const rect = engine.el.getBoundingClientRect();
+    const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+    if (!isVisible) return;
+
     if (e.code === "ArrowRight") {
       e.preventDefault();
       engine._enterKeyboardMode();
@@ -964,13 +969,19 @@ class VideoEngine {
       });
     }
 
-    /* ---- Space bar (only for active player) ---- */
+    /* ---- Space bar (only for active player when visible) ---- */
     document.addEventListener("keydown", (e) => {
       if (VideoEngine.activeEngine !== this) return;
       if (isTypingTarget(e.target)) return;
       if (e.code === "Space") {
-        e.preventDefault();
-        this.togglePlay(true);
+        /* Only consume spacebar if this player is visible in the viewport.
+           If not visible, allow default behavior (page scroll). */
+        const rect = container.getBoundingClientRect();
+        const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+        if (isVisible) {
+          e.preventDefault();
+          this.togglePlay(true);
+        }
       }
     });
 
