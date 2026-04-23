@@ -105,11 +105,11 @@ export function clearMoveQualityBadge(boardEl) {
 ================================================================ */
 
 /**
- * Fetch a text resource with cache-busting.
+ * Fetch a text resource.
  * Returns a Promise<string>.
  */
 export function fetchText(url) {
-  return fetch(url, { cache: "no-store" }).then(function (r) {
+  return fetch(url).then(function (r) {
     if (!r.ok) throw new Error("HTTP " + r.status);
     return r.text();
   });

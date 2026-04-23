@@ -87,8 +87,8 @@ function escapeAttr(value) {
 const BLANK_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
 function runInitAll() {
-    if (window.JekyllChess && typeof window.JekyllChess.initAll === 'function') {
-        window.JekyllChess.initAll();
+    if (window.ChessPublica && typeof window.ChessPublica.initAll === 'function') {
+        window.ChessPublica.initAll();
     }
 }
 

@@ -33,7 +33,7 @@ if (document.readyState === "loading") {
    PUBLIC API (optional — for programmatic use)
 ================================================================ */
 
-window.JekyllChess = {
+window.ChessPublica = {
   renderFullPGN: renderFullPGN,
   buildMoveTree: buildMoveTree,
   parseHeaders: parseHeaders,
@@ -44,3 +44,6 @@ window.JekyllChess = {
   initAll: initAll,
   initFigurineProse: initFigurineProse,
 };
+
+/* Deprecated alias for backward compatibility */
+window.JekyllChess = window.ChessPublica;
