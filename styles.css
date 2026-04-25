@@ -571,11 +571,17 @@ body {
 .tab-list {
     display: grid;
     width: 100%;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     margin-bottom: 2rem;
     background-color: var(--zinc-100);
     padding: 0.25rem;
     border-radius: 0.5rem;
+}
+
+@media (min-width: 768px) {
+    .tab-list {
+        grid-template-columns: repeat(4, 1fr);
+    }
 }
 
 .tab-trigger {
@@ -592,6 +598,8 @@ body {
     border: none;
     cursor: pointer;
     background: transparent;
+    min-width: 0;
+    flex-wrap: wrap;
 }
 
 .tab-trigger.active {
