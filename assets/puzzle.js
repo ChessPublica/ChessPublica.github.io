@@ -6,7 +6,7 @@
  */
 
 import { PIECE_THEME, normalizeSAN, parseGame, toFigurine, formatComment, formatCommentClickable, getDestinationSquare, renderMoveQualityBadge, clearMoveQualityBadge } from "./helpers.js";
-import { renderAnnotations, clearAnnotations } from "./board.js";
+import { renderAnnotations, clearAnnotations, makeBoardResizable } from "./board.js";
 
 /* ================================================================
    1. PUZZLE ENGINE
@@ -148,11 +148,64 @@ export function renderLocalPuzzle(
   var _boardDivRef = null;
   var _boardWrapRef = null;
 
+  /* Track what the SVG/badge overlays currently show so a resize can
+     re-derive their positions from the squares' new pixel coordinates.
+     Updated through setOverlayAnnotations / setOverlayBadge wrappers
+     instead of calling render/clear directly. */
+  var _currentAnnotations = null;
+  var _currentBadge = null;
+  /* ResizeObserver for the active board. Lives at this outer scope so
+     a reset (which builds a fresh board) can disconnect the previous
+     observer before installing a new one. */
+  var _resizeObserver = null;
+
+  function setOverlayAnnotations(annotations) {
+    if (!_boardDivRef) return;
+    var hasAny = annotations && (
+      (annotations.arrows && annotations.arrows.length) ||
+      (annotations.squareMarks && annotations.squareMarks.length)
+    );
+    if (hasAny) {
+      _currentAnnotations = annotations;
+      renderAnnotations(_boardDivRef, annotations, _boardWrapRef);
+    } else {
+      _currentAnnotations = null;
+      clearAnnotations(_boardDivRef, _boardWrapRef);
+    }
+  }
+
+  function setOverlayBadge(square, glyph) {
+    if (!_boardDivRef) return;
+    if (square && glyph) {
+      _currentBadge = { square: square, glyph: glyph };
+      renderMoveQualityBadge(_boardDivRef, square, glyph);
+    } else {
+      _currentBadge = null;
+      clearMoveQualityBadge(_boardDivRef);
+    }
+  }
+
+  function redrawOverlay() {
+    if (!_boardDivRef) return;
+    if (_currentAnnotations) {
+      renderAnnotations(_boardDivRef, _currentAnnotations, _boardWrapRef);
+    } else {
+      clearAnnotations(_boardDivRef, _boardWrapRef);
+    }
+    if (_currentBadge) {
+      renderMoveQualityBadge(_boardDivRef, _currentBadge.square, _currentBadge.glyph);
+    } else {
+      clearMoveQualityBadge(_boardDivRef);
+    }
+  }
+
   function showBadgeForMove(moveIndex) {
     if (!_boardDivRef) return;
-    clearMoveQualityBadge(_boardDivRef);
     var glyph = pgnGlyphs[moveIndex];
-    if (!glyph) return;
+    if (!glyph) {
+      setOverlayBadge(null, null);
+      return;
+    }
     var san = moves[moveIndex];
     /* The color that played this move: after the move, the turn flips,
        so the mover is the opposite of the current turn. But we can
@@ -160,7 +213,7 @@ export function renderLocalPuzzle(
     var startTurn = fen.split(" ")[1] || "w";
     var color = (moveIndex % 2 === 0) ? startTurn : (startTurn === "w" ? "b" : "w");
     var square = getDestinationSquare(san, color);
-    if (square) renderMoveQualityBadge(_boardDivRef, square, glyph);
+    setOverlayBadge(square, glyph);
   }
 
   /* Draw the coloured squares / arrows attached to the move at the
@@ -171,19 +224,24 @@ export function renderLocalPuzzle(
     if (!_boardDivRef) return;
     var arrows = pgnArrows[moveIndex];
     var squareMarks = pgnSquareMarks[moveIndex];
-    if ((arrows && arrows.length) || (squareMarks && squareMarks.length)) {
-      renderAnnotations(
-        _boardDivRef,
-        { arrows: arrows || [], squareMarks: squareMarks || [] },
-        _boardWrapRef,
-      );
-    } else {
-      clearAnnotations(_boardDivRef, _boardWrapRef);
-    }
+    setOverlayAnnotations({
+      arrows: arrows || [],
+      squareMarks: squareMarks || [],
+    });
   }
 
   function createPuzzleBoard() {
     container.innerHTML = "";
+
+    /* Tear down any previous board's resize observer before building a
+       fresh board (reset / first move auto). The old observer would
+       otherwise hang on to the detached boardDiv. */
+    if (_resizeObserver) {
+      _resizeObserver.disconnect();
+      _resizeObserver = null;
+    }
+    _currentAnnotations = null;
+    _currentBadge = null;
 
     /* Wrap the board in a positioned container so the round replay
        button can sit over its bottom-right corner, matching the
@@ -303,8 +361,8 @@ export function renderLocalPuzzle(
             }
           }
           board.position(state.game.fen(), true);
-          clearAnnotations(_boardDivRef, _boardWrapRef);
-          clearMoveQualityBadge(_boardDivRef);
+          setOverlayAnnotations(null);
+          setOverlayBadge(null, null);
           clearActiveInlineMove();
           span.classList.add("active");
         });
@@ -410,8 +468,8 @@ export function renderLocalPuzzle(
         var fpMove = state.game.move({ from: from, to: to, promotion: "q" });
         if (!fpMove) return "snapback";
         board.position(state.game.fen(), false);
-        clearAnnotations(_boardDivRef, _boardWrapRef);
-        clearMoveQualityBadge(_boardDivRef);
+        setOverlayAnnotations(null);
+        setOverlayBadge(null, null);
         clearActiveInlineMove();
         return true;
       }
@@ -452,28 +510,18 @@ export function renderLocalPuzzle(
           }
 
           /* Render the variation first-move quality glyph ("?", "??",
-             "!?", etc.) on its destination square. */
+             "!?", etc.) on its destination square, and any [%csl …] /
+             [%cal …] annotations attached to that first move. */
           requestAnimationFrame(function () {
             var varGlyph = (matchedVar.glyphs && matchedVar.glyphs[0]) || null;
-            if (varGlyph) {
-              renderMoveQualityBadge(_boardDivRef, move.to, varGlyph);
-            } else {
-              clearMoveQualityBadge(_boardDivRef);
-            }
+            setOverlayBadge(varGlyph ? move.to : null, varGlyph);
 
-            /* Render any [%csl …] / [%cal …] annotations attached to
-               the variation's first move, or clear stale arrows. */
             var varArrows = (matchedVar.arrows && matchedVar.arrows[0]) || null;
             var varMarks = (matchedVar.squareMarks && matchedVar.squareMarks[0]) || null;
-            if ((varArrows && varArrows.length) || (varMarks && varMarks.length)) {
-              renderAnnotations(
-                _boardDivRef,
-                { arrows: varArrows || [], squareMarks: varMarks || [] },
-                _boardWrapRef,
-              );
-            } else {
-              clearAnnotations(_boardDivRef, _boardWrapRef);
-            }
+            setOverlayAnnotations({
+              arrows: varArrows || [],
+              squareMarks: varMarks || [],
+            });
           });
 
           showRefreshButton();
@@ -527,6 +575,13 @@ export function renderLocalPuzzle(
     });
 
     boardDiv.__board = board;
+
+    /* Re-fit the inner board and re-draw the SVG overlay + NAG badge
+       whenever the .jc-board container changes width (e.g. crossing
+       the mobile breakpoint). chessboard.js doesn't auto-resize, so
+       without this the squares would stay at their original pixel
+       size and the annotations would no longer line up. */
+    _resizeObserver = makeBoardResizable(boardDiv, board, redrawOverlay);
 
     if (autoFirstMove) {
       var mv = state.game.move(moves[0], { sloppy: true });
