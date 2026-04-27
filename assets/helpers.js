@@ -499,7 +499,12 @@ export function parseCAL(data) {
  * with all arrays having length === moves.length.
  */
 export function parseMovesWithComments(text) {
-  var s = String(text || "").replace(/;[^\n]*/g, " ");
+  /* Strip PGN line comments (";" to end-of-line). Require a leading
+     boundary (start-of-string or whitespace) so we don't match the ";"
+     that terminates HTML entities like &lt;, &gt;, &amp; — those appear
+     inside brace comments when the puzzle content is set via textContent
+     and read back via innerHTML, which escapes <, >, and &. */
+  var s = String(text || "").replace(/(^|\s);[^\n]*/g, "$1 ");
 
   var moves = [];
   var comments = [];
