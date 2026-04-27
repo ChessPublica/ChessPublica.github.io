@@ -11,10 +11,10 @@ import {
 
 export function createBoard(container, fen, moveNode) {
   var wrapper = document.createElement("div");
-  wrapper.className = "jc-board-wrapper";
+  wrapper.className = "cp-board-wrapper";
 
   var boardDiv = document.createElement("div");
-  boardDiv.className = "jc-board";
+  boardDiv.className = "cp-board";
 
   wrapper.appendChild(boardDiv);
   container.appendChild(wrapper);
@@ -57,7 +57,7 @@ export function createBoard(container, fen, moveNode) {
  * chessboard.js v1.0.0 sizes its inner .board-b72b1 (and each square)
  * in fixed pixels at init: widget.resize() reads the container width
  * once, then squares get inline width/height. Our boards live inside a
- * .jc-board with `width: 100%; max-width: var(--board-size)`, so on
+ * .cp-board with `width: 100%; max-width: var(--board-size)`, so on
  * viewport resize the container scales but the squares stay put — and
  * the SVG annotation overlay (sized 100%/100% of .chessboard-63f37,
  * viewBox 0..100, preserveAspectRatio="none") drifts off the squares.
@@ -69,7 +69,7 @@ export function createBoard(container, fen, moveNode) {
  * batched through requestAnimationFrame so dragging the window edge
  * doesn't fire redundant work.
  *
- * @param {HTMLElement} boardDiv  the .jc-board element to observe
+ * @param {HTMLElement} boardDiv  the .cp-board element to observe
  * @param {Object}      widget    the chessboard.js instance (must expose .resize())
  * @param {Function}    redraw    callback invoked after each widget.resize()
  */
@@ -196,7 +196,7 @@ export function getSquareCenter(svg, boardDiv, square) {
  * longer used — callers that previously passed boardDiv.parentNode can keep
  * their call sites unchanged.
  *
- * @param {HTMLElement} boardDiv    the .jc-board element
+ * @param {HTMLElement} boardDiv    the .cp-board element
  * @param {?Object}     annotations { squareMarks, arrows } — may be null
  * @param {HTMLElement} [wrapper]   ignored (kept for API compatibility)
  */

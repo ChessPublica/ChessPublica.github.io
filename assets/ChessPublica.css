@@ -21,9 +21,9 @@
 
 /* CHESSBOARD — Board wrapper + SVG overlay */
 
-.jc-board-wrapper {position:relative;display:block;margin:1rem 0;width:100%;max-width:var(--board-size);box-sizing:content-box!important;}
-.jc-board {display:block;width:100%;max-width:var(--board-size);margin:1rem 0;break-inside:avoid;}
-.jc-board *,.jc-board *::before,.jc-board *::after,
+.cp-board-wrapper {position:relative;display:block;margin:1rem 0;width:100%;max-width:var(--board-size);box-sizing:content-box!important;}
+.cp-board {display:block;width:100%;max-width:var(--board-size);margin:1rem 0;break-inside:avoid;}
+.cp-board *,.cp-board *::before,.cp-board *::after,
 .board-wrapper{box-sizing:content-box!important;}
 
 /* Chessboard absolute fix */
@@ -38,13 +38,13 @@
 
 /* <puzzle> element */
 
-.jc-puzzle {display:block;margin:1rem 0;vertical-align:top;width:100%;max-width:var(--board-size);}
+.cp-puzzle {display:block;margin:1rem 0;vertical-align:top;width:100%;max-width:var(--board-size);}
 
 /* Prevent the page from scrolling while the user drags a piece on a
    touch device. Applied only to interactive puzzle boards so static
    <fen>/<pgn> diagrams still allow page scrolling over them. */
-.jc-puzzle-board,
-.jc-puzzle-board * {touch-action:none;}
+.cp-puzzle-board,
+.cp-puzzle-board * {touch-action:none;}
 
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
@@ -52,20 +52,20 @@
   20%, 40%, 60%, 80% { transform: translateX(4px); }
 }
 
-.jc-shake{animation: shake 0.5s ease-in-out;}
+.cp-shake{animation: shake 0.5s ease-in-out;}
 
 /* Clickable SAN tokens inside a puzzle's side-line variation comment.
    Rendered by formatCommentClickable() — clicking replays the line
    from the variation start up to that move. */
-.jc-inline-move {
+.cp-inline-move {
   display: inline-block;
   cursor: pointer;
   padding: 0 2px;
   border-radius: 2px;
   transition: background 0.1s;
 }
-.jc-inline-move:hover  { background: #eee; color: #000; }
-.jc-inline-move.active { background: #c8e6c9; font-weight: bold; color: #000; }
+.cp-inline-move:hover  { background: #eee; color: #000; }
+.cp-inline-move.active { background: #c8e6c9; font-weight: bold; color: #000; }
 
 /* <pgn-player> element */
 
@@ -478,10 +478,10 @@
 /* Mobile: center chessboards horizontally */
 @media (max-width: 640px) {
   .fen-container,
-  .jc-puzzle,
+  .cp-puzzle,
   .pgn-container,
-  .jc-board-wrapper,
-  .jc-board,
+  .cp-board-wrapper,
+  .cp-board,
   .player-wrapper,
   .player-container {
     margin-left: auto;

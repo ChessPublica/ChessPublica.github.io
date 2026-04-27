@@ -21,7 +21,7 @@ var ANIM_MS = 250;
  * The variation's `comments` array is keyed by move index: comments[0]
  * is the prose attached to the variation's first move (already on the
  * board), comments[N] is prose attached to move N.  Moves between
- * comment fragments are emitted as .jc-inline-move spans so the reader
+ * comment fragments are emitted as .cp-inline-move spans so the reader
  * sees and can click:
  *   "…after <span>1... e4</span> <span>2. ♔e7</span> … and manages to draw."
  *
@@ -74,7 +74,7 @@ function buildVariationComment(varObj, startFen) {
       }
 
       moveParts.push(
-        '<span class="jc-inline-move" data-san="' + moves[i] + '">' + label + "</span>"
+        '<span class="cp-inline-move" data-san="' + moves[i] + '">' + label + "</span>"
       );
 
       /* Flush accumulated spans whenever a prose comment follows this move. */
@@ -245,18 +245,18 @@ export function renderLocalPuzzle(
 
     /* Wrap the board in a positioned container so the round replay
        button can sit over its bottom-right corner, matching the
-       pgn-player style. .jc-board-wrapper already declares
-       position:relative + the same max-width as .jc-board. */
+       pgn-player style. .cp-board-wrapper already declares
+       position:relative + the same max-width as .cp-board. */
     var boardWrap = document.createElement("div");
-    boardWrap.className = "jc-board-wrapper";
+    boardWrap.className = "cp-board-wrapper";
     container.appendChild(boardWrap);
 
     var boardDiv = document.createElement("div");
-    boardDiv.className = "jc-board";
+    boardDiv.className = "cp-board";
     boardDiv.style.position = "relative";
     _boardDivRef = boardDiv;
     _boardWrapRef = boardWrap;
-    /* The wrapper already supplies the 1rem auto margin .jc-board uses
+    /* The wrapper already supplies the 1rem auto margin .cp-board uses
        on its own, so zero it here to avoid doubling the vertical gap. */
     boardDiv.style.margin = "0";
     boardWrap.appendChild(boardDiv);
@@ -269,7 +269,7 @@ export function renderLocalPuzzle(
        div so rewriting the text's innerHTML never removes the button. */
     var refreshBtn = document.createElement("button");
     refreshBtn.type = "button";
-    refreshBtn.className = "comment-play-btn jc-puzzle-refresh";
+    refreshBtn.className = "comment-play-btn cp-puzzle-refresh";
     refreshBtn.setAttribute("aria-label", "Reset puzzle");
     refreshBtn.title = "Reset puzzle";
     refreshBtn.innerHTML = '<span class="lucide-icon" style="--icon:url(https://unpkg.com/lucide-static@1.8.0/icons/rotate-ccw.svg)"></span>';
@@ -281,7 +281,7 @@ export function renderLocalPuzzle(
       captionEl.innerHTML = "";
       captionEl.style.position = "relative";
       captionTextEl = document.createElement("div");
-      captionTextEl.className = "jc-puzzle-caption-text";
+      captionTextEl.className = "cp-puzzle-caption-text";
       captionEl.appendChild(captionTextEl);
       captionEl.appendChild(refreshBtn);
     } else {
@@ -326,14 +326,14 @@ export function renderLocalPuzzle(
 
     function dispatchMoveEvent(index) {
       boardDiv.dispatchEvent(
-        new CustomEvent("jc-puzzle-move", {
+        new CustomEvent("cp-puzzle-move", {
           detail: { index: index },
           bubbles: true,
         }),
       );
     }
 
-    /* Attach click handlers to every .jc-inline-move span in the
+    /* Attach click handlers to every .cp-inline-move span in the
        caption.  Clicking a span replays the variation from its start
        position up to and including that move, so the reader can walk
        through the instructive line one move at a time without having
@@ -341,7 +341,7 @@ export function renderLocalPuzzle(
        visual feedback. */
     function wireInlineMoveClicks() {
       if (!captionTextEl) return;
-      var spans = captionTextEl.querySelectorAll(".jc-inline-move[data-san]");
+      var spans = captionTextEl.querySelectorAll(".cp-inline-move[data-san]");
       if (!spans.length) return;
 
       var sequence = [];
@@ -371,7 +371,7 @@ export function renderLocalPuzzle(
 
     function clearActiveInlineMove() {
       if (!captionTextEl) return;
-      var active = captionTextEl.querySelectorAll(".jc-inline-move.active");
+      var active = captionTextEl.querySelectorAll(".cp-inline-move.active");
       for (var a = 0; a < active.length; a++) active[a].classList.remove("active");
     }
 
@@ -385,8 +385,8 @@ export function renderLocalPuzzle(
     function finishSolved() {
       state.solved = true;
       board.position(state.game.fen(), false);
-      boardDiv.classList.remove("jc-fire-once");
-      boardDiv.classList.add("jc-fire-solved");
+      boardDiv.classList.remove("cp-fire-once");
+      boardDiv.classList.add("cp-fire-solved");
       /* Append the solved banner on its own line without wiping the
          last move's comment (if any). */
       if (captionTextEl) {
@@ -496,9 +496,9 @@ export function renderLocalPuzzle(
           board.position(state.game.fen(), false);
 
           /* Shake — the user didn't play the puzzle's solution. */
-          boardDiv.classList.remove("jc-shake");
+          boardDiv.classList.remove("cp-shake");
           void boardDiv.offsetWidth;
-          boardDiv.classList.add("jc-shake");
+          boardDiv.classList.add("cp-shake");
 
           state.freePlay = true;
           state.locked = false;
@@ -531,9 +531,9 @@ export function renderLocalPuzzle(
         /* Wrong move — undo and shake. */
         state.game.undo();
         board.position(state.game.fen(), false);
-        boardDiv.classList.remove("jc-shake");
+        boardDiv.classList.remove("cp-shake");
         void boardDiv.offsetWidth;
-        boardDiv.classList.add("jc-shake");
+        boardDiv.classList.add("cp-shake");
 
         return "snapback";
       }
@@ -547,13 +547,13 @@ export function renderLocalPuzzle(
       });
       dispatchMoveEvent(state.index);
 
-      boardDiv.classList.remove("jc-fire-once");
+      boardDiv.classList.remove("cp-fire-once");
       requestAnimationFrame(function () {
-        boardDiv.classList.add("jc-fire-once");
+        boardDiv.classList.add("cp-fire-once");
       });
 
       setTimeout(function () {
-        if (!state.solved) boardDiv.classList.remove("jc-fire-once");
+        if (!state.solved) boardDiv.classList.remove("cp-fire-once");
       }, 1000);
 
       if (state.index >= state.moves.length) return finishSolved();
@@ -577,7 +577,7 @@ export function renderLocalPuzzle(
     boardDiv.__board = board;
 
     /* Re-fit the inner board and re-draw the SVG overlay + NAG badge
-       whenever the .jc-board container changes width (e.g. crossing
+       whenever the .cp-board container changes width (e.g. crossing
        the mobile breakpoint). chessboard.js doesn't auto-resize, so
        without this the squares would stay at their original pixel
        size and the annotations would no longer line up. */
@@ -603,12 +603,12 @@ export function renderLocalPuzzle(
   container.reset = function () {
     createPuzzleBoard();
     container.dispatchEvent(
-      new CustomEvent("jc-puzzle-reset", { bubbles: true }),
+      new CustomEvent("cp-puzzle-reset", { bubbles: true }),
     );
   };
 }
 
-export function jcPuzzleCreate(el, cfg) {
+export function createPuzzle(el, cfg) {
   var parsed = parseGame(cfg.rawPGN || "");
   if (parsed.error) return;
 
