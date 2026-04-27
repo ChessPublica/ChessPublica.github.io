@@ -20,25 +20,74 @@ export function createBoard(container, fen, moveNode) {
   container.appendChild(wrapper);
 
   requestAnimationFrame(function () {
-    Chessboard(boardDiv, {
+    var widget = Chessboard(boardDiv, {
       position: fen,
       pieceTheme: PIECE_THEME,
     });
-    renderAnnotations(boardDiv, moveNode);
 
-    /* Show a move-quality badge on the destination square if the
-       move that produced this diagram has a NAG annotation. */
-    if (moveNode && moveNode.nags && moveNode.nags.length) {
-      var glyph = nagsToGlyph(moveNode.nags);
-      if (glyph && moveNode.san) {
-        var square = getDestinationSquare(moveNode.san, moveNode.color);
-        if (square) {
-          boardDiv.style.position = "relative";
-          renderMoveQualityBadge(boardDiv, square, glyph);
+    /* Draw the SVG overlay + (optional) NAG move-quality badge. Wrapped
+       in a function so makeBoardResizable() can re-run it after the
+       board re-fits its container; the squares' new pixel positions
+       feed into renderAnnotations()'s screen->SVG-user mapping so the
+       circles/arrows stay aligned. */
+    function renderOverlay() {
+      renderAnnotations(boardDiv, moveNode);
+      if (moveNode && moveNode.nags && moveNode.nags.length) {
+        var glyph = nagsToGlyph(moveNode.nags);
+        if (glyph && moveNode.san) {
+          var square = getDestinationSquare(moveNode.san, moveNode.color);
+          if (square) {
+            boardDiv.style.position = "relative";
+            renderMoveQualityBadge(boardDiv, square, glyph);
+          }
         }
       }
     }
+
+    renderOverlay();
+    makeBoardResizable(boardDiv, widget, renderOverlay);
   });
+}
+
+/* ================================================================
+   RESIZE HANDLING
+================================================================ */
+
+/**
+ * chessboard.js v1.0.0 sizes its inner .board-b72b1 (and each square)
+ * in fixed pixels at init: widget.resize() reads the container width
+ * once, then squares get inline width/height. Our boards live inside a
+ * .jc-board with `width: 100%; max-width: var(--board-size)`, so on
+ * viewport resize the container scales but the squares stay put — and
+ * the SVG annotation overlay (sized 100%/100% of .chessboard-63f37,
+ * viewBox 0..100, preserveAspectRatio="none") drifts off the squares.
+ *
+ * Observe the boardDiv with a ResizeObserver and on each size change
+ * call widget.resize() to re-fit the inner board, then re-run the
+ * caller-supplied redraw callback so any SVG annotations or NAG badges
+ * are re-derived from the squares' new screen positions. Updates are
+ * batched through requestAnimationFrame so dragging the window edge
+ * doesn't fire redundant work.
+ *
+ * @param {HTMLElement} boardDiv  the .jc-board element to observe
+ * @param {Object}      widget    the chessboard.js instance (must expose .resize())
+ * @param {Function}    redraw    callback invoked after each widget.resize()
+ */
+export function makeBoardResizable(boardDiv, widget, redraw) {
+  if (typeof ResizeObserver === "undefined") return null;
+  if (!widget || typeof widget.resize !== "function") return null;
+
+  var pendingFrame = null;
+  var ro = new ResizeObserver(function () {
+    if (pendingFrame) return;
+    pendingFrame = requestAnimationFrame(function () {
+      pendingFrame = null;
+      widget.resize();
+      if (typeof redraw === "function") redraw();
+    });
+  });
+  ro.observe(boardDiv);
+  return ro;
 }
 
 /* ================================================================
