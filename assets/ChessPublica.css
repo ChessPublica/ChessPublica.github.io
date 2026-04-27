@@ -471,6 +471,20 @@
 }
 
 /* Larger screens
-.pgn-moves{column-count:2;column-gap:2rem;column-rule:1px solid grey;} 
+.pgn-moves{column-count:2;column-gap:2rem;column-rule:1px solid grey;}
 
 */
+
+/* Mobile: center chessboards horizontally */
+@media (max-width: 640px) {
+  .fen-container,
+  .jc-puzzle,
+  .pgn-container,
+  .jc-board-wrapper,
+  .jc-board,
+  .player-wrapper,
+  .player-container {
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
