@@ -9,6 +9,7 @@ import {
   parseCSL,
   formatComment,
 } from "./helpers.js";
+import { lucideIconUrl } from "./icons.js";
 import { renderFullPGN } from "./pgn.js";
 import { renderAnnotations } from "./board.js";
 import { createPuzzle } from "./puzzle.js";
@@ -259,10 +260,7 @@ function renderPuzzleHeader(wrapper, raw, packInfo) {
 
     var emojiSpan = document.createElement("span");
     emojiSpan.className = "video-title-emoji lucide-icon";
-    emojiSpan.style.setProperty(
-      "--icon",
-      "url(https://unpkg.com/lucide-static@1.8.0/icons/puzzle.svg)",
-    );
+    emojiSpan.style.setProperty("--icon", lucideIconUrl("puzzle"));
     title.appendChild(emojiSpan);
 
     var textDiv = document.createElement("div");

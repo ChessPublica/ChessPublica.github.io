@@ -15,6 +15,7 @@ import {
   NAG_TO_GLYPH,
   stripCommentAnnotations,
 } from "./helpers.js";
+import { lucideIconUrl } from "./icons.js";
 import { createBoard } from "./board.js";
 
 /* ================================================================
@@ -383,10 +384,7 @@ export function renderHeaders(headers, container) {
 
   var emojiSpan = document.createElement("span");
   emojiSpan.className = "video-title-emoji lucide-icon";
-  emojiSpan.style.setProperty(
-    "--icon",
-    "url(https://unpkg.com/lucide-static@1.8.0/icons/text-initial.svg)",
-  );
+  emojiSpan.style.setProperty("--icon", lucideIconUrl("text-initial"));
   title.appendChild(emojiSpan);
 
   var textDiv = document.createElement("div");

@@ -6,6 +6,7 @@
  */
 
 import { PIECE_THEME, normalizeSAN, parseGame, toFigurine, formatComment, formatCommentClickable, getDestinationSquare, renderMoveQualityBadge, clearMoveQualityBadge } from "./helpers.js";
+import { lucideIconUrl } from "./icons.js";
 import { renderAnnotations, clearAnnotations, makeBoardResizable } from "./board.js";
 
 /* ================================================================
@@ -272,7 +273,10 @@ export function renderLocalPuzzle(
     refreshBtn.className = "comment-play-btn cp-puzzle-refresh";
     refreshBtn.setAttribute("aria-label", "Reset puzzle");
     refreshBtn.title = "Reset puzzle";
-    refreshBtn.innerHTML = '<span class="lucide-icon" style="--icon:url(https://unpkg.com/lucide-static@1.8.0/icons/rotate-ccw.svg)"></span>';
+    var refreshIcon = document.createElement("span");
+    refreshIcon.className = "lucide-icon";
+    refreshIcon.style.setProperty("--icon", lucideIconUrl("rotate-ccw"));
+    refreshBtn.appendChild(refreshIcon);
     refreshBtn.style.display = "none";
     refreshBtn.addEventListener("click", function () {
       handleRefresh();

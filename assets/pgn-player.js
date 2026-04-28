@@ -8,6 +8,7 @@ import {
   toFigurine,
   applyFigurineNotation,
 } from "./helpers.js";
+import { lucideIconUrl } from "./icons.js";
 import {
   renderAnnotations as applyBoardAnnotations,
   clearAnnotations,
@@ -360,10 +361,7 @@ function loadPGN(pgn) {
     // Lucide "swords" icon — sized via CSS to be ~2 lines tall
     const emojiSpan = document.createElement("span");
     emojiSpan.className = "video-title-emoji lucide-icon";
-    emojiSpan.style.setProperty(
-      "--icon",
-      "url(https://unpkg.com/lucide-static@1.8.0/icons/swords.svg)",
-    );
+    emojiSpan.style.setProperty("--icon", lucideIconUrl("swords"));
     this.titleEl.appendChild(emojiSpan);
 
     // Text block (two lines)
@@ -654,16 +652,16 @@ class GoodMove {
   }
 
   /* ------------------------------------------------------------------
-     render(moveIndex, glyphs, moves, chess)
+     render(moveIndex, glyphs, moves, lastMove)
 
      moveIndex  – 0-based index into the moves array (-1 = starting pos)
      glyphs     – array from pgn-parser: glyphs[moveIndex] = "!" | "?" …
      moves      – array of SAN strings
-     chess      – a Chess() instance reset and replayed up to moveIndex,
-                  so chess.history({verbose:true}) gives us the last move's
-                  destination square.
+     lastMove   – verbose move record { from, to, ... } from
+                  state.history[moveIndex]; precomputed by buildCache so
+                  we don't have to replay the game on every navigation.
   ------------------------------------------------------------------ */
-  render(moveIndex, glyphs, moves, chessInstance) {
+  render(moveIndex, glyphs, moves, lastMove) {
 
     this._clear();
 
@@ -675,11 +673,8 @@ class GoodMove {
     const meta = GLYPH_META[glyph];
     if (!meta) return;
 
-    // Derive the destination square from the verbose history
-    const history = chessInstance.history({ verbose: true });
-    if (!history.length) return;
+    if (!lastMove || !lastMove.to) return;
 
-    const lastMove  = history[history.length - 1];
     const toSquare  = lastMove.to; // e.g. "e4"
 
     // Locate the square DOM element inside the board
@@ -749,10 +744,7 @@ class VideoComment {
 
       const icon = document.createElement("span");
       icon.className = "comment-icon lucide-icon";
-      icon.style.setProperty(
-        "--icon",
-        "url(https://unpkg.com/lucide-static@1.8.0/icons/message-square.svg)",
-      );
+      icon.style.setProperty("--icon", lucideIconUrl("message-square"));
 
       /* Wrap body in a column div */
       const textBlock = document.createElement("div");
@@ -782,10 +774,7 @@ class VideoComment {
 
         const icon = document.createElement("span");
         icon.className = "variation-icon lucide-icon";
-        icon.style.setProperty(
-          "--icon",
-          "url(https://unpkg.com/lucide-static@1.8.0/icons/search.svg)",
-        );
+        icon.style.setProperty("--icon", lucideIconUrl("search"));
 
         const content = document.createElement("div");
         content.className = "variation-content";
@@ -860,20 +849,25 @@ class VideoComment {
     if (hasContent && isPaused) {
       const btn = document.createElement("button");
       btn.className = "comment-play-btn";
+      const iconSpan = document.createElement("span");
+      iconSpan.className = "lucide-icon";
       if (isGameOver) {
-        btn.innerHTML = '<span class="lucide-icon" style="--icon:url(https://unpkg.com/lucide-static@1.8.0/icons/rotate-ccw.svg)" aria-label="Replay"></span>';
-        btn.onclick   = () => {
+        iconSpan.style.setProperty("--icon", lucideIconUrl("rotate-ccw"));
+        iconSpan.setAttribute("aria-label", "Replay");
+        btn.onclick = () => {
           this.el.querySelectorAll(".var-move").forEach(s => s.classList.remove("active"));
           this.engine.goTo(0);
           this.engine.showPlayBtn();
         };
       } else {
-        btn.innerHTML = '<span class="lucide-icon" style="--icon:url(https://unpkg.com/lucide-static@1.8.0/icons/play.svg)" aria-label="Play"></span>';
-        btn.onclick   = () => {
+        iconSpan.style.setProperty("--icon", lucideIconUrl("play"));
+        iconSpan.setAttribute("aria-label", "Play");
+        btn.onclick = () => {
           this.el.querySelectorAll(".var-move").forEach(s => s.classList.remove("active"));
           this.engine.play();
         };
       }
+      btn.appendChild(iconSpan);
       this.el.appendChild(btn);
     }
 
@@ -1034,8 +1028,8 @@ class VideoEngine {
                 this._drawLastMoveArrow(moveIdx);
                 this.renderAnnotations(moveIdx);
                 if (this.goodMove) {
-                  const tmp = moveIdx >= 0 ? this._chessAt(moveIdx) : null;
-                  this.goodMove.render(moveIdx, this.state.glyphs, this.state.moves, tmp);
+                  const lastMove = moveIdx >= 0 ? this.state.history?.[moveIdx] : null;
+                  this.goodMove.render(moveIdx, this.state.glyphs, this.state.moves, lastMove);
                 }
               }
             });
@@ -1114,11 +1108,18 @@ class VideoEngine {
 
     this.chess.reset();
     this.state.cache    = [];
+    this.state.history  = []; // verbose move records, parallel to moves[]
     this.state.cache[0] = this.chess.fen();
 
     this.state.moves.forEach((m, i) => {
-      this.chess.move(m);
+      const result = this.chess.move(m);
       this.state.cache[i + 1] = this.chess.fen();
+      /* Stash {from,to,san,color} once so _drawLastMoveArrow and the
+         flip/keyboard/click navigation paths don't have to replay the
+         whole game on every move. */
+      this.state.history[i] = result
+        ? { from: result.from, to: result.to, san: result.san, color: result.color }
+        : null;
     });
   }
 
@@ -1209,25 +1210,17 @@ class VideoEngine {
 
     if (moveIndex < 0) return;
 
-    /* FIX 2 ── use the pre-built cache instead of replaying moves, which
-       was occasionally producing a stale/empty history due to timing. */
-    const tmp = new Chess();
-    for (let i = 0; i <= moveIndex; i++) {
-      const result = tmp.move(this.state.moves[i]);
-      if (!result) return; // safety: bail on invalid move
-    }
-    const hist = tmp.history({ verbose: true });
-    if (!hist.length) return;
-
-    const lastMove = hist[hist.length - 1];
-    const from = lastMove.from;
-    const to   = lastMove.to;
+    /* Look up the move's from/to from state.history (populated once in
+       buildCache) instead of replaying the game from move 0 on every
+       navigation — that was O(n) per arrow keystroke. */
+    const lastMove = this.state.history?.[moveIndex];
+    if (!lastMove) return;
 
     const svg = createGridOverlaySVG(this.boardEl, "last-move-overlay");
     if (!svg) return;
     svg.style.zIndex = "14";
 
-    _drawLastMoveArrowSVG(svg, svg.parentNode, from, to);
+    _drawLastMoveArrowSVG(svg, svg.parentNode, lastMove.from, lastMove.to);
   }
 
 
@@ -1260,12 +1253,6 @@ class VideoEngine {
   }
 
 
-
-  _chessAt(moveIndex) {
-    const tmp = new Chess();
-    for (let i = 0; i <= moveIndex; i++) tmp.move(this.state.moves[i]);
-    return tmp;
-  }
 
   _moveContext(moveIndex) {
     return {
@@ -1343,8 +1330,8 @@ class VideoEngine {
 
     if (this.goodMove) {
       requestAnimationFrame(() => {
-        const tmp = moveIdx >= 0 ? this._chessAt(moveIdx) : null;
-        this.goodMove.render(moveIdx, this.state.glyphs, this.state.moves, tmp);
+        const lastMove = moveIdx >= 0 ? this.state.history?.[moveIdx] : null;
+        this.goodMove.render(moveIdx, this.state.glyphs, this.state.moves, lastMove);
       });
     }
 
@@ -1553,23 +1540,26 @@ class PgnPlayerElement extends HTMLElement {
     const wrapper = document.createElement("div");
     wrapper.className = "player-wrapper";
 
+    /* The lucide-icon spans carry a data-lucide attribute so we can set
+       their --icon CSS custom property after insertion — keeps the icon
+       data URIs (~7 KB) out of every rendered HTML string. */
     wrapper.innerHTML = `
       <div class="video-title"></div>
 
       <div class="player-container">
         <div class="board-toolbar">
           <button class="settings-toggle" aria-label="Settings">
-            <span class="lucide-icon" style="--icon:url(https://unpkg.com/lucide-static@1.8.0/icons/settings.svg)"></span>
+            <span class="lucide-icon" data-lucide="settings"></span>
           </button>
           <div class="settings-panel hidden">
             <button class="settings-btn" data-action="download" title="Download PGN" aria-label="Download PGN">
-              <span class="lucide-icon" style="--icon:url(https://unpkg.com/lucide-static@1.8.0/icons/download.svg)"></span>
+              <span class="lucide-icon" data-lucide="download"></span>
             </button>
             <button class="settings-btn" data-action="flip" title="Flip board" aria-label="Flip board">
-              <span class="lucide-icon" style="--icon:url(https://unpkg.com/lucide-static@1.8.0/icons/arrow-up-down.svg)"></span>
+              <span class="lucide-icon" data-lucide="arrow-up-down"></span>
             </button>
             <button class="settings-btn" data-action="speed" title="Playback speed" aria-label="Playback speed">
-              <span class="lucide-icon" style="--icon:url(https://unpkg.com/lucide-static@1.8.0/icons/gauge.svg)"></span>
+              <span class="lucide-icon" data-lucide="gauge"></span>
               <span class="speed-label">1x</span>
             </button>
           </div>
@@ -1578,7 +1568,7 @@ class PgnPlayerElement extends HTMLElement {
         <div class="board-wrap">
           <div class="board"></div>
           <div class="play" aria-label="Play">
-            <span class="lucide-icon" style="--icon:url(https://unpkg.com/lucide-static@1.8.0/icons/play.svg)"></span>
+            <span class="lucide-icon" data-lucide="play"></span>
           </div>
         </div>
 
@@ -1590,6 +1580,10 @@ class PgnPlayerElement extends HTMLElement {
       <div class="video-moves"></div>
       <div class="video-comment"></div>
     `;
+
+    wrapper.querySelectorAll(".lucide-icon[data-lucide]").forEach((el) => {
+      el.style.setProperty("--icon", lucideIconUrl(el.dataset.lucide));
+    });
 
     this.appendChild(wrapper);
 
