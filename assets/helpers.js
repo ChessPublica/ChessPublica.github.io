@@ -177,6 +177,10 @@ var SAFE_URL_RE = /^(?:https?:|mailto:|#|\/)/i;
  * consumed group, so moves immediately after a closing ">" are
  * still converted.
  */
+export function applyFigurineNotation(html) {
+  return _applyFigurineNotation(html);
+}
+
 function _applyFigurineNotation(html) {
   /* Piece moves: Nf3, Bxe5+, Nbd7, R1e1, Qh4#, etc. */
   html = html.replace(

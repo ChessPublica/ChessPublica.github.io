@@ -1,12 +1,28 @@
 /* ChessPublica <pgn-player> element */
 
-import { parseCAL, parseCSL, NAG_TO_GLYPH, stripCommentAnnotations } from "./helpers.js";
+import {
+  parseCAL,
+  parseCSL,
+  NAG_TO_GLYPH,
+  stripCommentAnnotations,
+  toFigurine,
+  applyFigurineNotation,
+} from "./helpers.js";
 import {
   renderAnnotations as applyBoardAnnotations,
   clearAnnotations,
   createGridOverlaySVG,
   getSquareCenter,
 } from "./board.js";
+
+/* Strip a plain-text comment of its inline figurine notation. Wraps the
+   shared HTML-aware helper from helpers.js — comment text rendered via
+   textContent has no real HTML tags, so the alternation simply matches
+   piece-move tokens and converts them. Avoids the lookbehind regex that
+   the previous local implementation used (Safari < 16.4 unsupported). */
+function figurineComment(text) {
+  return applyFigurineNotation(text);
+}
 
 /* Skip global keyboard shortcuts while the user is editing a form field,
    otherwise Space / arrow keys would be swallowed instead of typed. */
@@ -381,6 +397,7 @@ function loadPGN(pgn) {
 
   // Double-tap left/right halves of the board for ±10 moves.
   const hitEl = engine.boardWrap || engine.boardEl;
+  const signal = engine._abortSignal;
 
   hitEl.addEventListener("click", function(e) {
 
@@ -402,7 +419,7 @@ function loadPGN(pgn) {
     }
 
     lastTap = now;
-  });
+  }, { signal });
 
   // Keyboard arrow navigation
   // FIX #7: keyboard nav enters a "keyboard mode" that hides play button & overlay
@@ -456,12 +473,12 @@ function loadPGN(pgn) {
       }
     }
 
-  });
+  }, { signal });
 
   // FIX #7: exit keyboard mode (restore normal hover behaviour) on mouse move over board
   hitEl.addEventListener("mouseenter", function() {
     engine._exitKeyboardMode();
-  });
+  }, { signal });
 
 }class EvalBar {
 
@@ -502,32 +519,6 @@ function loadPGN(pgn) {
       this.fill.style.height = percent + "%";
     }
   }
-}/* -------------------------------------------------------
-   Figurine notation map
-------------------------------------------------------- */
-const _pieceToFigurine = { K: '\u2654', Q: '\u2655', R: '\u2656', B: '\u2657', N: '\u2658' };
-
-function toFigurine(san) {
-  return san
-    .replace(/^K/, '\u2654') // ♔
-    .replace(/^Q/, '\u2655') // ♕
-    .replace(/^R/, '\u2656') // ♖
-    .replace(/^B/, '\u2657') // ♗
-    .replace(/^N/, '\u2658'); // ♘
-}
-
-/* Convert chess moves in free text (PGN comments) to figurine notation.
-   Handles piece moves (Nf3, Bxd5+, Nbd7), promotions (e8=Q+), and castling. */
-function figurineComment(text) {
-  // Piece moves: Nf3, Bxe5+, Nbd7, R1e1, Qh4#, etc.
-  return text.replace(
-    /(?<![a-zA-Z])([KQRBN])([a-h]?[1-8]?x?[a-h][1-8](?:=[QRBN])?[+#!?]*)/g,
-    (_, piece, rest) => _pieceToFigurine[piece] + rest.replace(/=([QRBN])/, (__, p) => '=' + _pieceToFigurine[p])
-  ).replace(
-    // Pawn promotions: e8=Q+, bxa1=R#, etc.
-    /(?<![a-zA-Z])([a-h](?:x[a-h])?[18])=([QRBN])([+#!?]*)/g,
-    (_, prefix, piece, suffix) => prefix + '=' + _pieceToFigurine[piece] + suffix
-  );
 }
 
 /* FIX #4: glyphs are displayed as plain text — no badge colours */
@@ -908,6 +899,13 @@ class VideoEngine {
     this.container = container;
     this.wrapper   = container;
 
+    /* All listeners and observers attached during this engine's lifetime
+       go through this controller so destroy() can tear them down in one
+       call when the host element is disconnected. */
+    this._abort        = new AbortController();
+    this._abortSignal  = this._abort.signal;
+    this._observers    = [];
+
     this.chess = new Chess();
 
     this.boardWrap = container.querySelector(".board-wrap");
@@ -917,9 +915,10 @@ class VideoEngine {
     /* ---- Activate on any interaction ---- */
     const wrapper = container.parentElement;
     const activate = () => this._activate();
-    wrapper.addEventListener("click",      activate);
-    wrapper.addEventListener("mouseenter", activate);
-    wrapper.addEventListener("touchstart", activate, { passive: true });
+    const signal = this._abortSignal;
+    wrapper.addEventListener("click",      activate, { signal });
+    wrapper.addEventListener("mouseenter", activate, { signal });
+    wrapper.addEventListener("touchstart", activate, { passive: true, signal });
 
     this.board = Chessboard(this.boardEl, {
       position:   "start",
@@ -934,7 +933,9 @@ class VideoEngine {
     };
     syncEvalHeight();
     if (typeof ResizeObserver !== "undefined") {
-      new ResizeObserver(syncEvalHeight).observe(this.boardEl);
+      const ro = new ResizeObserver(syncEvalHeight);
+      ro.observe(this.boardEl);
+      this._observers.push(ro);
     }
 
     /* Speed steps in moves-per-second */
@@ -959,14 +960,14 @@ class VideoEngine {
     this._variation    = null; // active variation nav state
 
     /* ---- Board click (toggle play/pause) ---- */
-    this.boardEl.addEventListener("click", () => this.togglePlay(true));
+    this.boardEl.addEventListener("click", () => this.togglePlay(true), { signal });
 
     /* ---- Play button ---- */
     if (this.playBtn) {
       this.playBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         this.play();
-      });
+      }, { signal });
     }
 
     /* ---- Space bar (only for active player when visible) ---- */
@@ -983,7 +984,7 @@ class VideoEngine {
           this.togglePlay(true);
         }
       }
-    });
+    }, { signal });
 
     /* ---- Sub-systems ---- */
     this.evalBar    = new EvalBar(container);
@@ -1007,9 +1008,9 @@ class VideoEngine {
       settingsToggle.addEventListener("click", (e) => {
         e.stopPropagation();
         settingsPanel.classList.toggle("hidden");
-      });
+      }, { signal });
 
-      settingsPanel.addEventListener("click", (e) => e.stopPropagation());
+      settingsPanel.addEventListener("click", (e) => e.stopPropagation(), { signal });
 
       settingsPanel.querySelectorAll(".settings-btn").forEach(btn => {
         btn.addEventListener("click", (e) => {
@@ -1057,8 +1058,28 @@ class VideoEngine {
             a.click();
             URL.revokeObjectURL(a.href);
           }
-        });
+        }, { signal });
       });
+    }
+  }
+
+  /* Tear down every listener and observer registered during the engine's
+     lifetime. Called from the host element's disconnectedCallback so a
+     dynamically-added/removed <pgn-player> doesn't leak document keydown
+     handlers or hold a detached board element via ResizeObserver. */
+  destroy() {
+    if (this._abort) {
+      try { this._abort.abort(); } catch (_) { /* ignore */ }
+      this._abort = null;
+      this._abortSignal = null;
+    }
+    if (this._observers) {
+      this._observers.forEach(o => { try { o.disconnect(); } catch (_) {} });
+      this._observers = [];
+    }
+    this.state.playing = false;
+    if (VideoEngine.activeEngine === this) {
+      VideoEngine.activeEngine = null;
     }
   }
 
@@ -1581,14 +1602,17 @@ class PgnPlayerElement extends HTMLElement {
 
     const container = wrapper.querySelector(".player-container");
     const engine    = new VideoEngine(container);
+    this._engine = engine;
 
     /* Pause when scrolled fully out of view */
     if (typeof IntersectionObserver !== "undefined") {
-      new IntersectionObserver((entries) => {
+      const io = new IntersectionObserver((entries) => {
         if (!entries[0].isIntersecting && VideoEngine.activeEngine === engine && engine.state.playing) {
           engine.pause();
         }
-      }, { threshold: 0 }).observe(this);
+      }, { threshold: 0 });
+      io.observe(this);
+      engine._observers.push(io);
     }
 
     const showError = (msg) => {
@@ -1636,6 +1660,13 @@ class PgnPlayerElement extends HTMLElement {
     }
 
     }); // end requestAnimationFrame
+  }
+
+  disconnectedCallback() {
+    if (this._engine && typeof this._engine.destroy === "function") {
+      this._engine.destroy();
+    }
+    this._engine = null;
   }
 }
 
