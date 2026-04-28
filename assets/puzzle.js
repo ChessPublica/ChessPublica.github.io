@@ -388,13 +388,17 @@ export function renderLocalPuzzle(
       boardDiv.classList.remove("cp-fire-once");
       boardDiv.classList.add("cp-fire-solved");
       /* Append the solved banner on its own line without wiping the
-         last move's comment (if any). */
+         last move's comment (if any).  Use appendChild rather than
+         innerHTML += so click handlers wired to .cp-inline-move spans
+         from a side-line variation survive \u2014 re-parsing the existing
+         HTML would orphan their listeners. */
       if (captionTextEl) {
-        var existing = captionTextEl.innerHTML.trim();
-        var solved = "\uD83C\uDFC6 Puzzle solved!";
-        captionTextEl.innerHTML = existing
-          ? existing + "<br>" + solved
-          : solved;
+        if (captionTextEl.childNodes.length) {
+          captionTextEl.appendChild(document.createElement("br"));
+        }
+        var solvedSpan = document.createElement("span");
+        solvedSpan.textContent = "\uD83C\uDFC6 Puzzle solved!";
+        captionTextEl.appendChild(solvedSpan);
       }
       showRefreshButton();
 
