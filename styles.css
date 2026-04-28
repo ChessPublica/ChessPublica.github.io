@@ -506,7 +506,7 @@ body {
     max-width: 100%;
 }
 
-.jc-error {
+.cp-error {
     color: #dc2626;
     font-family: var(--font-mono);
     white-space: pre-wrap;
@@ -832,7 +832,7 @@ body {
 }
 
 .sandbox-host > .fen-container,
-.sandbox-host > .jc-puzzle {
+.sandbox-host > .cp-puzzle {
     width: 100%;
     max-width: var(--board-size, 400px);
     box-sizing: border-box;
@@ -912,7 +912,7 @@ body {
     }
 
     .sandbox-host > .fen-container,
-    .sandbox-host > .jc-puzzle,
+    .sandbox-host > .cp-puzzle,
     .sandbox-host > .pgn-container,
     .sandbox-host > pgn-player {
         max-width: 100%;

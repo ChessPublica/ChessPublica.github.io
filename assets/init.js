@@ -11,14 +11,14 @@ import {
 } from "./helpers.js";
 import { renderFullPGN } from "./pgn.js";
 import { renderAnnotations } from "./board.js";
-import { jcPuzzleCreate } from "./puzzle.js";
+import { createPuzzle } from "./puzzle.js";
 
 /* ── Error helper ─────────────────────────────────────────── */
 
 function showError(wrapper, message) {
   wrapper.innerHTML = "";
   var err = document.createElement("div");
-  err.className = "jc-error";
+  err.className = "cp-error";
   err.style.color = "red";
   err.style.fontFamily = "monospace";
   err.style.whiteSpace = "pre-wrap";
@@ -46,8 +46,8 @@ function initCustomElements(selector, wrapperClass, renderFn, opts) {
   var preserveInlineHTML = !!(opts && opts.preserveInlineHTML);
 
   document.querySelectorAll(selector).forEach(function (el) {
-    if (el.dataset.jcRendered === "1") return;
-    el.dataset.jcRendered = "1";
+    if (el.dataset.cpRendered === "1") return;
+    el.dataset.cpRendered = "1";
 
     /* For <pgn> we read innerHTML (not textContent) so that inline HTML
        the author put inside comments — e.g. <br>, <strong>, Kramdown-
@@ -114,8 +114,8 @@ function validateFen(fen) {
 
 export function initFenElements() {
   document.querySelectorAll("fen").forEach(function (el) {
-    if (el.dataset.jcRendered === "1") return;
-    el.dataset.jcRendered = "1";
+    if (el.dataset.cpRendered === "1") return;
+    el.dataset.cpRendered = "1";
 
     /* Read innerHTML (not textContent) so inline HTML the author put
        inside a [Caption "..."] header — e.g. <br>, <strong> — survives
@@ -173,7 +173,7 @@ export function initFenElements() {
     while ((m = calRe.exec(raw))) arrows = arrows.concat(parseCAL(m[1]));
 
     var boardDiv = document.createElement("div");
-    boardDiv.className = "jc-board";
+    boardDiv.className = "cp-board";
     wrapper.appendChild(boardDiv);
 
     if (caption) {
@@ -200,9 +200,9 @@ export function initFenElements() {
         /* Keep the board (and its annotation overlay) in sync with the
            container width. chessboard.js sizes its inner .board-b72b1
            in fixed pixels at init, so when the viewport resizes the
-           outer .jc-board scales via CSS max-width but the inner squares
+           outer .cp-board scales via CSS max-width but the inner squares
            stay put — leaving any circles/arrows misaligned. Observing
-           .jc-board lets us re-run widget.resize() and re-draw the
+           .cp-board lets us re-run widget.resize() and re-draw the
            annotations on top of the freshly-laid-out squares. */
         if (typeof ResizeObserver !== "undefined" && widget && typeof widget.resize === "function") {
           var pendingFrame = null;
@@ -255,7 +255,7 @@ function renderPuzzleHeader(wrapper, raw, packInfo) {
 
   if (line1 || line2) {
     var title = document.createElement("div");
-    title.className = "video-title jc-puzzle-title";
+    title.className = "video-title cp-puzzle-title";
 
     var emojiSpan = document.createElement("span");
     emojiSpan.className = "video-title-emoji lucide-icon";
@@ -298,7 +298,7 @@ function renderPuzzleFromText(raw, wrapper) {
   if (games.length > 1) {
     games.forEach(function (game, i) {
       var sub = document.createElement("div");
-      sub.className = "jc-puzzle jc-puzzle-pack-item";
+      sub.className = "cp-puzzle cp-puzzle-pack-item";
       sub.style.marginBottom = "1.5rem";
       wrapper.appendChild(sub);
       renderSinglePuzzle(game, sub, { index: i + 1, total: games.length });
@@ -313,7 +313,7 @@ function renderSinglePuzzle(raw, wrapper, packInfo) {
   var caption = renderPuzzleHeader(wrapper, raw, packInfo);
 
   var boardHost = document.createElement("div");
-  boardHost.className = "jc-puzzle-board";
+  boardHost.className = "cp-puzzle-board";
   wrapper.appendChild(boardHost);
 
   /* Always create the caption slot (even when no initial caption is
@@ -325,7 +325,7 @@ function renderSinglePuzzle(raw, wrapper, packInfo) {
 
   try {
     var before = boardHost.innerHTML;
-    jcPuzzleCreate(boardHost, {
+    createPuzzle(boardHost, {
       rawPGN: raw,
       captionEl: cap,
       initialCaption: caption || "",
@@ -340,11 +340,11 @@ function renderSinglePuzzle(raw, wrapper, packInfo) {
 
 export function initPuzzleElements() {
   document.querySelectorAll("puzzle").forEach(function (oldEl) {
-    if (oldEl.dataset.jcRendered === "1") return;
-    oldEl.dataset.jcRendered = "1";
+    if (oldEl.dataset.cpRendered === "1") return;
+    oldEl.dataset.cpRendered = "1";
 
     var wrapper = document.createElement("div");
-    wrapper.className = "jc-puzzle";
+    wrapper.className = "cp-puzzle";
     oldEl.replaceWith(wrapper);
 
     var src = oldEl.getAttribute("src");
@@ -395,7 +395,7 @@ function _figurinifyNode(node) {
  */
 export function initFigurineProse() {
   document.querySelectorAll("p, h1, h2, h3, h4, h5, h6").forEach(function (el) {
-    if (el.closest("pgn, puzzle, pgn-player, fen, .pgn-container, .jc-puzzle, .jc-board-wrapper")) return;
+    if (el.closest("pgn, puzzle, pgn-player, fen, .pgn-container, .cp-puzzle, .cp-board-wrapper")) return;
     _figurinifyNode(el);
   });
 }

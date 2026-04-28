@@ -162,7 +162,7 @@ var ALLOWED_COMMENT_TAGS = {
    class names are stripped to prevent style/layout injection via the
    sanitizer, but our own inline-move spans need to keep their class
    so the puzzle engine can style/target them. */
-var ALLOWED_SPAN_CLASSES = /^jc-inline-move$/;
+var ALLOWED_SPAN_CLASSES = /^cp-inline-move$/;
 
 /* Only http(s), mailto, fragment and same-origin paths are allowed as
    link hrefs — blocks javascript: and data: URLs. */
@@ -310,7 +310,7 @@ export function formatComment(rawText) {
 }
 
 /* Wrap SAN tokens ("Re1", "e4", "Bxe5+", "O-O") in prose text with a
-   clickable <span class="jc-inline-move" data-san="…">…</span>.  The
+   clickable <span class="cp-inline-move" data-san="…">…</span>.  The
    first alternative (<[^>]*>) consumes HTML tags and attribute values
    so SAN-shaped substrings inside those are not touched, mirroring
    the tag-aware technique used by _applyFigurineNotation.  Must run
@@ -322,7 +322,7 @@ function _wrapInlineSanMoves(text) {
     function (m, san, offset, str) {
       if (!san) return m;
       if (offset > 0 && /[a-zA-Z0-9]/.test(str[offset - 1])) return m;
-      return '<span class="jc-inline-move" data-san="' + san + '">' + san + '</span>';
+      return '<span class="cp-inline-move" data-san="' + san + '">' + san + '</span>';
     },
   );
 }
