@@ -44,6 +44,3 @@ window.ChessPublica = {
   initAll: initAll,
   initFigurineProse: initFigurineProse,
 };
-
-/* Deprecated alias for backward compatibility */
-window.JekyllChess = window.ChessPublica;
