@@ -8,8 +8,6 @@
 
 /* <pgn> element */
 
-.pgn-headers{margin-bottom:1rem;}
-.pgn-players{font-weight:bold;}
 .pgn-container{overflow:hidden;padding:0 1rem;margin-bottom:1rem;}
 .pgn-mainline{display:inline;margin:0;font-weight:bold;margin-bottom:1rem;}
 .pgn-mainline::after{content: " ";}
@@ -439,35 +437,6 @@
 @keyframes gm-pop {
   from { transform: scale(0.4) translateY(-4px); opacity: 0; }
   to   { transform: scale(1)   translateY(0);    opacity: 1; }
-}
-
-.gm-glyph-inline {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.5rem; height: 1.5rem;
-  border-radius: 50%;
-  color: #fff;
-  font-size: 1rem;
-  font-weight: bold;
-  font-family: 'Arial Black', Helvetica, sans-serif;
-  flex-shrink: 0;
-}
-
-.move-glyph {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px; height: 16px;
-  border-radius: 50%;
-  color: #fff;
-  font-size: 1rem;
-  font-weight: bold;
-  font-family: 'Arial Black', Helvetica, sans-serif;
-  vertical-align: middle;
-  margin-left: 1px;
-  position: relative;
-  top: -1px;
 }
 
 /* Larger screens

@@ -155,7 +155,7 @@ var ALLOWED_COMMENT_TAGS = {
   br: [], b: [], strong: [], i: [], em: [], u: [], s: [], del: [], ins: [],
   code: [], kbd: [], mark: [], small: [], sub: [], sup: [],
   span: ["class", "data-san"],
-  a: ["href", "title"]
+  a: ["href", "title", "rel"]
 };
 
 /* Classes that may appear on <span> in sanitized comments.  Arbitrary
@@ -283,6 +283,14 @@ function _sanitizeCommentDOM(root) {
             child.removeAttribute("class");
           }
         }
+      }
+      /* Tag links from user-authored PGN comments as user-generated
+         content. nofollow + ugc tells crawlers not to count these as
+         endorsements; noopener keeps the linked page from poking at
+         window.opener even if the allowlist is later widened to include
+         target="_blank". */
+      if (tag === "a" && child.hasAttribute("href")) {
+        child.setAttribute("rel", "ugc nofollow noopener");
       }
       _sanitizeCommentDOM(child);
     } else {

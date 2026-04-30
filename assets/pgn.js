@@ -14,6 +14,8 @@ import {
   formatComment,
   NAG_TO_GLYPH,
   stripCommentAnnotations,
+  parseCSL,
+  parseCAL,
 } from "./helpers.js";
 import { lucideIconUrl } from "./icons.js";
 import { createBoard } from "./board.js";
@@ -324,18 +326,6 @@ function determineBranchFen(variationTokens, current, parentNode) {
   return current.parent && current.parent.fen
     ? current.parent.fen
     : parentNode.fen;
-}
-
-function parseCSL(data) {
-  return data.split(",").map(function (entry) {
-    return { color: entry[0], square: entry.slice(1) };
-  });
-}
-
-function parseCAL(data) {
-  return data.split(",").map(function (entry) {
-    return { color: entry[0], from: entry.slice(1, 3), to: entry.slice(3, 5) };
-  });
 }
 
 /* ================================================================

@@ -75,10 +75,18 @@ function loadPGN(pgn) {
       const char = src[i];
 
       if (char === "{") {
+        /* Depth-counting scan, matching the tokenizer in pgn.js, so the
+           static <pgn> renderer and the <pgn-player> agree on where a
+           comment ends even if the source contains a stray "{". */
+        let depth = 1;
         let j = i + 1;
-        while (j < src.length && src[j] !== "}") j++;
-        tokens.push({ type: "comment", value: src.slice(i + 1, j).trim() });
-        i = j + 1;
+        while (depth > 0 && j < src.length) {
+          if (src[j] === "{") depth++;
+          else if (src[j] === "}") depth--;
+          j++;
+        }
+        tokens.push({ type: "comment", value: src.slice(i + 1, j - 1).trim() });
+        i = j;
         continue;
       }
 
@@ -149,7 +157,7 @@ function loadPGN(pgn) {
   function isMove(token) {
     // Strip trailing glyph before testing
     const { san } = extractGlyph(token);
-    return /^(O-O-O|O-O|[KQRNB]?[a-h]?[1-8]?x?[a-h][1-8](=?[QRNB])?[+#]?)/.test(san) &&
+    return /^(O-O-O|O-O|[KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](=?[QRBN])?[+#]?)/.test(san) &&
            san.length > 1;
   }
 
