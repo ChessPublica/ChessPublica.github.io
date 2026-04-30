@@ -16,11 +16,11 @@ import {
   getSquareCenter,
 } from "./board.js";
 
-/* Strip a plain-text comment of its inline figurine notation. Wraps the
-   shared HTML-aware helper from helpers.js — comment text rendered via
-   textContent has no real HTML tags, so the alternation simply matches
-   piece-move tokens and converts them. Avoids the lookbehind regex that
-   the previous local implementation used (Safari < 16.4 unsupported). */
+/* Convert SAN piece-move tokens in a plain-text comment to figurine
+   notation. The comment text is rendered via textContent so it carries
+   no real HTML tags; the helper's tag-aware regex still works because
+   the tag-matching alternative simply finds nothing to skip and the
+   piece-move alternative does the substitution. */
 function figurineComment(text) {
   return applyFigurineNotation(text);
 }
@@ -265,7 +265,10 @@ function loadPGN(pgn) {
 
         if (isMove(val)) {
           const { san, glyph } = extractGlyph(val);
-          const result = chess.move(san);
+          /* sloppy:true mirrors pgn.js so authored PGNs that use long
+             algebraic notation (e2-e4) or lowercase piece letters parse
+             the same in both renderers. */
+          const result = chess.move(san, { sloppy: true });
           if (result) {
             moves.push(san);
             moveIndex++;
@@ -439,7 +442,7 @@ function loadPGN(pgn) {
     if (isTypingTarget(e.target)) return;
 
     // Only handle arrow keys if the player is visible in the viewport
-    const rect = engine.el.getBoundingClientRect();
+    const rect = engine.container.getBoundingClientRect();
     const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
     if (!isVisible) return;
 
@@ -794,7 +797,9 @@ class VideoComment {
         varFENs.push(tempChess.fen());
 
         variation.moves.forEach(m => {
-          const result = tempChess.move(m);
+          /* sloppy:true matches the parser so variation replays accept
+             the same notation the parser already accepted. */
+          const result = tempChess.move(m, { sloppy: true });
           varFENs.push(tempChess.fen());
           varVerbose.push(result ? { from: result.from, to: result.to } : null);
         });
@@ -1120,7 +1125,10 @@ class VideoEngine {
     this.state.cache[0] = this.chess.fen();
 
     this.state.moves.forEach((m, i) => {
-      const result = this.chess.move(m);
+      /* sloppy:true keeps replays in lock-step with the loadPGN parser,
+         which also runs sloppy — strict mode would reject moves that
+         the parser accepted (e.g. long-algebraic e2-e4). */
+      const result = this.chess.move(m, { sloppy: true });
       this.state.cache[i + 1] = this.chess.fen();
       /* Stash {from,to,san,color} once so _drawLastMoveArrow and the
          flip/keyboard/click navigation paths don't have to replay the

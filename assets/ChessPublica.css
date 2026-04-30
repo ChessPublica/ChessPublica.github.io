@@ -150,24 +150,6 @@
 .eval-bar.eval-disabled {background:#bbb;}
 .eval-bar.eval-disabled .eval-fill {background:#bbb;}
 
-/* OVERLAY */
-
-.overlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.22s ease;
-}
-
-.overlay.visible {
-  opacity: 1;
-  pointer-events: auto;
-}
-
 /* MOVE LIST */
 
 .video-moves {
