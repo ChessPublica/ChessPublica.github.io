@@ -66,7 +66,10 @@ Each tag accepts either inline content or a `src` attribute pointing at a
 - Drop `[P]` inside a `<pgn-player>` comment to turn the next move into an
   in-place puzzle: playback pauses, the board becomes draggable, and it
   auto-resumes once the reader finds the move. Use `[P3]` for a 3-ply
-  sequence (solve → forced reply auto-plays → solve).
+  sequence (solve → forced reply auto-plays → solve). Wrong moves snap back
+  and can be retried without limit; solving the puzzle is the only way to
+  resume — spacebar, the play button, arrow keys, and move-list clicks are
+  all disabled until it's solved.
 
 ## Building from source
 
