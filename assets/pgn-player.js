@@ -7,6 +7,7 @@ import {
   stripCommentAnnotations,
   toFigurine,
   applyFigurineNotation,
+  createReadyGate,
 } from "./helpers.js";
 import { lucideIconUrl } from "./icons.js";
 import {
@@ -1543,6 +1544,11 @@ function normalizeLichessUrl(src) {
 
 class PgnPlayerElement extends HTMLElement {
 
+  constructor() {
+    super();
+    this._markReady = createReadyGate(this);
+  }
+
   connectedCallback() {
 
     /* Capture any inline PGN text BEFORE we inject the player DOM,
@@ -1613,6 +1619,7 @@ class PgnPlayerElement extends HTMLElement {
     const container = wrapper.querySelector(".player-container");
     const engine    = new VideoEngine(container);
     this._engine = engine;
+    this._markReady({ engine });
 
     /* Pause when scrolled fully out of view */
     if (typeof IntersectionObserver !== "undefined") {
@@ -1677,6 +1684,11 @@ class PgnPlayerElement extends HTMLElement {
       this._engine.destroy();
     }
     this._engine = null;
+    /* Reset the ready gate so a reconnected element (rebuilding a fresh
+       engine in the next connectedCallback) gets a fresh isReady()/ready
+       instead of one already resolved from a previous, now-destroyed
+       engine. */
+    this._markReady = createReadyGate(this);
   }
 }
 

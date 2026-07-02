@@ -14,6 +14,34 @@ export var PIECE_THEME =
 export var NBSP = "\u00A0";
 
 /* ================================================================
+   READY-STATE GATE
+================================================================ */
+
+/**
+ * Give a DOM element a public "ready" signal: `el.isReady()`, `el.ready`
+ * (a Promise resolving with the engine once it exists), and a `cp-ready`
+ * CustomEvent dispatched from `el` the moment it becomes ready. Consumers
+ * that attach a `cp-ready` listener after the fact can instead read
+ * `el.isReady()` / await `el.ready` so they're never left hanging.
+ *
+ * Returns a `markReady(detail)` function to call once construction (e.g.
+ * a RAF-deferred engine build) has finished.
+ */
+export function createReadyGate(el) {
+  var resolveFn;
+  var isReady = false;
+
+  el.ready = new Promise(function (resolve) { resolveFn = resolve; });
+  el.isReady = function () { return isReady; };
+
+  return function markReady(detail) {
+    isReady = true;
+    resolveFn(detail && detail.engine);
+    el.dispatchEvent(new CustomEvent("cp-ready", { bubbles: true, detail: detail || {} }));
+  };
+}
+
+/* ================================================================
    MOVE-QUALITY BADGE
 ================================================================ */
 

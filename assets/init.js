@@ -8,6 +8,7 @@ import {
   parseCAL,
   parseCSL,
   formatComment,
+  createReadyGate,
 } from "./helpers.js";
 import { lucideIconUrl } from "./icons.js";
 import { renderFullPGN } from "./pgn.js";
@@ -321,6 +322,12 @@ function renderSinglePuzzle(raw, wrapper, packInfo) {
   if (caption) cap.textContent = caption;
   wrapper.appendChild(cap);
 
+  /* The original <puzzle> tag is replaced by `wrapper` above, so that's
+     the persistent node consumers can hold a reference to (or delegate
+     "cp-ready" listening through) once the puzzle board finishes
+     building. */
+  var markReady = createReadyGate(wrapper);
+
   try {
     var before = boardHost.innerHTML;
     createPuzzle(boardHost, {
@@ -330,7 +337,9 @@ function renderSinglePuzzle(raw, wrapper, packInfo) {
     });
     if (boardHost.innerHTML === before) {
       showError(wrapper, "could not parse <puzzle>: missing FEN or moves.");
+      return;
     }
+    markReady({ engine: boardHost });
   } catch (e) {
     showError(wrapper, "failed to render <puzzle>: " + e.message);
   }
