@@ -568,6 +568,16 @@ class VideoMoveList {
     this.el.innerHTML = "";
     this._halfSpans   = [];
 
+    /* Mask every move that's part of an unsolved [P]/[Pn] puzzle so the
+       move list — built up front for the whole game — can't spoil the
+       answer before the reader gets there. reveal() unmasks a move once
+       PuzzleMode actually solves it. */
+    this._maskedIndices = new Set();
+    (this.engine.state.puzzles || []).forEach((marker, startIndex) => {
+      if (!marker) return;
+      for (let k = 1; k <= marker.plies; k++) this._maskedIndices.add(startIndex + k);
+    });
+
     for (let i = 0; i < moves.length; i += 2) {
 
       const moveNumber = Math.floor(i / 2) + 1;
@@ -618,15 +628,39 @@ class VideoMoveList {
 
     /* FIX #4: glyph appended as plain text directly after the move, no badge */
     const moveText = document.createElement("span");
-    moveText.textContent = toFigurine(san) + (glyph ? glyph : "");
+    if (this._maskedIndices.has(moveIdx)) {
+      moveText.textContent = "?";
+      moveText.className   = "move-masked";
+      moveText.title       = "Solve the puzzle to reveal";
+      span.dataset.san     = san;
+      span.dataset.glyph   = glyph || "";
+    } else {
+      moveText.textContent = toFigurine(san) + (glyph ? glyph : "");
+    }
     span.appendChild(moveText);
 
     span.onclick = () => {
+      /* Re-check live masked state (not a captured boolean) so this still
+         works correctly after reveal() unmasks the move later. */
+      if (moveText.classList.contains("move-masked")) return;
       this.engine.pause();
       this.engine.goTo(moveIdx + 1);
     };
 
     return span;
+  }
+
+  /* Unmask a puzzle move once PuzzleMode has actually solved it. */
+  reveal(moveIndex) {
+    const span = this._halfSpans[moveIndex];
+    if (!span) return;
+
+    const moveText = span.querySelector(".move-masked");
+    if (!moveText) return;
+
+    moveText.textContent = toFigurine(span.dataset.san) + (span.dataset.glyph || "");
+    moveText.classList.remove("move-masked");
+    moveText.removeAttribute("title");
   }
 
   highlight(moveIndex) {
@@ -860,7 +894,10 @@ class PuzzleMode {
     engine.board.position(engine.state.cache[idx + 1], true);
     engine._drawLastMoveArrow(idx);
     engine.renderAnnotations(idx);
-    if (engine.moveList) engine.moveList.highlight(idx);
+    if (engine.moveList) {
+      engine.moveList.reveal(idx);
+      engine.moveList.highlight(idx);
+    }
     requestAnimationFrame(() => {
       if (engine.goodMove) {
         const lastMove = engine.state.history[idx];
