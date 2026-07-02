@@ -129,6 +129,15 @@
   position: relative;
 }
 
+/* PUZZLE MODE */
+
+.player-container.puzzle-active .board-wrap {
+  box-shadow: 0 0 0 3px #4a90e2;
+  border-radius: 2px;
+}
+
+.player-container.puzzle-active .board { cursor: grab; }
+
 /* EVAL BAR */
 
 .eval-bar {

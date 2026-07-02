@@ -8,6 +8,7 @@ import {
   toFigurine,
   applyFigurineNotation,
   createReadyGate,
+  normalizeSAN,
 } from "./helpers.js";
 import { lucideIconUrl } from "./icons.js";
 import {
@@ -129,6 +130,7 @@ function loadPGN(pgn) {
   const annotations = []; // cal/csl board annotations
   const variations  = [];
   const glyphs      = []; // move quality glyphs: "!", "?", "!!", "??", "!?", "?!"
+  const puzzles     = []; // [P] / [Pn] puzzle markers: { plies }
 
   let moveIndex      = -1;
   let variationDepth = 0;
@@ -224,7 +226,15 @@ function loadPGN(pgn) {
       const cal = calMatches.map(m => m[1]);
       const csl = cslMatches.map(m => m[1]);
 
-      const cleaned = stripCommentAnnotations(t.value);
+      /* [P] / [Pn] puzzle marker — a <pgn-player>-only convention, so it's
+         stripped here rather than in the shared stripCommentAnnotations()
+         helper (also used by the static <pgn> renderer, which has no
+         concept of puzzle mode). */
+      const puzzleMatch  = t.value.match(/\[P\s*(\d+)?\]/);
+      const puzzlePlies  = puzzleMatch ? (puzzleMatch[1] ? parseInt(puzzleMatch[1], 10) : 1) : null;
+      const commentSrc   = puzzleMatch ? t.value.replace(puzzleMatch[0], "") : t.value;
+
+      const cleaned = stripCommentAnnotations(commentSrc);
 
       if (variationDepth > 0 && varStack.length > 0) {
         const currentVar = varStack[varStack.length - 1].varObj;
@@ -238,6 +248,9 @@ function loadPGN(pgn) {
         if (cleaned) comments[moveIndex] = cleaned;
         if (cal.length || csl.length) {
           annotations[moveIndex] = { cal, csl };
+        }
+        if (puzzlePlies) {
+          puzzles[moveIndex] = { plies: puzzlePlies };
         }
       }
 
@@ -329,7 +342,8 @@ function loadPGN(pgn) {
     comments,
     variations,
     annotations,
-    glyphs
+    glyphs,
+    puzzles
   };
 
 }class VideoTitle {
@@ -725,6 +739,174 @@ class GoodMove {
     }
   }
 }
+
+/* ---------------------------------------------------------------
+   PuzzleMode
+
+   Turns the player's own board into a drag-and-drop puzzle when
+   playback reaches a move carrying a [P] / [Pn] marker, then resumes
+   normal playback once the reader solves it. No second board, no
+   modal — it drives the same VideoEngine.board instance.
+--------------------------------------------------------------- */
+class PuzzleMode {
+
+  constructor(engine) {
+    this.engine        = engine;
+    this.active         = false;
+    this.chess          = null;
+    this.startIndex     = null; // 0-based moveIndex the [P] marker is attached to
+    this.plies          = 0;
+    this.solvedCount    = 0;
+    this.expected       = [];   // SAN moves the reader/auto-reply must play, in order
+    this.solvedIndices  = new Set(); // startIndex values already solved this session
+  }
+
+  /* Called from VideoEngine.goTo() for every moveIndex the player lands on. */
+  handleArrival(moveIndex) {
+    const marker = this.engine.state.puzzles && this.engine.state.puzzles[moveIndex];
+
+    if (!marker || this.solvedIndices.has(moveIndex)) {
+      if (this.active) this._deactivate();
+      return;
+    }
+
+    if (this.active && this.startIndex === moveIndex) return; // already solving this one
+
+    this._activate(moveIndex, marker.plies);
+  }
+
+  _activate(moveIndex, plies) {
+    const engine = this.engine;
+
+    this.active      = true;
+    this.startIndex  = moveIndex;
+    this.plies       = plies;
+    this.solvedCount = 0;
+    this.chess       = new Chess(engine.state.cache[moveIndex + 1]);
+    this.expected    = engine.state.moves.slice(moveIndex + 1, moveIndex + 1 + plies);
+
+    /* Stop the autoplay loop outright — a bare [P] with no prose comment
+       leaves state.comments[moveIndex] empty, so the usual
+       hasComment-triggered pause() never fires and _loopRAF() would
+       otherwise keep advancing the game out from under the puzzle. */
+    engine.state.playing = false;
+    engine.container.classList.add("paused");
+
+    engine._puzzleActive = true;
+    engine.container.classList.add("puzzle-active");
+    engine.hidePlayBtn();
+
+    /* Solving-by-dragging replaces the usual "Continue" button; strip it
+       if the comment box just rendered one. */
+    const el = engine.commentBox && engine.commentBox.el;
+    if (el) {
+      el.querySelectorAll(".comment-play-btn").forEach(btn => btn.remove());
+      if (!el.textContent.trim()) {
+        const solverColor = this.chess.turn() === "w" ? "White" : "Black";
+        const prompt = document.createElement("div");
+        prompt.className   = "comment-line puzzle-prompt";
+        prompt.textContent = `\u{1F9E9} Find the best move for ${solverColor}.`;
+        el.appendChild(prompt);
+      }
+    }
+  }
+
+  _deactivate() {
+    this.active      = false;
+    this.startIndex  = null;
+    this.chess       = null;
+    this.expected    = [];
+    this.engine._puzzleActive = false;
+    this.engine.container.classList.remove("puzzle-active");
+  }
+
+  /* Board's onDragStart — only let the solver pick up their own pieces. */
+  canDrag(piece) {
+    if (!this.active) return false;
+    return !!piece && piece[0] === this.chess.turn();
+  }
+
+  /* Board's onDrop. */
+  handleDrop(from, to) {
+    if (!this.active) return "snapback";
+
+    const expectedSAN = this.expected[this.solvedCount];
+    const move = this.chess.move({ from, to, promotion: "q" });
+
+    if (!move || normalizeSAN(move.san) !== normalizeSAN(expectedSAN)) {
+      if (move) this.chess.undo();
+      this._shake();
+      return "snapback";
+    }
+
+    this._advance();
+    return true;
+  }
+
+  _shake() {
+    const boardEl = this.engine.boardEl;
+    boardEl.classList.remove("cp-shake");
+    void boardEl.offsetWidth;
+    boardEl.classList.add("cp-shake");
+  }
+
+  /* Render the board position, last-move arrow, board annotations, and
+     glyph badge for the move at absolute index `idx`, mirroring how
+     VideoEngine.goTo() renders a normal move. Kept synchronous (besides
+     the badge, same as goTo()) so a same-tick resume via _finish() never
+     races a stale arrow paint. */
+  _renderPly(idx) {
+    const engine = this.engine;
+    engine.board.position(engine.state.cache[idx + 1], true);
+    engine._drawLastMoveArrow(idx);
+    engine.renderAnnotations(idx);
+    if (engine.moveList) engine.moveList.highlight(idx);
+    requestAnimationFrame(() => {
+      if (engine.goodMove) {
+        const lastMove = engine.state.history[idx];
+        engine.goodMove.render(idx, engine.state.glyphs, engine.state.moves, lastMove);
+      }
+    });
+  }
+
+  _advance() {
+    const absoluteIdx = this.startIndex + 1 + this.solvedCount;
+    this.solvedCount++;
+    this._renderPly(absoluteIdx);
+
+    if (this.solvedCount >= this.plies) {
+      this._finish();
+      return;
+    }
+
+    /* Auto-play the opponent's forced reply, then wait for the next
+       solver move — mirrors autoReply() in puzzle.js. */
+    setTimeout(() => {
+      if (!this.active) return; // torn down (nav away) while waiting
+      const replyIdx = this.startIndex + 1 + this.solvedCount;
+      this.chess.move(this.engine.state.moves[replyIdx], { sloppy: true });
+      this.solvedCount++;
+      this._renderPly(replyIdx);
+      if (this.solvedCount >= this.plies) this._finish();
+    }, 300);
+  }
+
+  _finish() {
+    const engine = this.engine;
+    const startIndex = this.startIndex;
+    const plies = this.plies;
+
+    this.solvedIndices.add(startIndex);
+    this._deactivate();
+
+    /* Auto-resume: play() advances state.index by 1 itself, so pre-set it
+       to the position we're already showing (right after the last solved
+       ply) and let the normal play loop take over from there. */
+    engine.state.index = startIndex + plies;
+    engine.play();
+  }
+}
+
 /* video-engine.js */
 
 /* ---------------------------------------------------------------
@@ -915,6 +1097,8 @@ class VideoEngine {
     this._observers    = [];
 
     this.chess = new Chess();
+    this.puzzle = new PuzzleMode(this);
+    this._puzzleActive = false;
 
     this.boardWrap = container.querySelector(".board-wrap");
     this.boardEl   = container.querySelector(".board");
@@ -931,7 +1115,13 @@ class VideoEngine {
     this.board = Chessboard(this.boardEl, {
       position:   "start",
       pieceTheme: "https://chessboardjs.com/img/chesspieces/wikipedia/{piece}.png",
-      moveSpeed:  200
+      moveSpeed:  200,
+      draggable:  true,
+      onDragStart: (source, piece) => this.puzzle.canDrag(piece),
+      onDrop:      (from, to) => this.puzzle.handleDrop(from, to),
+      onSnapEnd:   () => {
+        if (this.puzzle.active) this.board.position(this.puzzle.chess.fen(), false);
+      }
     });
 
     /* Keep eval-bar height in sync with the (responsive) board height */
@@ -961,14 +1151,18 @@ class VideoEngine {
       comments:    [],
       variations:  [],
       annotations: [],
-      glyphs:      []
+      glyphs:      [],
+      puzzles:     []
     };
 
     this._loopLastTick = null;
     this._variation    = null; // active variation nav state
 
     /* ---- Board click (toggle play/pause) ---- */
-    this.boardEl.addEventListener("click", () => this.togglePlay(true), { signal });
+    this.boardEl.addEventListener("click", () => {
+      if (this._puzzleActive) return;
+      this.togglePlay(true);
+    }, { signal });
 
     /* ---- Play button ---- */
     if (this.playBtn) {
@@ -1104,6 +1298,7 @@ class VideoEngine {
     this.state.variations  = data.variations  || [];
     this.state.annotations = data.annotations || [];
     this.state.glyphs      = data.glyphs      || [];
+    this.state.puzzles     = data.puzzles     || [];
 
     if (this.evalBar) this.evalBar.setDisabled(!data.hasEvals);
 
@@ -1344,6 +1539,8 @@ class VideoEngine {
         else if (!this._keyboardMode) this.showPlayBtn();
       }
     }
+
+    if (this.puzzle) this.puzzle.handleArrival(moveIdx);
 
     if (this.goodMove) {
       requestAnimationFrame(() => {
