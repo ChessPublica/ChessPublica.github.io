@@ -63,6 +63,10 @@ Each tag accepts either inline content or a `src` attribute pointing at a
 - For `<pgn-player>`, you can paste any Lichess study or game URL straight
   from the address bar — common public routes are auto-rewritten to their
   CORS-enabled `/api/*` equivalents.
+- Drop `[P]` inside a `<pgn-player>` comment to turn the next move into an
+  in-place puzzle: playback pauses, the board becomes draggable, and it
+  auto-resumes once the reader finds the move. Use `[P3]` for a 3-ply
+  sequence (solve → forced reply auto-plays → solve).
 
 ## Building from source
 
