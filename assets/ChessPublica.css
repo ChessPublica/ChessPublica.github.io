@@ -156,8 +156,7 @@
   transition: height 0.25s linear;
 }
 
-.eval-bar.eval-disabled {background:#bbb;}
-.eval-bar.eval-disabled .eval-fill {background:#bbb;}
+.eval-bar.eval-disabled {display: none;}
 
 /* MOVE LIST */
 
