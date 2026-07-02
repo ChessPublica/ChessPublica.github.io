@@ -55,6 +55,22 @@ function loadPGN(pgn) {
     headers[hMatch[1]] = hMatch[2];
   }
 
+  /* Custom starting position — PGN "FEN" header (normally paired with
+     SetUp="1", though some sources omit SetUp and just supply FEN).
+     Loaded before any moves are parsed so move validation, the move
+     cache, and move-number/side-to-move bookkeeping all key off the
+     actual starting position instead of assuming a standard start.
+     Falls back to the standard start if the FEN is missing or invalid. */
+  const hasFEN = !!headers.FEN && headers.SetUp !== "0";
+  if (!hasFEN || !chess.load(headers.FEN)) {
+    chess.reset();
+  }
+
+  const startFEN         = chess.fen();
+  const startFENFields    = startFEN.split(" ");
+  const startColor       = startFENFields[1] || "w";
+  const startMoveNumber  = parseInt(startFENFields[5], 10) || 1;
+
   /* ---------------------------
      SPLIT HEADER / MOVE-TEXT
      Eval regex must only run on the move-text section to avoid
@@ -342,7 +358,10 @@ function loadPGN(pgn) {
     variations,
     annotations,
     glyphs,
-    puzzles
+    puzzles,
+    startFEN,
+    startColor,
+    startMoveNumber
   };
 
 }class VideoTitle {
@@ -557,6 +576,7 @@ class VideoMoveList {
     this._revealed   = [];  // parallel boolean array
     this._resultSpan = null;
     this._hideFromIndex = Infinity;
+    this._startOffset = 0;
   }
 
   /**
@@ -589,9 +609,42 @@ class VideoMoveList {
     });
     this._hideFromIndex = puzzleIndices.length ? Math.min(...puzzleIndices) : Infinity;
 
-    for (let i = 0; i < moves.length; i += 2) {
+    /* A PGN can start from a FEN where Black is to move (e.g. a study
+       chapter beginning mid-game). `offset` shifts White/Black parity so
+       pairing and move numbers key off the real side to move instead of
+       always assuming moves[0] is White; reveal() below re-derives the
+       same offset to keep the hidden-move-number reveal logic in sync. */
+    const offset = this.engine.state.startColor === "b" ? 1 : 0;
+    const startMoveNumber = this.engine.state.startMoveNumber || 1;
+    this._startOffset = offset;
 
-      const moveNumber = Math.floor(i / 2) + 1;
+    let i = 0;
+
+    // Lone Black half opening the list when the game starts mid-move-pair.
+    if (offset === 1 && moves.length > 0) {
+
+      const pairSpan = document.createElement("span");
+      pairSpan.className = "move";
+
+      const numSpan = document.createElement("span");
+      numSpan.className   = "move-number";
+      numSpan.textContent = `${startMoveNumber}…`;
+      pairSpan.appendChild(numSpan);
+      this._numSpans[0] = numSpan;
+
+      const bSpan = this._makeHalf(moves[0], glyphs[0], 0);
+      pairSpan.appendChild(bSpan);
+      this._halfSpans[0] = bSpan;
+
+      if (0 >= this._hideFromIndex) numSpan.style.display = "none";
+
+      this.el.appendChild(pairSpan);
+      i = 1;
+    }
+
+    for (; i < moves.length; i += 2) {
+
+      const moveNumber = startMoveNumber + Math.floor((i + offset) / 2);
       const whiteMove  = moves[i];
       const blackMove  = moves[i + 1];
 
@@ -683,8 +736,10 @@ class VideoMoveList {
     span.style.display = "";
     this._revealed[moveIndex] = true;
 
-    /* White's half reveal also unhides the shared move-number label. */
-    if (moveIndex % 2 === 0) {
+    /* The half that opens its pair (White, normally — or the lone Black
+       half when the game starts mid-pair) also unhides the shared
+       move-number label; see the matching offset comment in build(). */
+    if ((moveIndex + (this._startOffset || 0)) % 2 === 0) {
       const numSpan = this._numSpans[moveIndex];
       if (numSpan) numSpan.style.display = "";
     }
@@ -1227,7 +1282,10 @@ class VideoEngine {
       variations:  [],
       annotations: [],
       glyphs:      [],
-      puzzles:     []
+      puzzles:     [],
+      startFEN:        null,
+      startColor:      "w",
+      startMoveNumber: 1
     };
 
     this._loopLastTick = null;
@@ -1374,6 +1432,9 @@ class VideoEngine {
     this.state.annotations = data.annotations || [];
     this.state.glyphs      = data.glyphs      || [];
     this.state.puzzles     = data.puzzles     || [];
+    this.state.startFEN        = data.startFEN        || null;
+    this.state.startColor      = data.startColor      || "w";
+    this.state.startMoveNumber = data.startMoveNumber || 1;
 
     if (this.evalBar) this.evalBar.setDisabled(!data.hasEvals);
 
@@ -1390,7 +1451,11 @@ class VideoEngine {
 
   buildCache() {
 
-    this.chess.reset();
+    if (this.state.startFEN) {
+      this.chess.load(this.state.startFEN);
+    } else {
+      this.chess.reset();
+    }
     this.state.cache    = [];
     this.state.history  = []; // verbose move records, parallel to moves[]
     this.state.cache[0] = this.chess.fen();
@@ -1542,9 +1607,14 @@ class VideoEngine {
 
 
   _moveContext(moveIndex) {
+    /* Mirrors the offset math in VideoMoveList.build()/reveal() — a
+       Black-to-move starting FEN shifts the White/Black parity and the
+       move-number base. */
+    const offset = this.state.startColor === "b" ? 1 : 0;
+    const virtualIndex = moveIndex + offset;
     return {
-      fullMoveNum: Math.floor(moveIndex / 2) + 1,
-      isBlack:     moveIndex % 2 === 1
+      fullMoveNum: (this.state.startMoveNumber || 1) + Math.floor(virtualIndex / 2),
+      isBlack:     virtualIndex % 2 === 1
     };
   }
 
@@ -1592,8 +1662,10 @@ class VideoEngine {
     this._drawLastMoveArrow(moveIdx);
 
     if (this.commentBox) {
-      const branchFEN = moveIdx >= 0 ? this.state.cache[moveIdx] : null;
-      const ctx       = moveIdx >= 0 ? this._moveContext(moveIdx) : { fullMoveNum: 1, isBlack: false };
+      const branchFEN = this.state.cache[Math.max(moveIdx, 0)] || null;
+      const ctx       = moveIdx >= 0
+        ? this._moveContext(moveIdx)
+        : { fullMoveNum: this.state.startMoveNumber || 1, isBlack: this.state.startColor === "b" };
       const gameOver  = i >= this.state.moves.length;
 
       if (this.state.playing) {
