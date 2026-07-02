@@ -1477,6 +1477,14 @@ class VideoEngine {
 
   goTo(i) {
 
+    /* Solving the puzzle is the only way to advance past it — block every
+       navigation path (spacebar, play button, arrow keys, double-tap skip,
+       move-list clicks) while it's active and unsolved. PuzzleMode's own
+       solving flow never calls goTo() while still active (it drives
+       board.position() directly and only calls play()/goTo() from
+       _finish(), after deactivating), so this can't block a real solve. */
+    if (this.puzzle && this.puzzle.active) return;
+
     this._variation = null;
 
     if (i < 0) i = 0;
@@ -1555,6 +1563,13 @@ class VideoEngine {
 
 
   play() {
+
+    /* Same reasoning as the goTo() guard: don't let play() spin up the
+       autoplay loop while an unsolved puzzle is active — otherwise
+       _loopRAF() would keep ticking state.index forward every second with
+       goTo() silently no-oping each time, wasting cycles and leaving
+       state.playing out of sync with what's actually on the board. */
+    if (this.puzzle && this.puzzle.active) return;
 
     if (this.state.index >= this.state.moves.length) this.state.index = 0;
 
