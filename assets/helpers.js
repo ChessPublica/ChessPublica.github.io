@@ -19,26 +19,50 @@ export var NBSP = "\u00A0";
 
 /**
  * Give a DOM element a public "ready" signal: `el.isReady()`, `el.ready`
- * (a Promise resolving with the engine once it exists), and a `cp-ready`
- * CustomEvent dispatched from `el` the moment it becomes ready. Consumers
- * that attach a `cp-ready` listener after the fact can instead read
- * `el.isReady()` / await `el.ready` so they're never left hanging.
+ * (a Promise resolving with the engine once it exists, or rejecting if
+ * construction fails), and a `cp-ready` CustomEvent dispatched from `el`
+ * the moment it becomes ready. Consumers that attach a `cp-ready` listener
+ * after the fact can instead read `el.isReady()` / await `el.ready` so
+ * they're never left hanging.
  *
  * Returns a `markReady(detail)` function to call once construction (e.g.
- * a RAF-deferred engine build) has finished.
+ * a RAF-deferred engine build, or a PGN fetch + parse) has finished
+ * successfully. `markReady.fail(err)` is the counterpart to call when
+ * construction fails (e.g. the PGN failed to load or parse) — it rejects
+ * `el.ready` and dispatches a `cp-ready-error` CustomEvent instead of
+ * leaving `el.ready` pending forever.
  */
 export function createReadyGate(el) {
-  var resolveFn;
+  var resolveFn, rejectFn;
   var isReady = false;
+  var isFailed = false;
 
-  el.ready = new Promise(function (resolve) { resolveFn = resolve; });
+  el.ready = new Promise(function (resolve, reject) {
+    resolveFn = resolve;
+    rejectFn = reject;
+  });
+  /* Swallow unhandled-rejection warnings for consumers who never touch
+     `el.ready` at all (e.g. they only poll `isReady()`). This does not
+     suppress `.catch()`/`.then()` chains a real consumer attaches to
+     `el.ready` themselves — those are independent derived promises. */
+  el.ready.catch(function () {});
   el.isReady = function () { return isReady; };
 
-  return function markReady(detail) {
+  var markReady = function (detail) {
+    if (isReady || isFailed) return;
     isReady = true;
     resolveFn(detail && detail.engine);
     el.dispatchEvent(new CustomEvent("cp-ready", { bubbles: true, detail: detail || {} }));
   };
+
+  markReady.fail = function (err) {
+    if (isReady || isFailed) return;
+    isFailed = true;
+    rejectFn(err);
+    el.dispatchEvent(new CustomEvent("cp-ready-error", { bubbles: true, detail: { error: err } }));
+  };
+
+  return markReady;
 }
 
 /* ================================================================
@@ -133,14 +157,30 @@ export function clearMoveQualityBadge(boardEl) {
 ================================================================ */
 
 /**
- * Fetch a text resource.
+ * Fetch a text resource, aborting (and rejecting) if the server hasn't
+ * responded within `timeoutMs`. Without this, a request that never
+ * completes (host unreachable but not yet refused, etc.) leaves callers
+ * — e.g. the <puzzle>/<pgn> readiness gate — waiting forever with no
+ * reject path.
  * Returns a Promise<string>.
  */
-export function fetchText(url) {
-  return fetch(url).then(function (r) {
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    return r.text();
-  });
+export function fetchText(url, timeoutMs) {
+  timeoutMs = timeoutMs || 20000;
+  var controller = new AbortController();
+  var timer = setTimeout(function () { controller.abort(); }, timeoutMs);
+
+  return fetch(url, { signal: controller.signal })
+    .then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.text();
+    })
+    .catch(function (err) {
+      if (err && err.name === "AbortError") {
+        throw new Error("timed out after " + timeoutMs + "ms fetching " + url);
+      }
+      throw err;
+    })
+    .finally(function () { clearTimeout(timer); });
 }
 
 /* ================================================================
