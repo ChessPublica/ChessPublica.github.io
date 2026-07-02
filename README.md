@@ -69,7 +69,10 @@ Each tag accepts either inline content or a `src` attribute pointing at a
   sequence (solve → forced reply auto-plays → solve). Wrong moves snap back
   and can be retried without limit; solving the puzzle is the only way to
   resume — spacebar, the play button, arrow keys, and move-list clicks are
-  all disabled until it's solved.
+  all disabled until it's solved. The move list itself stays hidden from
+  the puzzle onward too (not just the puzzle's own move), revealing each
+  move only once it's actually been played, so scrolling the list can't
+  spoil the puzzle or what happens after it.
 - `[P]` / `[Pn]` also work inside `<pgn>` — instead of pausing playback (a
   static move list has none), the marked move's following `n` moves (1 by
   default) are replaced with a self-contained interactive puzzle board,

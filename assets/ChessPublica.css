@@ -196,13 +196,6 @@
 .move .white-half:hover  { background: #eee; color: #000; }
 .move .white-half.active { background: #c8e6c9; font-weight: bold; color: #000; }
 
-.move-masked {
-  color: #999;
-  font-style: italic;
-}
-.move .white-half:has(.move-masked) { cursor: default; }
-.move .white-half:has(.move-masked):hover { background: none; }
-
 .var-move {
   display: inline-block;
   cursor: pointer;
