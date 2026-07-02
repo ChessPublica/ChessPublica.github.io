@@ -2006,7 +2006,6 @@ class PgnPlayerElement extends HTMLElement {
     const container = wrapper.querySelector(".player-container");
     const engine    = new VideoEngine(container);
     this._engine = engine;
-    this._markReady({ engine });
 
     /* Pause when scrolled fully out of view */
     if (typeof IntersectionObserver !== "undefined") {
@@ -2025,6 +2024,7 @@ class PgnPlayerElement extends HTMLElement {
       if (titleEl) {
         titleEl.textContent = `⚠️ Could not load game: ${msg}`;
       }
+      this._markReady.fail(new Error(msg));
     };
 
     const renderFromText = (pgnText) => {
@@ -2033,13 +2033,17 @@ class PgnPlayerElement extends HTMLElement {
         throw new Error("No moves found in PGN");
       }
       engine.load(data, pgnText);
+      this._markReady({ engine });
     };
 
     const pgnSrc = this.getAttribute("src");
 
     if (pgnSrc) {
       const fetchUrl = normalizeLichessUrl(pgnSrc);
-      fetch(fetchUrl)
+      const FETCH_TIMEOUT_MS = 20000;
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+      fetch(fetchUrl, { signal: controller.signal })
         .then(r => {
           if (!r.ok) throw new Error(`HTTP ${r.status}`);
           return r.text();
@@ -2048,11 +2052,16 @@ class PgnPlayerElement extends HTMLElement {
         .catch(err => {
           // fetch() throws TypeError on network/CORS failures — the message
           // ("Failed to fetch") is unhelpful on its own, so add context.
-          const msg = (err && err.name === "TypeError")
-            ? `network or CORS error fetching ${fetchUrl}`
-            : err.message;
+          // An aborted fetch (our own timeout) throws a DOMException named
+          // AbortError instead.
+          const msg = (err && err.name === "AbortError")
+            ? `timed out after ${FETCH_TIMEOUT_MS}ms fetching ${fetchUrl}`
+            : (err && err.name === "TypeError")
+              ? `network or CORS error fetching ${fetchUrl}`
+              : err.message;
           showError(msg);
-        });
+        })
+        .finally(() => clearTimeout(timer));
     } else if (inlineText) {
       try {
         renderFromText(inlineText);

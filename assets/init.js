@@ -287,14 +287,23 @@ function renderPuzzleHeader(wrapper, raw, packInfo) {
   return caption;
 }
 
-function renderPuzzleFromText(raw, wrapper) {
+/* `markReady` is the gate created up-front (in initPuzzleElements) for
+   `wrapper` — passed through here so both the empty-content and
+   multi-game-pack paths always settle it (resolve or reject) rather than
+   leaving it pending forever when a PGN fails to load or parse. */
+function renderPuzzleFromText(raw, wrapper, markReady) {
   if (!raw || !raw.trim()) {
-    showError(wrapper, "<puzzle> is empty (no inline content and no src attribute).");
+    var emptyMsg = "<puzzle> is empty (no inline content and no src attribute).";
+    showError(wrapper, emptyMsg);
+    markReady.fail(new Error(emptyMsg));
     return;
   }
 
   var games = splitIntoPgnGames(raw);
   if (games.length > 1) {
+    /* Each pack item is an independent board with its own readiness
+       gate (see renderSinglePuzzle); the pack container itself becomes
+       ready once every item has been built. */
     games.forEach(function (game, i) {
       var sub = document.createElement("div");
       sub.className = "cp-puzzle cp-puzzle-pack-item";
@@ -302,13 +311,14 @@ function renderPuzzleFromText(raw, wrapper) {
       wrapper.appendChild(sub);
       renderSinglePuzzle(game, sub, { index: i + 1, total: games.length });
     });
+    markReady({ engine: wrapper });
     return;
   }
 
-  renderSinglePuzzle(raw, wrapper);
+  renderSinglePuzzle(raw, wrapper, null, markReady);
 }
 
-function renderSinglePuzzle(raw, wrapper, packInfo) {
+function renderSinglePuzzle(raw, wrapper, packInfo, markReady) {
   var caption = renderPuzzleHeader(wrapper, raw, packInfo);
 
   var boardHost = document.createElement("div");
@@ -325,8 +335,8 @@ function renderSinglePuzzle(raw, wrapper, packInfo) {
   /* The original <puzzle> tag is replaced by `wrapper` above, so that's
      the persistent node consumers can hold a reference to (or delegate
      "cp-ready" listening through) once the puzzle board finishes
-     building. */
-  var markReady = createReadyGate(wrapper);
+     building. Pack items don't get one up-front, so create their own. */
+  if (!markReady) markReady = createReadyGate(wrapper);
 
   try {
     var before = boardHost.innerHTML;
@@ -336,12 +346,15 @@ function renderSinglePuzzle(raw, wrapper, packInfo) {
       initialCaption: caption || "",
     });
     if (boardHost.innerHTML === before) {
-      showError(wrapper, "could not parse <puzzle>: missing FEN or moves.");
+      var msg = "could not parse <puzzle>: missing FEN or moves.";
+      showError(wrapper, msg);
+      markReady.fail(new Error(msg));
       return;
     }
     markReady({ engine: boardHost });
   } catch (e) {
     showError(wrapper, "failed to render <puzzle>: " + e.message);
+    markReady.fail(e);
   }
 }
 
@@ -354,19 +367,27 @@ export function initPuzzleElements() {
     wrapper.className = "cp-puzzle";
     oldEl.replaceWith(wrapper);
 
+    /* Create the readiness gate synchronously, before any async fetch,
+       so `wrapper.ready` always exists and always settles — including
+       when the PGN fails to load (network error, timeout, 404) or fails
+       to parse — instead of consumers finding it undefined or pending
+       forever. */
+    var markReady = createReadyGate(wrapper);
+
     var src = oldEl.getAttribute("src");
     if (src) {
       fetchText(src)
-        .then(function (text) { renderPuzzleFromText(text, wrapper); })
+        .then(function (text) { renderPuzzleFromText(text, wrapper, markReady); })
         .catch(function (e) {
           showError(wrapper, "failed to load puzzle from " + src + ": " + e.message);
+          markReady.fail(e);
         });
     } else {
       /* Read innerHTML (not textContent) so inline HTML the author
          put inside comments — <br>, <strong>, Kramdown-produced
          <em>…</em> — survives into the tokenizer and can be rendered
          by the sanitizing formatComment() helper. */
-      renderPuzzleFromText(oldEl.innerHTML, wrapper);
+      renderPuzzleFromText(oldEl.innerHTML, wrapper, markReady);
     }
   });
 }
