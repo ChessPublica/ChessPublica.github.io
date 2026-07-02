@@ -549,10 +549,14 @@ function loadPGN(pgn) {
 class VideoMoveList {
 
   constructor(container, engine) {
-    this.container  = container;
-    this.engine     = engine;
-    this.el         = container.querySelector(".video-moves");
-    this._halfSpans = [];
+    this.container   = container;
+    this.engine      = engine;
+    this.el          = container.querySelector(".video-moves");
+    this._halfSpans  = [];
+    this._numSpans   = [];  // move-number span, indexed by the pair's white (even) moveIndex
+    this._revealed   = [];  // parallel boolean array
+    this._resultSpan = null;
+    this._hideFromIndex = Infinity;
   }
 
   /**
@@ -566,16 +570,24 @@ class VideoMoveList {
 
     this.el.innerHTML = "";
     this._halfSpans   = [];
+    this._numSpans    = [];
+    this._revealed    = [];
+    this._resultSpan  = null;
 
-    /* Mask every move that's part of an unsolved [P]/[Pn] puzzle so the
-       move list — built up front for the whole game — can't spoil the
-       answer before the reader gets there. reveal() unmasks a move once
-       PuzzleMode actually solves it. */
-    this._maskedIndices = new Set();
+    /* A game with a puzzle hides every move from the puzzle's first
+       covered ply onward — not just the puzzle's own answer(s), but
+       everything after it too — instead of showing the full transcript
+       up front. Each hidden move is revealed only once it's actually
+       been played: by solving the puzzle (PuzzleMode calls reveal()) or
+       by normal playback continuing past it (goTo() calls
+       revealThrough()). Games with no puzzle keep the full list visible
+       immediately, unchanged. */
+    const puzzleIndices = [];
     (this.engine.state.puzzles || []).forEach((marker, startIndex) => {
       if (!marker) return;
-      for (let k = 1; k <= marker.plies; k++) this._maskedIndices.add(startIndex + k);
+      for (let k = 1; k <= marker.plies; k++) puzzleIndices.push(startIndex + k);
     });
+    this._hideFromIndex = puzzleIndices.length ? Math.min(...puzzleIndices) : Infinity;
 
     for (let i = 0; i < moves.length; i += 2) {
 
@@ -591,6 +603,7 @@ class VideoMoveList {
       numSpan.className   = "move-number";
       numSpan.textContent = `${moveNumber}.`;
       pairSpan.appendChild(numSpan);
+      this._numSpans[i] = numSpan;
 
       // White half
       const wSpan = this._makeHalf(whiteMove, glyphs[i], i);
@@ -604,6 +617,12 @@ class VideoMoveList {
         this._halfSpans[i + 1] = bSpan;
       }
 
+      /* Hide the move number itself only once White's half is hidden —
+         seeing e.g. "15." with nothing after it would still tip off how
+         far the game runs. A hidden-black/visible-white pair keeps its
+         number, matching normal notation. */
+      if (i >= this._hideFromIndex) numSpan.style.display = "none";
+
       this.el.appendChild(pairSpan);
     }
 
@@ -615,7 +634,9 @@ class VideoMoveList {
       const resultSpan = document.createElement("span");
       resultSpan.className   = "move pgn-result";
       resultSpan.textContent = label;
+      if (moves.length >= this._hideFromIndex) resultSpan.style.display = "none";
       this.el.appendChild(resultSpan);
+      this._resultSpan = resultSpan;
     }
 
   }
@@ -627,21 +648,21 @@ class VideoMoveList {
 
     /* FIX #4: glyph appended as plain text directly after the move, no badge */
     const moveText = document.createElement("span");
-    if (this._maskedIndices.has(moveIdx)) {
-      moveText.textContent = "?";
-      moveText.className   = "move-masked";
-      moveText.title       = "Solve the puzzle to reveal";
-      span.dataset.san     = san;
-      span.dataset.glyph   = glyph || "";
+    moveText.className = "move-text";
+
+    if (moveIdx >= this._hideFromIndex) {
+      span.dataset.san    = san;
+      span.dataset.glyph  = glyph || "";
+      span.style.display  = "none";
+      this._revealed[moveIdx] = false;
     } else {
       moveText.textContent = toFigurine(san) + (glyph ? glyph : "");
+      this._revealed[moveIdx] = true;
     }
     span.appendChild(moveText);
 
     span.onclick = () => {
-      /* Re-check live masked state (not a captured boolean) so this still
-         works correctly after reveal() unmasks the move later. */
-      if (moveText.classList.contains("move-masked")) return;
+      if (!this._revealed[moveIdx]) return;
       this.engine.pause();
       this.engine.goTo(moveIdx + 1);
     };
@@ -649,17 +670,35 @@ class VideoMoveList {
     return span;
   }
 
-  /* Unmask a puzzle move once PuzzleMode has actually solved it. */
+  /* Reveal a single hidden move — called as it's actually played, either
+     by PuzzleMode solving a ply or by normal playback reaching it. */
   reveal(moveIndex) {
+    if (this._revealed[moveIndex]) return;
+
     const span = this._halfSpans[moveIndex];
     if (!span) return;
 
-    const moveText = span.querySelector(".move-masked");
-    if (!moveText) return;
-
+    const moveText = span.querySelector(".move-text");
     moveText.textContent = toFigurine(span.dataset.san) + (span.dataset.glyph || "");
-    moveText.classList.remove("move-masked");
-    moveText.removeAttribute("title");
+    span.style.display = "";
+    this._revealed[moveIndex] = true;
+
+    /* White's half reveal also unhides the shared move-number label. */
+    if (moveIndex % 2 === 0) {
+      const numSpan = this._numSpans[moveIndex];
+      if (numSpan) numSpan.style.display = "";
+    }
+  }
+
+  /* Reveal every hidden move up to and including moveIndex — used when
+     playback jumps ahead (skip, resuming past a solved puzzle) instead
+     of advancing one ply at a time. Also reveals the game result once
+     the final move is reached. */
+  revealThrough(moveIndex) {
+    for (let i = 0; i <= moveIndex; i++) this.reveal(i);
+    if (this._resultSpan && moveIndex >= this.engine.state.moves.length - 1) {
+      this._resultSpan.style.display = "";
+    }
   }
 
   highlight(moveIndex) {
@@ -1544,7 +1583,10 @@ class VideoEngine {
 
     const moveIdx = i - 1;
 
-    if (this.moveList) this.moveList.highlight(moveIdx);
+    if (this.moveList) {
+      this.moveList.revealThrough(moveIdx);
+      this.moveList.highlight(moveIdx);
+    }
 
     /* Last-move arrow */
     this._drawLastMoveArrow(moveIdx);
