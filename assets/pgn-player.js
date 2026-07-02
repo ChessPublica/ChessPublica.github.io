@@ -71,6 +71,14 @@ function loadPGN(pgn) {
   const startColor       = startFENFields[1] || "w";
   const startMoveNumber  = parseInt(startFENFields[5], 10) || 1;
 
+  /* Board flip — PGN "Orientation" header ("White"/"Black", case-insensitive),
+     matching the convention already used by <puzzle>. Anything else (missing,
+     misspelled) is ignored and the board keeps the default white-at-bottom view. */
+  const orientationHeader = (headers.Orientation || "").toLowerCase();
+  const orientation = orientationHeader === "black" ? "black"
+                     : orientationHeader === "white" ? "white"
+                     : null;
+
   /* ---------------------------
      SPLIT HEADER / MOVE-TEXT
      Eval regex must only run on the move-text section to avoid
@@ -361,7 +369,8 @@ function loadPGN(pgn) {
     puzzles,
     startFEN,
     startColor,
-    startMoveNumber
+    startMoveNumber,
+    orientation
   };
 
 }class VideoTitle {
@@ -1285,7 +1294,8 @@ class VideoEngine {
       puzzles:     [],
       startFEN:        null,
       startColor:      "w",
-      startMoveNumber: 1
+      startMoveNumber: 1,
+      orientation:     null
     };
 
     this._loopLastTick = null;
@@ -1435,8 +1445,11 @@ class VideoEngine {
     this.state.startFEN        = data.startFEN        || null;
     this.state.startColor      = data.startColor      || "w";
     this.state.startMoveNumber = data.startMoveNumber || 1;
+    this.state.orientation     = data.orientation      || null;
 
     if (this.evalBar) this.evalBar.setDisabled(!data.hasEvals);
+
+    if (this.state.orientation) this._setOrientation(this.state.orientation);
 
     this.buildCache();
 
@@ -1785,6 +1798,18 @@ class VideoEngine {
 
   showPlayBtn() { if (this.playBtn) this.playBtn.classList.remove("hidden"); }
   hidePlayBtn() { if (this.playBtn) this.playBtn.classList.add("hidden");    }
+
+  /* Set board orientation directly (no-op if already set) — used to apply
+     the PGN "Orientation" header at load time, as opposed to the flip
+     button's toggle. Keeps the eval bar's rotation in sync, same as the
+     flip button does. */
+  _setOrientation(color) {
+    if (this.board.orientation() === color) return;
+    this.board.orientation(color);
+    if (this.evalBar && this.evalBar.bar) {
+      this.evalBar.bar.style.transform = color === "black" ? "rotate(180deg)" : "";
+    }
+  }
 
   /* FIX #7 keyboard mode helpers */
   _enterKeyboardMode() {
