@@ -70,6 +70,11 @@ Each tag accepts either inline content or a `src` attribute pointing at a
   and can be retried without limit; solving the puzzle is the only way to
   resume — spacebar, the play button, arrow keys, and move-list clicks are
   all disabled until it's solved.
+- `[P]` / `[Pn]` also work inside `<pgn>` — instead of pausing playback (a
+  static move list has none), the marked move's following `n` moves (1 by
+  default) are replaced with a self-contained interactive puzzle board,
+  built from the same drag-and-drop engine as `<puzzle>`. The rest of the
+  game renders normally around it. Not supported inside variation lines.
 
 ## Building from source
 

@@ -14,11 +14,13 @@ import {
   formatComment,
   NAG_TO_GLYPH,
   stripCommentAnnotations,
+  extractPuzzleMarker,
   parseCSL,
   parseCAL,
 } from "./helpers.js";
 import { lucideIconUrl } from "./icons.js";
 import { createBoard } from "./board.js";
+import { createPuzzleFromNode } from "./puzzle.js";
 
 /* ================================================================
    1. PGN TOKENIZER
@@ -281,18 +283,28 @@ function processComment(commentText, lastMoveNode, current, parentNode, chess, o
 
   var hasDiagramMarker = /\[D\]/.test(commentText);
 
+  /* [P] / [Pn] puzzle marker (shared with pgn-player.js) — extracted
+     before stripCommentAnnotations() since it's not part of the [%…]
+     family that helper already strips. */
+  var puzzleMarker = extractPuzzleMarker(commentText);
+
   /* ── Clean comment text (shared with pgn-player.js) ──
      stripCommentAnnotations() removes [%…] tags, [D] markers, and
      move-number-led parentheticals.  Plain prose parentheticals like
      "(Grob's Attack)" are preserved. */
-  var cleaned = stripCommentAnnotations(commentText);
+  var cleaned = stripCommentAnnotations(puzzleMarker.text);
 
-  /* Push parts in PGN order: diagram first, then text. */
+  /* Push parts in PGN order: diagram first, then text, then puzzle
+     (the marker typically closes out the prompting sentence, so the
+     interactive board reads naturally as following the setup text). */
   if (hasDiagramMarker || hadArrows || hadSquareMarks) {
     lastMoveNode.parts.push({ type: "diagram" });
   }
   if (cleaned.length) {
     lastMoveNode.parts.push({ type: "text", value: cleaned });
+  }
+  if (puzzleMarker.plies) {
+    lastMoveNode.parts.push({ type: "puzzle", plies: puzzleMarker.plies });
   }
 }
 
@@ -448,6 +460,12 @@ function renderLine(node, parent, isVariation) {
   var needsMoveNumber = true;
 
   while (current) {
+    /* Set by a "puzzle" part below — the number of already-parsed nodes
+       ahead that the puzzle widget covers, so their SAN doesn't also get
+       printed as plain text (that would spoil the puzzle right next to
+       it). Reset each iteration; consumed at the bottom of the loop. */
+    var skipAhead = 0;
+
     var newMoveNumber = current.moveNumber !== lastMoveNumber;
 
     /* MOVE NUMBER */
@@ -499,6 +517,15 @@ function renderLine(node, parent, isVariation) {
           buffer = "";
           createBoard(parent, current.fen, current);
           needsMoveNumber = true;
+        } else if (part.type === "puzzle" && !isVariation) {
+          /* Not supported inside variations — a variation line is built
+             as inline text in one buffer, with no room for a block-level
+             widget. The marker is silently ignored there. */
+          flushBuffer(parent, buffer, isVariation);
+          buffer = "";
+          createPuzzleFromNode(parent, current, part.plies);
+          needsMoveNumber = true;
+          skipAhead = part.plies;
         }
       }
     }
@@ -518,6 +545,10 @@ function renderLine(node, parent, isVariation) {
       needsMoveNumber = true;
     }
 
+    while (skipAhead > 0 && current.next) {
+      current = current.next;
+      skipAhead--;
+    }
     current = current.next;
   }
 
