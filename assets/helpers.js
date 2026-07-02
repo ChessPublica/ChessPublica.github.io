@@ -503,6 +503,20 @@ export function stripCommentAnnotations(raw) {
     .trim();
 }
 
+/* [P] / [Pn] puzzle marker — a ChessPublica-only convention (not part of
+   the [%…] Lichess annotation family, so it's not handled by
+   stripCommentAnnotations() above). Shared by pgn.js and pgn-player.js:
+   both turn the marked move into an interactive drag-and-drop puzzle
+   covering the next `plies` moves. Returns { plies, text } — `plies` is
+   null when no marker is present; `text` has the marker removed so
+   callers can run their own comment-cleaning on top. */
+export function extractPuzzleMarker(raw) {
+  var src = String(raw || "");
+  var m = src.match(/\[P\s*(\d+)?\]/);
+  if (!m) return { plies: null, text: src };
+  return { plies: m[1] ? parseInt(m[1], 10) : 1, text: src.replace(m[0], "") };
+}
+
 export function parseCSL(data) {
   return String(data || "").split(",").map(function (entry) {
     entry = entry.trim();

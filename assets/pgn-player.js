@@ -9,6 +9,7 @@ import {
   applyFigurineNotation,
   createReadyGate,
   normalizeSAN,
+  extractPuzzleMarker,
 } from "./helpers.js";
 import { lucideIconUrl } from "./icons.js";
 import {
@@ -226,13 +227,11 @@ function loadPGN(pgn) {
       const cal = calMatches.map(m => m[1]);
       const csl = cslMatches.map(m => m[1]);
 
-      /* [P] / [Pn] puzzle marker — a <pgn-player>-only convention, so it's
-         stripped here rather than in the shared stripCommentAnnotations()
-         helper (also used by the static <pgn> renderer, which has no
-         concept of puzzle mode). */
-      const puzzleMatch  = t.value.match(/\[P\s*(\d+)?\]/);
-      const puzzlePlies  = puzzleMatch ? (puzzleMatch[1] ? parseInt(puzzleMatch[1], 10) : 1) : null;
-      const commentSrc   = puzzleMatch ? t.value.replace(puzzleMatch[0], "") : t.value;
+      /* [P] / [Pn] puzzle marker — stripped via the shared helper (also
+         used by <pgn>) before running stripCommentAnnotations(), since
+         [P] isn't part of the [%…] Lichess annotation family that helper
+         already handles. */
+      const { plies: puzzlePlies, text: commentSrc } = extractPuzzleMarker(t.value);
 
       const cleaned = stripCommentAnnotations(commentSrc);
 
