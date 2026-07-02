@@ -307,7 +307,7 @@ function loadPGN(pgn) {
      EVAL PARSE
   --------------------------- */
 
-  const evalRegex = /\[%eval ([^\]]+)\]/g;
+  const evalRegex = /\[%(?:eval|evp) ([^\]]+)\]/g;
   const evals     = [];
 
   let match;
@@ -513,7 +513,7 @@ function loadPGN(pgn) {
     this._disabled = false;
   }
 
-  /** Grey-out the bar when the PGN has no [%eval] annotations. */
+  /** Hide the bar entirely when the PGN has no [%eval]/[%evp] annotations. */
   setDisabled(flag) {
     this._disabled = !!flag;
     if (this.bar) {
