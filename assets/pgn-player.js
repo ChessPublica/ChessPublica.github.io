@@ -267,7 +267,14 @@ function loadPGN(pgn) {
           const mi = Math.max(0, currentVar.moves.length - 1);
           currentVar.moveAnnotations[mi] = { cal, csl };
         }
-      } else if (moveIndex >= 0) {
+      } else {
+        /* moveIndex is -1 for a comment before the very first main-line
+           move (e.g. a puzzle marker attached to a FEN-header start, or
+           intro prose before move 1) — store it at that slot too, same
+           as any other move's comment/annotation/puzzle marker. goTo(0)
+           reads comments/annotations/puzzles with moveIdx = -1 already,
+           so this just fills in data that was previously silently
+           dropped. */
         if (cleaned) comments[moveIndex] = cleaned;
         if (cal.length || csl.length) {
           annotations[moveIndex] = { cal, csl };
@@ -620,8 +627,17 @@ class VideoMoveList {
        by normal playback continuing past it (goTo() calls
        revealThrough()). Games with no puzzle keep the full list visible
        immediately, unchanged. */
+    const puzzles = this.engine.state.puzzles || [];
     const puzzleIndices = [];
-    (this.engine.state.puzzles || []).forEach((marker, startIndex) => {
+    /* A puzzle marker attached before the very first move (e.g. a
+       FEN-header start where [P] covers the game's opening move) lives
+       at puzzles[-1] — a non-index property Array#forEach never visits,
+       so it's checked separately here. */
+    const startMarker = puzzles[-1];
+    if (startMarker) {
+      for (let k = 1; k <= startMarker.plies; k++) puzzleIndices.push(-1 + k);
+    }
+    puzzles.forEach((marker, startIndex) => {
       if (!marker) return;
       for (let k = 1; k <= marker.plies; k++) puzzleIndices.push(startIndex + k);
     });
@@ -1463,7 +1479,10 @@ class VideoEngine {
     this.buildCache();
 
     this.goTo(0);
-    this.showPlayBtn();
+    /* goTo(0) may have activated a puzzle covering the game's opening
+       move (a [P] marker before the very first move) — don't stomp on
+       PuzzleMode's hidePlayBtn() in that case. */
+    if (!this._puzzleActive) this.showPlayBtn();
 
     if (this.title)    this.title.build(this.state.headers);
     if (this.moveList) this.moveList.build(this.state.moves, this.state.glyphs, this.state.headers);
