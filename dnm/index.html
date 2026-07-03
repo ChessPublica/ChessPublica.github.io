@@ -37,6 +37,8 @@
 </head>
 <body>
 
+<div class="parent" >
+  <div class="child">
 <pgn-player>
 [Event "Event"]
 [Site "Site"]
@@ -50,6 +52,20 @@
 
 { [P] } 31... Bxc5! { Siyahın güçlü seçeneklerinden yalnızca biri. } 32. Rxc5 Nxc5 33. Bxe5 (33. Qxc5 Rd2 $19 { Siyahın 31. hamlesinin ana fikri buydu. }) 33... Nd3! $19 { Kalite fazla olan Siyah, kolaylıkla olmasa da kazanmasını bildi. } 0-1
 </pgn-player>
+  </div>
+</div>
+    <style>
+        .parent {
+  display: grid;
+  place-items: center;
+  resize: both;
+  overflow: auto;
+}
+
+.child {
+  text-align: center;
+}
+    </style>
 
     <script src="../dist/ChessPublica.all.min.js"></script>
     <script type="module" src="../script.js"></script>
