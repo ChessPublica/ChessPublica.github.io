@@ -150,7 +150,12 @@ pgn-player {
 
 /* PUZZLE MODE */
 
-.player-container.puzzle-active .board-wrap {
+/* Ring the actual rendered chessboard.js board (.board-b72b1), not the
+   fixed-width .board-wrap — chessboard.js sizes its inner board from the
+   container width using its own border-aware math, which floors to a
+   whole pixel and rarely fills --board-size exactly. Tracking the real
+   element keeps the ring snug regardless of that rounding. */
+.player-container.puzzle-active .board-wrap .board-b72b1 {
   box-shadow: 0 0 0 3px #4a90e2;
   border-radius: 2px;
 }
