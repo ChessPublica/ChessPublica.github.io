@@ -546,6 +546,15 @@ function loadPGN(pgn) {
     if (this.bar) {
       this.bar.classList.toggle("eval-disabled", this._disabled);
     }
+    /* Also drop the width reserved for the eval bar's column on
+       .player-container and its parent .player-wrapper — otherwise the
+       board (and everything else in the wrapper) sits inside a box 10px
+       wider than it needs, leaving a blank gutter to the right. */
+    if (this.container) {
+      this.container.classList.toggle("no-eval-bar", this._disabled);
+      const wrapper = this.container.parentElement;
+      if (wrapper) wrapper.classList.toggle("no-eval-bar", this._disabled);
+    }
   }
 
   update(score) {
