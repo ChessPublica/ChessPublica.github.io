@@ -162,6 +162,12 @@ pgn-player {
 
 .player-container.puzzle-active .board { cursor: grab; }
 
+/* Prevent the page from scrolling while the user drags a piece on a
+   touch device — same fix as .cp-puzzle-board, scoped to puzzle mode
+   only so normal playback still allows page scroll over the board. */
+.player-container.puzzle-active .board-wrap,
+.player-container.puzzle-active .board-wrap * {touch-action:none;}
+
 /* EVAL BAR */
 
 .eval-bar {
