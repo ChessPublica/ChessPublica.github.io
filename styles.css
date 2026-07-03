@@ -849,8 +849,12 @@ body {
 }
 
 .sandbox-host > pgn-player {
-    width: 100%;
-    max-width: calc(var(--board-size, 400px) + 10px);
+    /* Shrink-wrap to the player's actual rendered width (410px with the
+       eval bar, 400px without — see pgn-player's own no-eval-bar CSS)
+       instead of a hardcoded max-width that left empty space next to a
+       narrower board when the eval bar is hidden. */
+    width: fit-content;
+    max-width: 100%;
     display: block;
     margin-left: auto;
     margin-right: auto;
