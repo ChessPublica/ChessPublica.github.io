@@ -67,6 +67,17 @@
 
 /* <pgn-player> element */
 
+/* HOST ELEMENT — shrink-wrap to whatever width .player-wrapper below
+   actually renders at (410px with the eval bar, 400px without), instead
+   of the custom element defaulting to block-level "fill the container"
+   sizing and leaving empty space to the right on host pages wider than
+   the board. */
+pgn-player {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+}
+
 /* WRAPPER */
 
 .player-wrapper {
