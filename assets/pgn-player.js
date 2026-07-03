@@ -772,11 +772,12 @@ class VideoMoveList {
 
     /* The half that opens its pair (White, normally — or the lone Black
        half when the game starts mid-pair) also unhides the shared
-       move-number label; see the matching offset comment in build(). */
-    if ((moveIndex + (this._startOffset || 0)) % 2 === 0) {
-      const numSpan = this._numSpans[moveIndex];
-      if (numSpan) numSpan.style.display = "";
-    }
+       move-number label. _numSpans is only populated at pair-opening
+       indices, so checking for an entry there directly covers both the
+       normal parity case and the lone-Black-opener special case (index 0
+       when the game starts with Black to move). */
+    const numSpan = this._numSpans[moveIndex];
+    if (numSpan) numSpan.style.display = "";
   }
 
   /* Reveal every hidden move up to and including moveIndex — used when
