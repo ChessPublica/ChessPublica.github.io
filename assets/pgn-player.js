@@ -965,8 +965,22 @@ class PuzzleMode {
       if (!el.textContent.trim()) {
         const solverColor = this.chess.turn() === "w" ? "White" : "Black";
         const prompt = document.createElement("div");
-        prompt.className   = "comment-line puzzle-prompt";
-        prompt.textContent = `\u{1F9E9} Find the best move for ${solverColor}.`;
+        prompt.className = "comment-line puzzle-prompt";
+
+        const icon = document.createElement("span");
+        icon.className = "comment-icon lucide-icon";
+        icon.style.setProperty("--icon", lucideIconUrl("puzzle"));
+
+        const textBlock = document.createElement("div");
+        textBlock.className = "comment-text-block";
+
+        const body = document.createElement("span");
+        body.className   = "comment-body";
+        body.textContent = `Find the best move for ${solverColor}.`;
+        textBlock.appendChild(body);
+
+        prompt.appendChild(icon);
+        prompt.appendChild(textBlock);
         el.appendChild(prompt);
       }
     }
