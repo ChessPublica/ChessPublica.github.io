@@ -76,6 +76,14 @@
   margin: 0;
 }
 
+/* No [%eval]/[%evp] data in the PGN — the eval bar is hidden, so drop the
+   10px column reserved for it instead of leaving empty space to the
+   right of the board. */
+.player-wrapper.no-eval-bar,
+.player-container.no-eval-bar {
+  width: var(--board-size) !important;
+}
+
 /* TITLE */
 
 .video-title {
