@@ -231,14 +231,15 @@ function loadPGN(pgn) {
 
       const newVar = {
         moves:      [],
-        comments:   [],
+        commentsByMove: [], // comment text per move index — sparse, parallel to moves
         children:   [],
         nagsByMove: [], // raw NAG tokens per variation move — combined into glyphs at render time
         /* Approximate branch position — the main line's current FEN when
-           this variation starts. Comments aren't tied to a specific move
-           within a variation (see the flat `comments` array below), so a
-           comment-embedded PGN reference line inside one always branches
-           from here rather than from a precise position within it. */
+           this variation starts. A comment-embedded PGN reference line
+           inside this variation's comments always branches from here
+           rather than from a precise position within it (unlike the
+           main line, tracking a FEN per variation move just for that
+           rare case isn't worth the bookkeeping). */
         startFenApprox: chess.fen(),
       };
 
@@ -303,10 +304,17 @@ function loadPGN(pgn) {
 
       if (inVariation) {
         const currentVar = varStack[varStack.length - 1].varObj;
-        if (cleaned) currentVar.comments.push(cleaned);
+        /* Matches moveAnnotations' existing convention just below: a
+           comment before the variation's own first move is attributed
+           to move index 0 too, rather than needing a separate slot. */
+        const mi = Math.max(0, currentVar.moves.length - 1);
+        if (cleaned) {
+          currentVar.commentsByMove[mi] = currentVar.commentsByMove[mi]
+            ? currentVar.commentsByMove[mi] + " " + cleaned
+            : cleaned;
+        }
         if (cal.length || csl.length) {
           if (!currentVar.moveAnnotations) currentVar.moveAnnotations = [];
-          const mi = Math.max(0, currentVar.moves.length - 1);
           currentVar.moveAnnotations[mi] = { cal, csl };
         }
       } else {
@@ -1306,14 +1314,26 @@ class VideoComment {
           varVerbose.push(result ? { from: result.from, to: result.to } : null);
         });
 
+        /* Set after a move's comment renders (see below) so the next
+           move's number is shown even when it wouldn't otherwise be
+           (a non-first black move) — otherwise a move immediately
+           following a rendered comment reads as an unnumbered
+           continuation instead of the fresh move it is. Mirrors
+           needsMoveNumber in pgn.js's renderLine(). */
+        let needsRenumber = false;
+
         variation.moves.forEach((san, mi) => {
 
           const isBlackVarMove = branchIsBlack ? (mi % 2 === 0) : (mi % 2 === 1);
-          const fullNum = branchMoveNum + Math.floor(
-            (branchIsBlack ? mi : mi + 1) / 2
-          );
+          /* branchIsBlack fixes whether this variation's moves alternate
+             black/white/black/... or white/black/white/...; the pair
+             number only advances on the second half of each pair. */
+          const fullNum = branchIsBlack
+            ? branchMoveNum + Math.floor((mi + 1) / 2)
+            : branchMoveNum + Math.floor(mi / 2);
 
-          const needsNumber = !isBlackVarMove || mi === 0;
+          const needsNumber = !isBlackVarMove || mi === 0 || needsRenumber;
+          needsRenumber = false;
 
           if (needsNumber) {
             const numSpan = document.createElement("span");
@@ -1341,20 +1361,23 @@ class VideoComment {
           };
 
           content.appendChild(moveSpan);
-        });
 
-        if (variation.comments && variation.comments.length) {
-          variation.comments.forEach(c => {
+          /* Comments render right after the move they're attached to —
+             in PGN order, same as pgn.js — rather than all together at
+             the end. */
+          const moveComment = variation.commentsByMove && variation.commentsByMove[mi];
+          if (moveComment) {
             const vcom = document.createElement("div");
             vcom.className = "variation-comment";
 
             const vbody = document.createElement("span");
-            vbody.textContent = figurineComment(c);
+            vbody.textContent = figurineComment(moveComment);
 
             vcom.appendChild(vbody);
             content.appendChild(vcom);
-          });
-        }
+            needsRenumber = true;
+          }
+        });
 
         block.appendChild(icon);
         block.appendChild(content);

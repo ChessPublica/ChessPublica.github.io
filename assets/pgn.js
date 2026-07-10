@@ -615,8 +615,13 @@ function renderLine(node, parent, isVariation) {
             /* Inline comments inside variations stay on the same line.
                Comments are pre-sanitized so flushBuffer can safely use
                innerHTML for variation lines (moves are plain SAN and
-               contain no HTML-special characters). */
+               contain no HTML-special characters). needsMoveNumber is
+               still set so a black move right after the comment gets
+               its "N..." prefix reprinted — otherwise, reading "Qd5"
+               straight after a full sentence looks like an unnumbered
+               continuation instead of a fresh move. */
             buffer += formatComment(part.value) + " ";
+            needsMoveNumber = true;
           } else {
             flushBuffer(parent, buffer, isVariation);
             buffer = "";
