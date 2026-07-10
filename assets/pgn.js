@@ -12,7 +12,7 @@ import {
   NBSP,
   toFigurine,
   formatComment,
-  NAG_TO_GLYPH,
+  nagsToGlyph,
   stripCommentAnnotations,
   extractPuzzleMarker,
   parseCSL,
@@ -482,12 +482,10 @@ export function renderMoveTree(rootNode, container, headers) {
 }
 
 function renderNAG(nags) {
-  if (!nags || !nags.length) return "";
-  var out = "";
-  for (var i = 0; i < nags.length; i++) {
-    out += NAG_TO_GLYPH[nags[i]] || nags[i];
-  }
-  return out;
+  /* Only the first recognized glyph is shown per move — matches
+     pgn-player.js and the puzzle widget, both of which keep just one
+     glyph per move rather than concatenating every NAG on it. */
+  return nagsToGlyph(nags) || "";
 }
 
 function renderLine(node, parent, isVariation) {
@@ -524,8 +522,10 @@ function renderLine(node, parent, isVariation) {
 
     needsMoveNumber = false;
 
-    /* MOVE TEXT */
-    buffer += toFigurine(current.san) + renderNAG(current.nags) + " ";
+    /* MOVE TEXT — quality glyphs (!, ?, −+, …) are mainline-only, matching
+       pgn-player.js, which never carries glyphs into its variation
+       rendering (extractGlyph() there discards the glyph for var moves). */
+    buffer += toFigurine(current.san) + (isVariation ? "" : renderNAG(current.nags)) + " ";
 
     lastMoveNumber = current.moveNumber;
 
