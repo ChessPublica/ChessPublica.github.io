@@ -974,31 +974,33 @@ class PuzzleMode {
     engine.hidePlayBtn();
 
     /* Solving-by-dragging replaces the usual "Continue" button; strip it
-       if the comment box just rendered one. */
+       if the comment box just rendered one. The "Find the best move…"
+       prompt is appended below any prose comment already rendered for
+       this move (rather than only when the comment box is empty), so a
+       [P] marker sharing a comment with prose still gets its prompt. */
     const el = engine.commentBox && engine.commentBox.el;
     if (el) {
       el.querySelectorAll(".comment-play-btn").forEach(btn => btn.remove());
-      if (!el.textContent.trim()) {
-        const solverColor = this.chess.turn() === "w" ? "White" : "Black";
-        const prompt = document.createElement("div");
-        prompt.className = "comment-line puzzle-prompt";
 
-        const icon = document.createElement("span");
-        icon.className = "comment-icon lucide-icon";
-        icon.style.setProperty("--icon", lucideIconUrl("puzzle"));
+      const solverColor = this.chess.turn() === "w" ? "White" : "Black";
+      const prompt = document.createElement("div");
+      prompt.className = "comment-line puzzle-prompt";
 
-        const textBlock = document.createElement("div");
-        textBlock.className = "comment-text-block";
+      const icon = document.createElement("span");
+      icon.className = "comment-icon lucide-icon";
+      icon.style.setProperty("--icon", lucideIconUrl("puzzle"));
 
-        const body = document.createElement("span");
-        body.className   = "comment-body";
-        body.textContent = `Find the best move for ${solverColor}.`;
-        textBlock.appendChild(body);
+      const textBlock = document.createElement("div");
+      textBlock.className = "comment-text-block";
 
-        prompt.appendChild(icon);
-        prompt.appendChild(textBlock);
-        el.appendChild(prompt);
-      }
+      const body = document.createElement("span");
+      body.className   = "comment-body";
+      body.textContent = `Find the best move for ${solverColor}.`;
+      textBlock.appendChild(body);
+
+      prompt.appendChild(icon);
+      prompt.appendChild(textBlock);
+      el.appendChild(prompt);
     }
   }
 
