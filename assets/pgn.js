@@ -288,35 +288,37 @@ var RE_INLINE_PGN_VAR = /\(\s*\d+\.+[^()]*\)/g;
 
 function processComment(commentText, lastMoveNode, current, parentNode, chess, originalPgn) {
 
-  /* ── Parse any inline PGN variations found in the comment ── */
-  RE_INLINE_PGN_VAR.lastIndex = 0;
-  var varMatch;
-  while ((varMatch = RE_INLINE_PGN_VAR.exec(commentText))) {
-    /* Strip the surrounding parens to get the bare move text. Authors
-       sometimes write this embedded reference line in figurine notation
-       (♘f3 rather than Nf3) for readability; the tokenizer only knows
-       ASCII piece letters, so normalize back before parsing or the
-       figurine glyphs desync the move sequence entirely. */
-    var inner = fromFigurine(varMatch[0].slice(1, -1).trim());
-    var hasDiagram = inner.includes("[D]");
+  /* ── Render any inline PGN variations found in the comment, in place ──
+     Authors sometimes embed a short illustrative reference line (e.g.
+     naming a well-known opening) directly inside a comment, in
+     parentheses starting with a move number: "(1. e4 e5 2. Nf3 ...)".
+     Rendered as plain inline figurine text exactly where it appears —
+     parentheses dropped — so it reads as part of the sentence the
+     author wrote, rather than as a separate variation block after the
+     whole comment. Plain-prose parentheticals like "(Grob's Attack)"
+     don't start with digits and are left untouched. */
+  commentText = commentText.replace(RE_INLINE_PGN_VAR, function (match) {
+    /* Authors sometimes write this in figurine notation (♘f3 rather
+       than Nf3) for readability; the tokenizer only knows ASCII piece
+       letters, so normalize back before parsing or the figurine glyphs
+       desync the move sequence entirely. */
+    var inner = fromFigurine(match.slice(1, -1).trim()).replace(/\[D\]/g, "");
 
     try {
-      var fakePGN = '[Event "?"]\n\n' + inner.replace(/\[D\]/g, "");
+      var fakePGN = '[Event "?"]\n\n' + inner;
       var variationTokens = parsePGN(fakePGN);
-      if (hasDiagram) variationTokens.push({ type: "comment", value: "[D]" });
 
       var branchFen = determineBranchFen(variationTokens, current, parentNode);
       var snapshot = new Chess(branchFen);
       var variationRoot = { next: null, fen: branchFen };
       parseSequence(variationTokens, snapshot, variationRoot, originalPgn);
 
-      if (current && variationRoot.next) {
-        current.variations.push(variationRoot.next);
-      }
+      return variationRoot.next ? renderInlineVariationText(variationRoot.next) : "";
     } catch (_e) {
-      // Silently skip invalid inline variations
+      // Drop invalid inline snippets, same as before.
+      return "";
     }
-  }
+  });
 
   /* ── Extract square marks and arrows ── */
   var cslM;
@@ -358,6 +360,29 @@ function processComment(commentText, lastMoveNode, current, parentNode, chess, o
   }
 }
 
+/* Render a parsed inline-variation node chain as plain figurine text,
+   e.g. "1. e4 e5 2. ♘f3 ♘c6" — spliced back into a comment's prose
+   exactly where the author's "(1. e4 e5 2. Nf3 Nc6)" reference line
+   appeared, in place of a separate variation block. */
+function renderInlineVariationText(node) {
+  var buffer = "";
+  var current = node;
+  var first = true;
+
+  while (current) {
+    if (current.color === "w") {
+      buffer += current.moveNumber + "." + NBSP;
+    } else if (first) {
+      buffer += current.moveNumber + "..." + NBSP;
+    }
+    buffer += toFigurine(current.san) + renderNAG(current.nags) + " ";
+    first = false;
+    current = current.next;
+  }
+
+  return buffer.trim();
+}
+
 /* ── Smart branch logic ─────────────────────────────────── */
 
 function determineBranchFen(variationTokens, current, parentNode) {
@@ -371,21 +396,6 @@ function determineBranchFen(variationTokens, current, parentNode) {
     }
   }
 
-  /* A variation restarting at move 1 while the game is already well past
-     it is virtually always an illustrative reference to a different
-     (often well-known) line from the very start of the game — commonly
-     embedded in a comment to name/reference an opening — not a "what if"
-     alternate to the current move (which could never legitimately
-     renumber all the way back to 1). Play it from the standard starting
-     position instead of branching off the current game state. */
-  if (
-    firstMoveNumberToken &&
-    parseInt(firstMoveNumberToken.value, 10) === 1 &&
-    current.moveNumber !== 1
-  ) {
-    return new Chess().fen();
-  }
-
   var variationColor;
   if (firstMoveNumberToken && firstMoveNumberToken.value.includes("...")) {
     variationColor = "b";
@@ -397,12 +407,30 @@ function determineBranchFen(variationTokens, current, parentNode) {
 
   var nextToMove = current.color === "w" ? "b" : "w";
 
-  if (variationColor === nextToMove) {
-    return current.fen;
+  var branchFen = variationColor === nextToMove
+    ? current.fen
+    : (current.parent && current.parent.fen ? current.parent.fen : parentNode.fen);
+
+  /* A variation's move-number token should match the fullmove number of
+     wherever it actually branches from — real chess annotation always
+     keeps these in sync (an alternate to White's 9th move is written
+     "(9. ...)", never "(1. ...)"). When they disagree — e.g. a comment
+     restarts "1." deep into a much later position, or right after
+     Black's own first move, where the natural next move would properly
+     be numbered 2 — the supposed "variation" is virtually always an
+     unrelated illustrative reference (often naming a different opening)
+     rather than a genuine alternate to the current move. Play it from
+     the standard starting position instead of branching off the current
+     game state. */
+  if (firstMoveNumberToken) {
+    var parsedNum = parseInt(firstMoveNumberToken.value, 10);
+    var branchMoveNum = parseInt(branchFen.split(" ")[5], 10) || 1;
+    if (parsedNum !== branchMoveNum) {
+      return new Chess().fen();
+    }
   }
-  return current.parent && current.parent.fen
-    ? current.parent.fen
-    : parentNode.fen;
+
+  return branchFen;
 }
 
 /* ================================================================
