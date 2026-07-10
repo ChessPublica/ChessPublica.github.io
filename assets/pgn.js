@@ -11,6 +11,7 @@
 import {
   NBSP,
   toFigurine,
+  fromFigurine,
   formatComment,
   nagsToGlyph,
   stripCommentAnnotations,
@@ -291,8 +292,12 @@ function processComment(commentText, lastMoveNode, current, parentNode, chess, o
   RE_INLINE_PGN_VAR.lastIndex = 0;
   var varMatch;
   while ((varMatch = RE_INLINE_PGN_VAR.exec(commentText))) {
-    /* Strip the surrounding parens to get the bare move text. */
-    var inner = varMatch[0].slice(1, -1).trim();
+    /* Strip the surrounding parens to get the bare move text. Authors
+       sometimes write this embedded reference line in figurine notation
+       (♘f3 rather than Nf3) for readability; the tokenizer only knows
+       ASCII piece letters, so normalize back before parsing or the
+       figurine glyphs desync the move sequence entirely. */
+    var inner = fromFigurine(varMatch[0].slice(1, -1).trim());
     var hasDiagram = inner.includes("[D]");
 
     try {
@@ -364,6 +369,21 @@ function determineBranchFen(variationTokens, current, parentNode) {
       firstMoveNumberToken = variationTokens[k];
       break;
     }
+  }
+
+  /* A variation restarting at move 1 while the game is already well past
+     it is virtually always an illustrative reference to a different
+     (often well-known) line from the very start of the game — commonly
+     embedded in a comment to name/reference an opening — not a "what if"
+     alternate to the current move (which could never legitimately
+     renumber all the way back to 1). Play it from the standard starting
+     position instead of branching off the current game state. */
+  if (
+    firstMoveNumberToken &&
+    parseInt(firstMoveNumberToken.value, 10) === 1 &&
+    current.moveNumber !== 1
+  ) {
+    return new Chess().fen();
   }
 
   var variationColor;
