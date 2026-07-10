@@ -468,7 +468,86 @@ export function renderLocalPuzzle(
       return null;
     }
 
+    /* ── Click-to-move ──────────────────────────────────────
+       Click a piece to select it, then click a destination square to
+       attempt the move — an alternative to dragging. selectedSquare is
+       rebuilt fresh each createPuzzleBoard() call (reset/auto-first-move
+       both call it), same lifetime as `state` and `board` below. */
+    var selectedSquare = null;
+
+    function clearSelectedSquare() {
+      if (!selectedSquare) return;
+      var el = boardDiv.querySelector('[data-square="' + selectedSquare + '"]');
+      if (el) el.classList.remove("cp-square-selected");
+      selectedSquare = null;
+    }
+
+    function selectSquare(square) {
+      clearSelectedSquare();
+      selectedSquare = square;
+      var el = boardDiv.querySelector('[data-square="' + square + '"]');
+      if (el) el.classList.add("cp-square-selected");
+    }
+
+    /* Whether `square` holds a piece the solver may currently pick up —
+       shared by the board's onDragStart and click-to-move, so dragging
+       and clicking agree on which pieces are liftable. Free-play (after
+       a side-line variation) allows either color's pieces, matching
+       onDrop()'s own sandbox handling above. */
+    function isDraggablePiece(square) {
+      if (state.locked || state.solved) return false;
+      var piece = state.game.get(square);
+      if (!piece) return false;
+      if (state.freePlay) return piece.color === state.game.turn();
+      return piece.color === state.solverSide && state.game.turn() === state.solverSide;
+    }
+
+    function handleSquareClick(square) {
+      if (state.locked || state.solved) return;
+
+      if (selectedSquare === square) {
+        clearSelectedSquare();
+        return;
+      }
+
+      if (selectedSquare) {
+        var from = selectedSquare;
+
+        /* Clicking another liftable piece reselects rather than
+           attempting a move onto the solver's own piece. */
+        if (isDraggablePiece(square)) {
+          selectSquare(square);
+          return;
+        }
+
+        clearSelectedSquare();
+        onDrop(from, square);
+        return;
+      }
+
+      if (isDraggablePiece(square)) {
+        selectSquare(square);
+      }
+    }
+
     function onDrop(from, to) {
+      /* chessboard.js calls onDrop with from === to for a plain click
+         that never actually moved the mouse (a click is a mousedown/
+         mouseup pair with no drag in between) — not a move attempt, just
+         picking a piece up and putting it back down. Route it through
+         the click-to-move state machine instead of letting it fall into
+         the move-validation logic below, where from === to is always an
+         illegal "move" and would incorrectly shake the board on every
+         plain click. */
+      if (from === to) {
+        handleSquareClick(from);
+        return "snapback";
+      }
+
+      /* A real drag always supersedes an in-progress click-to-move
+         selection. */
+      clearSelectedSquare();
+
       /* In free-play mode (entered after a side-line variation is
          triggered) accept any legal move for either side. The board
          becomes an exploration sandbox until the user hits replay. */
@@ -576,6 +655,9 @@ export function renderLocalPuzzle(
       position: fen,
       orientation: getOrientation(),
       pieceTheme: PIECE_THEME,
+      onDragStart: function (source) {
+        return isDraggablePiece(source);
+      },
       onDrop: onDrop,
       onSnapEnd: function () {
         board.position(state.game.fen(), false);
@@ -583,6 +665,21 @@ export function renderLocalPuzzle(
     });
 
     boardDiv.__board = board;
+
+    /* Click-to-move's destination square: chessboard.js's own drag
+       machinery only ever starts (and only ever calls onDrop) for a
+       square onDragStart approves, so a click on an empty square or a
+       non-liftable piece (the opponent's, while it's not their turn)
+       never reaches onDrop at all — it bubbles here as a normal click
+       instead. A click on a liftable piece IS handled by onDrop's
+       from === to case above; chessboard.js appends its floating
+       "dragged piece" ghost straight to <body>, so the browser's own
+       click for that case lands on the ghost, outside boardDiv, and
+       never reaches this listener — the two paths don't double-fire. */
+    boardDiv.addEventListener("click", function (e) {
+      var squareEl = e.target.closest("[data-square]");
+      if (squareEl) handleSquareClick(squareEl.dataset.square);
+    });
 
     /* Re-fit the inner board and re-draw the SVG overlay + NAG badge
        whenever the .cp-board container changes width (e.g. crossing
