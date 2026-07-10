@@ -140,6 +140,12 @@ export function buildMoveTree(pgnText) {
   if (root.preComments && root.next) {
     root.next.preComments = root.preComments;
   }
+  if (root.prePuzzlePlies && root.next) {
+    /* [P] marker before the first move — the puzzle starts from the
+       game's starting position (root.fen/root.next chain), which is
+       exactly the { fen, next } shape createPuzzleFromNode() expects. */
+    root.next.prePuzzle = { node: root, plies: root.prePuzzlePlies };
+  }
   return root.next;
 }
 
@@ -208,10 +214,16 @@ function parseSequence(tokens, chess, parentNode, originalPgn) {
       if (lastMoveNode) {
         processComment(token.value, lastMoveNode, current, parentNode, chess, originalPgn);
       } else {
-        var cleaned = stripCommentAnnotations(token.value);
+        /* Comment before the very first move — e.g. a [P] puzzle marker
+           attached to a FEN-header start, or intro prose before move 1. */
+        var puzzleMarker = extractPuzzleMarker(token.value);
+        var cleaned = stripCommentAnnotations(puzzleMarker.text);
         if (cleaned.length) {
           if (!parentNode.preComments) parentNode.preComments = [];
           parentNode.preComments.push(cleaned);
+        }
+        if (puzzleMarker.plies) {
+          parentNode.prePuzzlePlies = puzzleMarker.plies;
         }
       }
       i++;
@@ -441,7 +453,19 @@ export function renderMoveTree(rootNode, container, headers) {
     }
   }
 
-  renderLine(rootNode, movesDiv, false);
+  var lineStart = rootNode;
+  if (rootNode.prePuzzle) {
+    createPuzzleFromNode(movesDiv, rootNode.prePuzzle.node, rootNode.prePuzzle.plies);
+    var skip = rootNode.prePuzzle.plies;
+    while (skip > 0 && lineStart) {
+      lineStart = lineStart.next;
+      skip--;
+    }
+  }
+
+  if (lineStart) {
+    renderLine(lineStart, movesDiv, false);
+  }
 
   /* Append the game result (1-0 / 0-1 / ½-½) inline at the end of
      the main line. Skip "*" (ongoing) and missing values. */
