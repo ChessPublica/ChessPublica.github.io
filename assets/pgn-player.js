@@ -12,6 +12,7 @@ import {
   normalizeSAN,
   extractPuzzleMarker,
 } from "./helpers.js";
+import { renderInlinePgnReferences } from "./pgn.js";
 import { lucideIconUrl } from "./icons.js";
 import {
   renderAnnotations as applyBoardAnnotations,
@@ -157,11 +158,26 @@ function loadPGN(pgn) {
   const variations  = [];
   const nagsByMove  = []; // raw NAG tokens per main-line move — combined into glyphs below
   const puzzles     = []; // [P] / [Pn] puzzle markers: { plies }
+  const fenBeforeMove = []; // FEN just before each main-line move — for renderInlinePgnReferences()
 
   let moveIndex      = -1;
   let variationDepth = 0;
 
   const varStack = [];
+
+  /* Mirrors VideoEngine._moveContext()'s offset math — a Black-to-move
+     starting FEN shifts the White/Black parity and the move-number base.
+     Used to build the { color, moveNumber } a comment-embedded PGN
+     reference line branches from (see renderInlinePgnReferences() in
+     pgn.js), the same info pgn.js's own move-tree nodes carry. */
+  function moveContext(idx) {
+    const offset = startColor === "b" ? 1 : 0;
+    const virtualIndex = idx + offset;
+    return {
+      fullMoveNum: (startMoveNumber || 1) + Math.floor(virtualIndex / 2),
+      isBlack: virtualIndex % 2 === 1,
+    };
+  }
 
   /* ---------------------------
      HELPERS
@@ -215,9 +231,16 @@ function loadPGN(pgn) {
 
       const newVar = {
         moves:      [],
-        comments:   [],
+        commentsByMove: [], // comment text per move index — sparse, parallel to moves
         children:   [],
         nagsByMove: [], // raw NAG tokens per variation move — combined into glyphs at render time
+        /* Approximate branch position — the main line's current FEN when
+           this variation starts. A comment-embedded PGN reference line
+           inside this variation's comments always branches from here
+           rather than from a precise position within it (unlike the
+           main line, tracking a FEN per variation move just for that
+           rare case isn't worth the bookkeeping). */
+        startFenApprox: chess.fen(),
       };
 
       const parentMoveIndex = moveIndex;
@@ -247,8 +270,26 @@ function loadPGN(pgn) {
     /* COMMENT */
     if (t.type === "comment") {
 
-      const calMatches = [...t.value.matchAll(/\[%cal\s+([^\]]+)\]/g)];
-      const cslMatches = [...t.value.matchAll(/\[%csl\s+([^\]]+)\]/g)];
+      /* A "(1. e4 e5 2. Nf3 ...)" reference line embedded in the comment
+         — an author naming/citing a different (often well-known) game
+         or opening — is rendered as plain inline figurine text exactly
+         where it appears, parentheses dropped, matching <pgn>. Must run
+         before extractPuzzleMarker()/stripCommentAnnotations() below,
+         which would otherwise strip it outright as an annotation. */
+      const inVariation = variationDepth > 0 && varStack.length > 0;
+      const current = inVariation || moveIndex < 0 ? null : {
+        fen: chess.fen(),
+        color: moveContext(moveIndex).isBlack ? "b" : "w",
+        moveNumber: moveContext(moveIndex).fullMoveNum,
+        parent: { fen: fenBeforeMove[moveIndex] },
+      };
+      const parentNode = {
+        fen: inVariation ? varStack[varStack.length - 1].varObj.startFenApprox : startFEN,
+      };
+      const commentValue = renderInlinePgnReferences(t.value, current, parentNode, pgn);
+
+      const calMatches = [...commentValue.matchAll(/\[%cal\s+([^\]]+)\]/g)];
+      const cslMatches = [...commentValue.matchAll(/\[%csl\s+([^\]]+)\]/g)];
 
       const cal = calMatches.map(m => m[1]);
       const csl = cslMatches.map(m => m[1]);
@@ -257,16 +298,23 @@ function loadPGN(pgn) {
          used by <pgn>) before running stripCommentAnnotations(), since
          [P] isn't part of the [%…] Lichess annotation family that helper
          already handles. */
-      const { plies: puzzlePlies, text: commentSrc } = extractPuzzleMarker(t.value);
+      const { plies: puzzlePlies, text: commentSrc } = extractPuzzleMarker(commentValue);
 
       const cleaned = stripCommentAnnotations(commentSrc);
 
-      if (variationDepth > 0 && varStack.length > 0) {
+      if (inVariation) {
         const currentVar = varStack[varStack.length - 1].varObj;
-        if (cleaned) currentVar.comments.push(cleaned);
+        /* Matches moveAnnotations' existing convention just below: a
+           comment before the variation's own first move is attributed
+           to move index 0 too, rather than needing a separate slot. */
+        const mi = Math.max(0, currentVar.moves.length - 1);
+        if (cleaned) {
+          currentVar.commentsByMove[mi] = currentVar.commentsByMove[mi]
+            ? currentVar.commentsByMove[mi] + " " + cleaned
+            : cleaned;
+        }
         if (cal.length || csl.length) {
           if (!currentVar.moveAnnotations) currentVar.moveAnnotations = [];
-          const mi = Math.max(0, currentVar.moves.length - 1);
           currentVar.moveAnnotations[mi] = { cal, csl };
         }
       } else {
@@ -318,6 +366,7 @@ function loadPGN(pgn) {
 
         if (isMove(val)) {
           const { san, nag } = extractGlyph(val);
+          const beforeFen = chess.fen();
           /* sloppy:true mirrors pgn.js so authored PGNs that use long
              algebraic notation (e2-e4) or lowercase piece letters parse
              the same in both renderers. */
@@ -326,6 +375,7 @@ function loadPGN(pgn) {
             moves.push(san);
             moveIndex++;
             nagsByMove[moveIndex] = nag ? [nag] : [];
+            fenBeforeMove[moveIndex] = beforeFen;
           }
         }
 
@@ -1264,14 +1314,26 @@ class VideoComment {
           varVerbose.push(result ? { from: result.from, to: result.to } : null);
         });
 
+        /* Set after a move's comment renders (see below) so the next
+           move's number is shown even when it wouldn't otherwise be
+           (a non-first black move) — otherwise a move immediately
+           following a rendered comment reads as an unnumbered
+           continuation instead of the fresh move it is. Mirrors
+           needsMoveNumber in pgn.js's renderLine(). */
+        let needsRenumber = false;
+
         variation.moves.forEach((san, mi) => {
 
           const isBlackVarMove = branchIsBlack ? (mi % 2 === 0) : (mi % 2 === 1);
-          const fullNum = branchMoveNum + Math.floor(
-            (branchIsBlack ? mi : mi + 1) / 2
-          );
+          /* branchIsBlack fixes whether this variation's moves alternate
+             black/white/black/... or white/black/white/...; the pair
+             number only advances on the second half of each pair. */
+          const fullNum = branchIsBlack
+            ? branchMoveNum + Math.floor((mi + 1) / 2)
+            : branchMoveNum + Math.floor(mi / 2);
 
-          const needsNumber = !isBlackVarMove || mi === 0;
+          const needsNumber = !isBlackVarMove || mi === 0 || needsRenumber;
+          needsRenumber = false;
 
           if (needsNumber) {
             const numSpan = document.createElement("span");
@@ -1299,20 +1361,23 @@ class VideoComment {
           };
 
           content.appendChild(moveSpan);
-        });
 
-        if (variation.comments && variation.comments.length) {
-          variation.comments.forEach(c => {
+          /* Comments render right after the move they're attached to —
+             in PGN order, same as pgn.js — rather than all together at
+             the end. */
+          const moveComment = variation.commentsByMove && variation.commentsByMove[mi];
+          if (moveComment) {
             const vcom = document.createElement("div");
             vcom.className = "variation-comment";
 
             const vbody = document.createElement("span");
-            vbody.textContent = figurineComment(c);
+            vbody.textContent = figurineComment(moveComment);
 
             vcom.appendChild(vbody);
             content.appendChild(vcom);
-          });
-        }
+            needsRenumber = true;
+          }
+        });
 
         block.appendChild(icon);
         block.appendChild(content);
