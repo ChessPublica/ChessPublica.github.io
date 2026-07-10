@@ -380,7 +380,7 @@ pgn-player {
 
 .puzzle-hint-row {
   display: none;
-  justify-content: center;
+  justify-content: flex-end;
   margin-top: 0.5rem;
 }
 
