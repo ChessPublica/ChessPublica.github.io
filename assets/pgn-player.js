@@ -936,6 +936,7 @@ class PuzzleMode {
     this.solvedCount    = 0;
     this.expected       = [];   // SAN moves the reader/auto-reply must play, in order
     this.solvedIndices  = new Set(); // startIndex values already solved this session
+    this.selectedSquare = null; // click-to-move: square holding the picked-up piece, if any
   }
 
   /* Called from VideoEngine.goTo() for every moveIndex the player lands on. */
@@ -996,6 +997,7 @@ class PuzzleMode {
     this.engine._puzzleActive = false;
     this.engine.container.classList.remove("puzzle-active");
     if (this.engine.hintText) this.engine.hintText.textContent = "";
+    this._clearSelection();
   }
 
   /* Board's onDragStart — only let the solver pick up their own pieces. */
@@ -1008,6 +1010,29 @@ class PuzzleMode {
   handleDrop(from, to) {
     if (!this.active) return "snapback";
 
+    /* chessboard.js calls onDrop with from === to for a plain click that
+       never actually moved the mouse (a click is a mousedown+mouseup
+       pair with no drag in between) — that's not a move attempt, just
+       picking a piece up and putting it back down. Route it through the
+       same click-to-move state machine boardEl's "click" listener uses
+       for the destination square, rather than treating it as a bogus
+       "invalid move" (which would shake the board on every plain click).
+       chessboard.js's own drag machinery appends a floating "dragged
+       piece" ghost straight to <body>, so the browser's native click
+       lands on that ghost — outside this element entirely — whenever
+       the source square holds the solver's own piece (i.e. exactly the
+       cases that reach here with from === to). Squares the drag
+       machinery never engages for (empty squares, the opponent's
+       pieces) still get a normal bubbling click, handled by boardEl's
+       listener instead. */
+    if (from === to) {
+      this.handleSquareClick(from);
+      return "snapback";
+    }
+
+    /* A real drag always supersedes an in-progress click-to-move selection. */
+    this._clearSelection();
+
     const expectedSAN = this.expected[this.solvedCount];
     const move = this.chess.move({ from, to, promotion: "q" });
 
@@ -1019,6 +1044,63 @@ class PuzzleMode {
 
     this._advance();
     return true;
+  }
+
+  /* Click-to-move: click a piece to select it, then click a destination
+     square to attempt the move — an alternative to dragging. Mirrors
+     handleDrop()'s validation so both input methods behave identically. */
+  handleSquareClick(square) {
+    if (!this.active) return;
+
+    const piece       = this.chess.get(square);
+    const solverColor = this.chess.turn();
+
+    if (this.selectedSquare === square) {
+      this._clearSelection();
+      return;
+    }
+
+    if (this.selectedSquare) {
+      const from = this.selectedSquare;
+
+      /* Clicking another of the solver's own pieces reselects rather
+         than attempting a move between two of their own squares. */
+      if (piece && piece.color === solverColor) {
+        this._selectSquare(square);
+        return;
+      }
+
+      const expectedSAN = this.expected[this.solvedCount];
+      const move = this.chess.move({ from, to: square, promotion: "q" });
+      this._clearSelection();
+
+      if (!move || normalizeSAN(move.san) !== normalizeSAN(expectedSAN)) {
+        if (move) this.chess.undo();
+        this._shake();
+        return;
+      }
+
+      this._advance();
+      return;
+    }
+
+    if (piece && piece.color === solverColor) {
+      this._selectSquare(square);
+    }
+  }
+
+  _selectSquare(square) {
+    this._clearSelection();
+    this.selectedSquare = square;
+    const el = this.engine.boardEl.querySelector(`[data-square="${square}"]`);
+    if (el) el.classList.add("cp-square-selected");
+  }
+
+  _clearSelection() {
+    if (!this.selectedSquare) return;
+    const el = this.engine.boardEl.querySelector(`[data-square="${this.selectedSquare}"]`);
+    if (el) el.classList.remove("cp-square-selected");
+    this.selectedSquare = null;
   }
 
   /* Plays the current expected solution move for the solver — invoked by
@@ -1361,9 +1443,13 @@ class VideoEngine {
     this._loopLastTick = null;
     this._variation    = null; // active variation nav state
 
-    /* ---- Board click (toggle play/pause) ---- */
-    this.boardEl.addEventListener("click", () => {
-      if (this._puzzleActive) return;
+    /* ---- Board click (toggle play/pause, or puzzle click-to-move) ---- */
+    this.boardEl.addEventListener("click", (e) => {
+      if (this._puzzleActive) {
+        const squareEl = e.target.closest("[data-square]");
+        if (squareEl) this.puzzle.handleSquareClick(squareEl.dataset.square);
+        return;
+      }
       this.togglePlay(true);
     }, { signal });
 
@@ -2051,7 +2137,10 @@ class PgnPlayerElement extends HTMLElement {
             <span class="lucide-icon" data-lucide="play"></span>
           </div>
           <div class="puzzle-hint-row">
-            <span class="puzzle-hint-text"></span>
+            <div class="puzzle-hint-prompt">
+              <span class="lucide-icon" data-lucide="puzzle"></span>
+              <span class="puzzle-hint-text"></span>
+            </div>
             <button class="puzzle-hint-btn" aria-label="Show solution move" title="Show solution move">
               <span class="lucide-icon" data-lucide="key"></span>
             </button>
