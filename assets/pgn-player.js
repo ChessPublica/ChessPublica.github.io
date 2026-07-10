@@ -2051,7 +2051,10 @@ class PgnPlayerElement extends HTMLElement {
             <span class="lucide-icon" data-lucide="play"></span>
           </div>
           <div class="puzzle-hint-row">
-            <span class="puzzle-hint-text"></span>
+            <div class="puzzle-hint-prompt">
+              <span class="lucide-icon" data-lucide="puzzle"></span>
+              <span class="puzzle-hint-text"></span>
+            </div>
             <button class="puzzle-hint-btn" aria-label="Show solution move" title="Show solution move">
               <span class="lucide-icon" data-lucide="key"></span>
             </button>
