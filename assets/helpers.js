@@ -233,6 +233,23 @@ export function stripFigurines(s) {
   return String(s || "").replace(/[♔♕♖♗♘♙♚♛♜♝♞♟]/g, "");
 }
 
+/* Reverse of toFigurine(): maps figurine glyphs (either color's set —
+   SAN piece letters don't encode color) back to their plain ASCII piece
+   letter, so text handed to it can be tokenized as SAN again. Used for
+   PGN move sequences authors wrote in figurine notation (e.g. inside a
+   comment's embedded reference line) that need re-parsing rather than
+   just display. */
+var FIGURINE_TO_LETTER = {
+  "♔": "K", "♕": "Q", "♖": "R", "♗": "B", "♘": "N",
+  "♚": "K", "♛": "Q", "♜": "R", "♝": "B", "♞": "N",
+};
+
+export function fromFigurine(s) {
+  return String(s || "").replace(/[♔♕♖♗♘♚♛♜♝♞]/g, function (ch) {
+    return FIGURINE_TO_LETTER[ch];
+  });
+}
+
 /* ================================================================
    COMMENT FORMATTING (inline markdown + safe HTML)
 ================================================================ */
