@@ -121,7 +121,20 @@ function extractMovetext(pgnText) {
 
 export function buildMoveTree(pgnText) {
   var tokens = parsePGN(pgnText);
+  var headers = parseHeaders(pgnText);
   var chess = new Chess();
+
+  /* Custom starting position — PGN "FEN" header (normally paired with
+     SetUp="1", though some sources omit SetUp and just supply FEN).
+     Loaded before any moves are parsed so move validation and move-number
+     bookkeeping key off the actual starting position instead of assuming
+     a standard start. Falls back to the standard start if the FEN is
+     missing or invalid. Mirrors the same logic in pgn-player.js. */
+  var hasFEN = !!headers.FEN && headers.SetUp !== "0";
+  if (!hasFEN || !chess.load(headers.FEN)) {
+    chess.reset();
+  }
+
   var root = { next: null, fen: chess.fen() };
   parseSequence(tokens, chess, root, pgnText);
   if (root.preComments && root.next) {
