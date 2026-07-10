@@ -376,6 +376,30 @@ pgn-player {
 
 .play .lucide-icon { width: 2rem; height: 2rem; }
 
+/* PUZZLE HINT BUTTON — sits below the board, only while solving a [P] puzzle */
+
+.puzzle-hint-row {
+  display: none;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+.player-container.puzzle-active .puzzle-hint-row { display: flex; }
+
+.puzzle-hint-btn {
+  width: 36px; height: 36px;
+  border: none; border-radius: 50%;
+  background: rgba(0,0,0,0.7);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.puzzle-hint-btn:hover { background: rgba(0,0,0,0.45); }
+
+.puzzle-hint-btn .lucide-icon { width: 20px; height: 20px; }
+
 /* BOARD SETTINGS TOOLBAR */
 
 .board-toolbar {

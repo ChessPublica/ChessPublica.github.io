@@ -1034,6 +1034,20 @@ class PuzzleMode {
     return true;
   }
 
+  /* Plays the current expected solution move for the solver — invoked by
+     the hint (key icon) button under the board. Mirrors handleDrop()'s
+     success path; the move is already known correct so there's no
+     from/to to validate against. */
+  showHint() {
+    if (!this.active) return;
+
+    const expectedSAN = this.expected[this.solvedCount];
+    const move = this.chess.move(expectedSAN, { sloppy: true });
+    if (!move) return;
+
+    this._advance();
+  }
+
   _shake() {
     const boardEl = this.engine.boardEl;
     boardEl.classList.remove("cp-shake");
@@ -1299,6 +1313,7 @@ class VideoEngine {
     this.boardWrap = container.querySelector(".board-wrap");
     this.boardEl   = container.querySelector(".board");
     this.playBtn   = this.boardWrap ? this.boardWrap.querySelector(".play") : null;
+    this.hintBtn   = this.boardWrap ? this.boardWrap.querySelector(".puzzle-hint-btn") : null;
 
     /* ---- Activate on any interaction ---- */
     const wrapper = container.parentElement;
@@ -1369,6 +1384,14 @@ class VideoEngine {
       this.playBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         this.play();
+      }, { signal });
+    }
+
+    /* ---- Puzzle hint button (under the board, puzzle mode only) ---- */
+    if (this.hintBtn) {
+      this.hintBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (this.puzzle.active) this.puzzle.showHint();
       }, { signal });
     }
 
@@ -2038,6 +2061,11 @@ class PgnPlayerElement extends HTMLElement {
           <div class="board"></div>
           <div class="play" aria-label="Play">
             <span class="lucide-icon" data-lucide="play"></span>
+          </div>
+          <div class="puzzle-hint-row">
+            <button class="puzzle-hint-btn" aria-label="Show solution move" title="Show solution move">
+              <span class="lucide-icon" data-lucide="key"></span>
+            </button>
           </div>
         </div>
 
