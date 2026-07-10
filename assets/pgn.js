@@ -458,9 +458,6 @@ export function renderMoveTree(rootNode, container, headers) {
 }
 
 function renderNAG(nags) {
-  /* Only the first recognized glyph is shown per move — matches
-     pgn-player.js and the puzzle widget, both of which keep just one
-     glyph per move rather than concatenating every NAG on it. */
   return nagsToGlyph(nags) || "";
 }
 
@@ -492,10 +489,8 @@ function renderLine(node, parent, isVariation) {
 
     needsMoveNumber = false;
 
-    /* MOVE TEXT — quality glyphs (!, ?, −+, …) are mainline-only, matching
-       pgn-player.js, which never carries glyphs into its variation
-       rendering (extractGlyph() there discards the glyph for var moves). */
-    buffer += toFigurine(current.san) + (isVariation ? "" : renderNAG(current.nags)) + " ";
+    /* MOVE TEXT */
+    buffer += toFigurine(current.san) + renderNAG(current.nags) + " ";
 
     lastMoveNumber = current.moveNumber;
 
