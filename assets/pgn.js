@@ -454,8 +454,13 @@ export function renderMoveTree(rootNode, container, headers) {
   }
 
   var lineStart = rootNode;
+  var lineParent = movesDiv;
   if (rootNode.prePuzzle) {
-    createPuzzleFromNode(movesDiv, rootNode.prePuzzle.node, rootNode.prePuzzle.plies);
+    lineParent = attachPuzzleAndHideRest(
+      movesDiv,
+      rootNode.prePuzzle.node,
+      rootNode.prePuzzle.plies,
+    );
     var skip = rootNode.prePuzzle.plies;
     while (skip > 0 && lineStart) {
       lineStart = lineStart.next;
@@ -464,21 +469,38 @@ export function renderMoveTree(rootNode, container, headers) {
   }
 
   if (lineStart) {
-    renderLine(lineStart, movesDiv, false);
+    lineParent = renderLine(lineStart, lineParent, false);
   }
 
   /* Append the game result (1-0 / 0-1 / ½-½) inline at the end of
-     the main line. Skip "*" (ongoing) and missing values. */
+     the main line. Skip "*" (ongoing) and missing values. Goes into
+     the same (possibly puzzle-hidden) parent as the move text above. */
   var rawResult = headers && headers.Result;
   if (rawResult && rawResult !== "*") {
     var label = rawResult === "1/2-1/2" ? "½-½" : rawResult;
     var resultP = document.createElement("p");
     resultP.className = "pgn-mainline pgn-result";
     resultP.textContent = label;
-    movesDiv.appendChild(resultP);
+    lineParent.appendChild(resultP);
   }
 
   container.appendChild(movesDiv);
+}
+
+/* Build an interactive puzzle from `node`/`plies` inside `parent`, then
+   append a wrapper div that holds everything that would render after it
+   (remaining moves, comments, the result, …) and keep that wrapper
+   hidden until the puzzle is solved. Returns the wrapper so callers can
+   redirect subsequent appends into it — the puzzle's answer, and the
+   rest of the article, stay spoiler-free until solved. */
+function attachPuzzleAndHideRest(parent, node, plies) {
+  var rest = document.createElement("div");
+  rest.className = "pgn-after-puzzle cp-hidden";
+  createPuzzleFromNode(parent, node, plies, function () {
+    rest.classList.remove("cp-hidden");
+  });
+  parent.appendChild(rest);
+  return rest;
 }
 
 function renderNAG(nags) {
@@ -560,7 +582,7 @@ function renderLine(node, parent, isVariation) {
              widget. The marker is silently ignored there. */
           flushBuffer(parent, buffer, isVariation);
           buffer = "";
-          createPuzzleFromNode(parent, current, part.plies);
+          parent = attachPuzzleAndHideRest(parent, current, part.plies);
           needsMoveNumber = true;
           skipAhead = part.plies;
         }
@@ -590,6 +612,11 @@ function renderLine(node, parent, isVariation) {
   }
 
   flushBuffer(parent, buffer, isVariation);
+  /* A mid-line puzzle part reassigns `parent` to a new hidden wrapper for
+     everything after it — return the final target so callers appending
+     content after this line (e.g. the game result) land in the same
+     place, staying spoiler-free until that puzzle is solved. */
+  return parent;
 }
 
 function flushBuffer(parent, text, isVariation) {

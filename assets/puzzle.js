@@ -656,8 +656,11 @@ export function createPuzzle(el, cfg) {
  * not surfaced inside the puzzle (matching <pgn-player>'s [P] scope) —
  * they stay attached to the node but the puzzle only exposes the main
  * solution line.
+ *
+ * @param {Function} [onSolved] optional callback fired once the puzzle's
+ *   solution line has been fully played out.
  */
-export function createPuzzleFromNode(container, node, plies) {
+export function createPuzzleFromNode(container, node, plies, onSolved) {
   var wrapper = document.createElement("div");
   wrapper.className = "cp-puzzle";
   container.appendChild(wrapper);
@@ -691,7 +694,7 @@ export function createPuzzleFromNode(container, node, plies) {
     moves,
     false,
     false,
-    null,
+    onSolved || null,
     null,
     null,
     false,

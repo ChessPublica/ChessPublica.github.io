@@ -17,6 +17,9 @@
 .pgn-variation-line::after{content: " ";}
 .pgn-error{color:red;}
 
+/* Content after a [P] puzzle — hidden until the puzzle is solved. */
+.pgn-after-puzzle.cp-hidden{display:none;}
+
 /* CHESSBOARD — Board wrapper + SVG overlay */
 
 .cp-board-wrapper {position:relative;display:block;margin:1rem 0;width:100%;max-width:var(--board-size);box-sizing:content-box!important;}
