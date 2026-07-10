@@ -52,6 +52,10 @@
 
 .cp-shake{animation: shake 0.5s ease-in-out;}
 
+/* Puzzle click-to-move: highlights the square holding the piece the
+   solver has picked up, as an alternative to dragging it. */
+.cp-square-selected{box-shadow: inset 0 0 0 4px rgba(255, 215, 0, 0.75);}
+
 /* Clickable SAN tokens inside a puzzle's side-line variation comment.
    Rendered by formatCommentClickable() — clicking replays the line
    from the variation start up to that move. */
