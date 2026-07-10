@@ -376,18 +376,28 @@ pgn-player {
 
 .play .lucide-icon { width: 2rem; height: 2rem; }
 
-/* PUZZLE HINT BUTTON — sits below the board, only while solving a [P] puzzle */
+/* PUZZLE HINT ROW — sits below the board, only while solving a [P]
+   puzzle. Prompt text on the left, hint button on the right — same
+   left/right relationship as a comment and its "continue" button. */
 
 .puzzle-hint-row {
   display: none;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
   margin-top: 0.5rem;
 }
 
 .player-container.puzzle-active .puzzle-hint-row { display: flex; }
 
+.puzzle-hint-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .puzzle-hint-btn {
   width: 36px; height: 36px;
+  flex-shrink: 0;
   border: none; border-radius: 50%;
   background: rgba(0,0,0,0.7);
   color: #fff;
