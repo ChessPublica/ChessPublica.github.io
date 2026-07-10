@@ -286,18 +286,30 @@ var RE_CAL = /\[%cal\s+([^\]]+)\]/g;
    digits and are left untouched. */
 var RE_INLINE_PGN_VAR = /\(\s*\d+\.+[^()]*\)/g;
 
-function processComment(commentText, lastMoveNode, current, parentNode, chess, originalPgn) {
-
-  /* ── Render any inline PGN variations found in the comment, in place ──
-     Authors sometimes embed a short illustrative reference line (e.g.
-     naming a well-known opening) directly inside a comment, in
-     parentheses starting with a move number: "(1. e4 e5 2. Nf3 ...)".
-     Rendered as plain inline figurine text exactly where it appears —
-     parentheses dropped — so it reads as part of the sentence the
-     author wrote, rather than as a separate variation block after the
-     whole comment. Plain-prose parentheticals like "(Grob's Attack)"
-     don't start with digits and are left untouched. */
-  commentText = commentText.replace(RE_INLINE_PGN_VAR, function (match) {
+/**
+ * Render any inline PGN variations found in a comment string, in place.
+ * Authors sometimes embed a short illustrative reference line (e.g.
+ * naming a well-known opening) directly inside a comment, in
+ * parentheses starting with a move number: "(1. e4 e5 2. Nf3 ...)".
+ * Each match is replaced with plain figurine text — parentheses dropped
+ * — so it reads as part of the sentence the author wrote. Plain-prose
+ * parentheticals like "(Grob's Attack)" don't start with digits and are
+ * left untouched.
+ *
+ * Shared by pgn.js's own processComment() below and pgn-player.js, so
+ * both renderers parse/branch/render these embedded lines identically.
+ *
+ * @param {string} commentText
+ * @param {object|null} current   move-tree node ({fen,color,moveNumber,
+ *   parent}) the comment is attached to, or null if there isn't one
+ *   (e.g. a comment before the very first move) — passed to
+ *   determineBranchFen() to pick where each embedded line branches from.
+ * @param {object} parentNode     fallback/start-position node ({fen}).
+ * @param {string} originalPgn    raw PGN text, threaded through to
+ *   parseSequence() purely for its error messages' pgnIndex.
+ */
+export function renderInlinePgnReferences(commentText, current, parentNode, originalPgn) {
+  return commentText.replace(RE_INLINE_PGN_VAR, function (match) {
     /* Authors sometimes write this in figurine notation (♘f3 rather
        than Nf3) for readability; the tokenizer only knows ASCII piece
        letters, so normalize back before parsing or the figurine glyphs
@@ -311,7 +323,7 @@ function processComment(commentText, lastMoveNode, current, parentNode, chess, o
       var branchFen = determineBranchFen(variationTokens, current, parentNode);
       var snapshot = new Chess(branchFen);
       var variationRoot = { next: null, fen: branchFen };
-      parseSequence(variationTokens, snapshot, variationRoot, originalPgn);
+      parseSequence(variationTokens, snapshot, variationRoot, originalPgn || "");
 
       return variationRoot.next ? renderInlineVariationText(variationRoot.next) : "";
     } catch (_e) {
@@ -319,6 +331,11 @@ function processComment(commentText, lastMoveNode, current, parentNode, chess, o
       return "";
     }
   });
+}
+
+function processComment(commentText, lastMoveNode, current, parentNode, chess, originalPgn) {
+
+  commentText = renderInlinePgnReferences(commentText, current, parentNode, originalPgn);
 
   /* ── Extract square marks and arrows ── */
   var cslM;
@@ -386,8 +403,6 @@ function renderInlineVariationText(node) {
 /* ── Smart branch logic ─────────────────────────────────── */
 
 function determineBranchFen(variationTokens, current, parentNode) {
-  if (!current) return parentNode.fen;
-
   var firstMoveNumberToken = null;
   for (var k = 0; k < variationTokens.length; k++) {
     if (variationTokens[k].type === "moveNumber") {
@@ -396,20 +411,30 @@ function determineBranchFen(variationTokens, current, parentNode) {
     }
   }
 
-  var variationColor;
-  if (firstMoveNumberToken && firstMoveNumberToken.value.includes("...")) {
-    variationColor = "b";
-  } else if (firstMoveNumberToken) {
-    variationColor = "w";
+  var branchFen;
+  if (!current) {
+    /* No specific move to branch from (e.g. a comment-embedded reference
+       line whose exact attachment point isn't tracked, such as inside a
+       <pgn-player> variation's flat comment list) — parentNode.fen is
+       the best available anchor. Still subject to the move-number
+       mismatch check below. */
+    branchFen = parentNode.fen;
   } else {
-    variationColor = current.color === "w" ? "b" : "w";
+    var variationColor;
+    if (firstMoveNumberToken && firstMoveNumberToken.value.includes("...")) {
+      variationColor = "b";
+    } else if (firstMoveNumberToken) {
+      variationColor = "w";
+    } else {
+      variationColor = current.color === "w" ? "b" : "w";
+    }
+
+    var nextToMove = current.color === "w" ? "b" : "w";
+
+    branchFen = variationColor === nextToMove
+      ? current.fen
+      : (current.parent && current.parent.fen ? current.parent.fen : parentNode.fen);
   }
-
-  var nextToMove = current.color === "w" ? "b" : "w";
-
-  var branchFen = variationColor === nextToMove
-    ? current.fen
-    : (current.parent && current.parent.fen ? current.parent.fen : parentNode.fen);
 
   /* A variation's move-number token should match the fullmove number of
      wherever it actually branches from — real chess annotation always

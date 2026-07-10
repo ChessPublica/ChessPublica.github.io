@@ -12,6 +12,7 @@ import {
   normalizeSAN,
   extractPuzzleMarker,
 } from "./helpers.js";
+import { renderInlinePgnReferences } from "./pgn.js";
 import { lucideIconUrl } from "./icons.js";
 import {
   renderAnnotations as applyBoardAnnotations,
@@ -157,11 +158,26 @@ function loadPGN(pgn) {
   const variations  = [];
   const nagsByMove  = []; // raw NAG tokens per main-line move — combined into glyphs below
   const puzzles     = []; // [P] / [Pn] puzzle markers: { plies }
+  const fenBeforeMove = []; // FEN just before each main-line move — for renderInlinePgnReferences()
 
   let moveIndex      = -1;
   let variationDepth = 0;
 
   const varStack = [];
+
+  /* Mirrors VideoEngine._moveContext()'s offset math — a Black-to-move
+     starting FEN shifts the White/Black parity and the move-number base.
+     Used to build the { color, moveNumber } a comment-embedded PGN
+     reference line branches from (see renderInlinePgnReferences() in
+     pgn.js), the same info pgn.js's own move-tree nodes carry. */
+  function moveContext(idx) {
+    const offset = startColor === "b" ? 1 : 0;
+    const virtualIndex = idx + offset;
+    return {
+      fullMoveNum: (startMoveNumber || 1) + Math.floor(virtualIndex / 2),
+      isBlack: virtualIndex % 2 === 1,
+    };
+  }
 
   /* ---------------------------
      HELPERS
@@ -218,6 +234,12 @@ function loadPGN(pgn) {
         comments:   [],
         children:   [],
         nagsByMove: [], // raw NAG tokens per variation move — combined into glyphs at render time
+        /* Approximate branch position — the main line's current FEN when
+           this variation starts. Comments aren't tied to a specific move
+           within a variation (see the flat `comments` array below), so a
+           comment-embedded PGN reference line inside one always branches
+           from here rather than from a precise position within it. */
+        startFenApprox: chess.fen(),
       };
 
       const parentMoveIndex = moveIndex;
@@ -247,8 +269,26 @@ function loadPGN(pgn) {
     /* COMMENT */
     if (t.type === "comment") {
 
-      const calMatches = [...t.value.matchAll(/\[%cal\s+([^\]]+)\]/g)];
-      const cslMatches = [...t.value.matchAll(/\[%csl\s+([^\]]+)\]/g)];
+      /* A "(1. e4 e5 2. Nf3 ...)" reference line embedded in the comment
+         — an author naming/citing a different (often well-known) game
+         or opening — is rendered as plain inline figurine text exactly
+         where it appears, parentheses dropped, matching <pgn>. Must run
+         before extractPuzzleMarker()/stripCommentAnnotations() below,
+         which would otherwise strip it outright as an annotation. */
+      const inVariation = variationDepth > 0 && varStack.length > 0;
+      const current = inVariation || moveIndex < 0 ? null : {
+        fen: chess.fen(),
+        color: moveContext(moveIndex).isBlack ? "b" : "w",
+        moveNumber: moveContext(moveIndex).fullMoveNum,
+        parent: { fen: fenBeforeMove[moveIndex] },
+      };
+      const parentNode = {
+        fen: inVariation ? varStack[varStack.length - 1].varObj.startFenApprox : startFEN,
+      };
+      const commentValue = renderInlinePgnReferences(t.value, current, parentNode, pgn);
+
+      const calMatches = [...commentValue.matchAll(/\[%cal\s+([^\]]+)\]/g)];
+      const cslMatches = [...commentValue.matchAll(/\[%csl\s+([^\]]+)\]/g)];
 
       const cal = calMatches.map(m => m[1]);
       const csl = cslMatches.map(m => m[1]);
@@ -257,11 +297,11 @@ function loadPGN(pgn) {
          used by <pgn>) before running stripCommentAnnotations(), since
          [P] isn't part of the [%…] Lichess annotation family that helper
          already handles. */
-      const { plies: puzzlePlies, text: commentSrc } = extractPuzzleMarker(t.value);
+      const { plies: puzzlePlies, text: commentSrc } = extractPuzzleMarker(commentValue);
 
       const cleaned = stripCommentAnnotations(commentSrc);
 
-      if (variationDepth > 0 && varStack.length > 0) {
+      if (inVariation) {
         const currentVar = varStack[varStack.length - 1].varObj;
         if (cleaned) currentVar.comments.push(cleaned);
         if (cal.length || csl.length) {
@@ -318,6 +358,7 @@ function loadPGN(pgn) {
 
         if (isMove(val)) {
           const { san, nag } = extractGlyph(val);
+          const beforeFen = chess.fen();
           /* sloppy:true mirrors pgn.js so authored PGNs that use long
              algebraic notation (e2-e4) or lowercase piece letters parse
              the same in both renderers. */
@@ -326,6 +367,7 @@ function loadPGN(pgn) {
             moves.push(san);
             moveIndex++;
             nagsByMove[moveIndex] = nag ? [nag] : [];
+            fenBeforeMove[moveIndex] = beforeFen;
           }
         }
 
