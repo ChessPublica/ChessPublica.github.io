@@ -974,33 +974,17 @@ class PuzzleMode {
     engine.hidePlayBtn();
 
     /* Solving-by-dragging replaces the usual "Continue" button; strip it
-       if the comment box just rendered one. The "Find the best move…"
-       prompt is appended below any prose comment already rendered for
-       this move (rather than only when the comment box is empty), so a
-       [P] marker sharing a comment with prose still gets its prompt. */
+       if the comment box just rendered one. Any prose comment for this
+       move stays in the comment box untouched. */
     const el = engine.commentBox && engine.commentBox.el;
-    if (el) {
-      el.querySelectorAll(".comment-play-btn").forEach(btn => btn.remove());
+    if (el) el.querySelectorAll(".comment-play-btn").forEach(btn => btn.remove());
 
+    /* "Find the best move for X." lives under the board, on the same row
+       as the hint button — not in the comment box — so it shows up
+       whether or not this move also carries a prose comment. */
+    if (engine.hintText) {
       const solverColor = this.chess.turn() === "w" ? "White" : "Black";
-      const prompt = document.createElement("div");
-      prompt.className = "comment-line puzzle-prompt";
-
-      const icon = document.createElement("span");
-      icon.className = "comment-icon lucide-icon";
-      icon.style.setProperty("--icon", lucideIconUrl("puzzle"));
-
-      const textBlock = document.createElement("div");
-      textBlock.className = "comment-text-block";
-
-      const body = document.createElement("span");
-      body.className   = "comment-body";
-      body.textContent = `Find the best move for ${solverColor}.`;
-      textBlock.appendChild(body);
-
-      prompt.appendChild(icon);
-      prompt.appendChild(textBlock);
-      el.appendChild(prompt);
+      engine.hintText.textContent = `Find the best move for ${solverColor}.`;
     }
   }
 
@@ -1011,6 +995,7 @@ class PuzzleMode {
     this.expected    = [];
     this.engine._puzzleActive = false;
     this.engine.container.classList.remove("puzzle-active");
+    if (this.engine.hintText) this.engine.hintText.textContent = "";
   }
 
   /* Board's onDragStart — only let the solver pick up their own pieces. */
@@ -1316,6 +1301,7 @@ class VideoEngine {
     this.boardEl   = container.querySelector(".board");
     this.playBtn   = this.boardWrap ? this.boardWrap.querySelector(".play") : null;
     this.hintBtn   = this.boardWrap ? this.boardWrap.querySelector(".puzzle-hint-btn") : null;
+    this.hintText  = this.boardWrap ? this.boardWrap.querySelector(".puzzle-hint-text") : null;
 
     /* ---- Activate on any interaction ---- */
     const wrapper = container.parentElement;
@@ -2065,6 +2051,7 @@ class PgnPlayerElement extends HTMLElement {
             <span class="lucide-icon" data-lucide="play"></span>
           </div>
           <div class="puzzle-hint-row">
+            <span class="puzzle-hint-text"></span>
             <button class="puzzle-hint-btn" aria-label="Show solution move" title="Show solution move">
               <span class="lucide-icon" data-lucide="key"></span>
             </button>

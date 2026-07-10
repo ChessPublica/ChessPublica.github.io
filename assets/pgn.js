@@ -130,14 +130,26 @@ export function buildMoveTree(pgnText) {
      a standard start. Falls back to the standard start if the FEN is
      missing or invalid. Mirrors the same logic in pgn-player.js. */
   var hasFEN = !!headers.FEN && headers.SetUp !== "0";
-  if (!hasFEN || !chess.load(headers.FEN)) {
+  var fenLoaded = hasFEN && chess.load(headers.FEN);
+  if (!fenLoaded) {
     chess.reset();
   }
 
-  var root = { next: null, fen: chess.fen() };
+  /* A genuine SetUp/FEN start (as opposed to the standard starting
+     position) always gets an opening diagram, regardless of whether a
+     [D]/[P] marker is also present — readers can't otherwise tell the
+     game doesn't start from the normal array. */
+  var root = { next: null, fen: chess.fen(), hasDiagram: !!fenLoaded };
   parseSequence(tokens, chess, root, pgnText);
   if (root.preComments && root.next) {
     root.next.preComments = root.preComments;
+  }
+  if (root.hasDiagram && root.next) {
+    root.next.startDiagram = {
+      fen: root.fen,
+      squareMarks: root.squareMarks || [],
+      arrows: root.arrows || [],
+    };
   }
   return root.next;
 }
@@ -207,12 +219,32 @@ function parseSequence(tokens, chess, parentNode, originalPgn) {
       if (lastMoveNode) {
         processComment(token.value, lastMoveNode, current, parentNode, chess, originalPgn);
       } else {
-        /* Comment before the very first move — e.g. a [P]/[Pn] marker
-           attached to a FEN-header start, or intro prose before move 1.
-           [P] is treated the same as [D] here: stripped from the text,
-           no diagram (matching [D]'s existing behavior in this spot). */
+        /* Comment before the very first move — e.g. a [D]/[P]/[Pn]
+           marker attached to a FEN-header start, or intro prose before
+           move 1. [D] and [P] both mean "show a diagram here", same as
+           processComment() below does for a comment attached to a move;
+           the diagram here is of the game's starting position. */
+        var cslM0;
+        RE_CSL.lastIndex = 0;
+        while ((cslM0 = RE_CSL.exec(token.value))) {
+          if (!parentNode.squareMarks) parentNode.squareMarks = [];
+          parentNode.squareMarks = parentNode.squareMarks.concat(parseCSL(cslM0[1]));
+        }
+
+        var calM0;
+        RE_CAL.lastIndex = 0;
+        while ((calM0 = RE_CAL.exec(token.value))) {
+          if (!parentNode.arrows) parentNode.arrows = [];
+          parentNode.arrows = parentNode.arrows.concat(parseCAL(calM0[1]));
+        }
+
+        var hasDiagramMarker0 = /\[D\]/.test(token.value);
         var puzzleMarker = extractPuzzleMarker(token.value);
         var cleaned = stripCommentAnnotations(puzzleMarker.text);
+
+        if (hasDiagramMarker0 || parentNode.arrows || parentNode.squareMarks || puzzleMarker.plies) {
+          parentNode.hasDiagram = true;
+        }
         if (cleaned.length) {
           if (!parentNode.preComments) parentNode.preComments = [];
           parentNode.preComments.push(cleaned);
@@ -431,6 +463,13 @@ export function renderHeaders(headers, container) {
 export function renderMoveTree(rootNode, container, headers) {
   var movesDiv = document.createElement("div");
   movesDiv.className = "pgn-moves";
+
+  /* [D]/[P] before the first move — diagram of the starting position,
+     rendered first (diagram-then-text, same order as a mid-game
+     comment's parts). */
+  if (rootNode.startDiagram) {
+    createBoard(movesDiv, rootNode.startDiagram.fen, rootNode.startDiagram);
+  }
 
   if (rootNode.preComments && rootNode.preComments.length) {
     for (var pc = 0; pc < rootNode.preComments.length; pc++) {
