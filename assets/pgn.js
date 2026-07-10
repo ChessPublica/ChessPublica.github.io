@@ -12,7 +12,7 @@ import {
   NBSP,
   toFigurine,
   formatComment,
-  NAG_TO_GLYPH,
+  nagsToGlyph,
   stripCommentAnnotations,
   extractPuzzleMarker,
   parseCSL,
@@ -20,7 +20,6 @@ import {
 } from "./helpers.js";
 import { lucideIconUrl } from "./icons.js";
 import { createBoard } from "./board.js";
-import { createPuzzleFromNode } from "./puzzle.js";
 
 /* ================================================================
    1. PGN TOKENIZER
@@ -140,12 +139,6 @@ export function buildMoveTree(pgnText) {
   if (root.preComments && root.next) {
     root.next.preComments = root.preComments;
   }
-  if (root.prePuzzlePlies && root.next) {
-    /* [P] marker before the first move — the puzzle starts from the
-       game's starting position (root.fen/root.next chain), which is
-       exactly the { fen, next } shape createPuzzleFromNode() expects. */
-    root.next.prePuzzle = { node: root, plies: root.prePuzzlePlies };
-  }
   return root.next;
 }
 
@@ -214,16 +207,15 @@ function parseSequence(tokens, chess, parentNode, originalPgn) {
       if (lastMoveNode) {
         processComment(token.value, lastMoveNode, current, parentNode, chess, originalPgn);
       } else {
-        /* Comment before the very first move — e.g. a [P] puzzle marker
-           attached to a FEN-header start, or intro prose before move 1. */
+        /* Comment before the very first move — e.g. a [P]/[Pn] marker
+           attached to a FEN-header start, or intro prose before move 1.
+           [P] is treated the same as [D] here: stripped from the text,
+           no diagram (matching [D]'s existing behavior in this spot). */
         var puzzleMarker = extractPuzzleMarker(token.value);
         var cleaned = stripCommentAnnotations(puzzleMarker.text);
         if (cleaned.length) {
           if (!parentNode.preComments) parentNode.preComments = [];
           parentNode.preComments.push(cleaned);
-        }
-        if (puzzleMarker.plies) {
-          parentNode.prePuzzlePlies = puzzleMarker.plies;
         }
       }
       i++;
@@ -308,7 +300,8 @@ function processComment(commentText, lastMoveNode, current, parentNode, chess, o
 
   var hasDiagramMarker = /\[D\]/.test(commentText);
 
-  /* [P] / [Pn] puzzle marker (shared with pgn-player.js) — extracted
+  /* [P] / [Pn] puzzle marker — an interactive puzzle in <pgn-player>, but
+     in this static renderer it's just a diagram, same as [D]. Extracted
      before stripCommentAnnotations() since it's not part of the [%…]
      family that helper already strips. */
   var puzzleMarker = extractPuzzleMarker(commentText);
@@ -319,17 +312,12 @@ function processComment(commentText, lastMoveNode, current, parentNode, chess, o
      "(Grob's Attack)" are preserved. */
   var cleaned = stripCommentAnnotations(puzzleMarker.text);
 
-  /* Push parts in PGN order: diagram first, then text, then puzzle
-     (the marker typically closes out the prompting sentence, so the
-     interactive board reads naturally as following the setup text). */
-  if (hasDiagramMarker || hadArrows || hadSquareMarks) {
+  /* Push parts in PGN order: diagram first, then text. */
+  if (hasDiagramMarker || hadArrows || hadSquareMarks || puzzleMarker.plies) {
     lastMoveNode.parts.push({ type: "diagram" });
   }
   if (cleaned.length) {
     lastMoveNode.parts.push({ type: "text", value: cleaned });
-  }
-  if (puzzleMarker.plies) {
-    lastMoveNode.parts.push({ type: "puzzle", plies: puzzleMarker.plies });
   }
 }
 
@@ -453,19 +441,7 @@ export function renderMoveTree(rootNode, container, headers) {
     }
   }
 
-  var lineStart = rootNode;
-  if (rootNode.prePuzzle) {
-    createPuzzleFromNode(movesDiv, rootNode.prePuzzle.node, rootNode.prePuzzle.plies);
-    var skip = rootNode.prePuzzle.plies;
-    while (skip > 0 && lineStart) {
-      lineStart = lineStart.next;
-      skip--;
-    }
-  }
-
-  if (lineStart) {
-    renderLine(lineStart, movesDiv, false);
-  }
+  renderLine(rootNode, movesDiv, false);
 
   /* Append the game result (1-0 / 0-1 / ½-½) inline at the end of
      the main line. Skip "*" (ongoing) and missing values. */
@@ -482,12 +458,10 @@ export function renderMoveTree(rootNode, container, headers) {
 }
 
 function renderNAG(nags) {
-  if (!nags || !nags.length) return "";
-  var out = "";
-  for (var i = 0; i < nags.length; i++) {
-    out += NAG_TO_GLYPH[nags[i]] || nags[i];
-  }
-  return out;
+  /* Only the first recognized glyph is shown per move — matches
+     pgn-player.js and the puzzle widget, both of which keep just one
+     glyph per move rather than concatenating every NAG on it. */
+  return nagsToGlyph(nags) || "";
 }
 
 function renderLine(node, parent, isVariation) {
@@ -497,12 +471,6 @@ function renderLine(node, parent, isVariation) {
   var needsMoveNumber = true;
 
   while (current) {
-    /* Set by a "puzzle" part below — the number of already-parsed nodes
-       ahead that the puzzle widget covers, so their SAN doesn't also get
-       printed as plain text (that would spoil the puzzle right next to
-       it). Reset each iteration; consumed at the bottom of the loop. */
-    var skipAhead = 0;
-
     var newMoveNumber = current.moveNumber !== lastMoveNumber;
 
     /* MOVE NUMBER */
@@ -524,8 +492,10 @@ function renderLine(node, parent, isVariation) {
 
     needsMoveNumber = false;
 
-    /* MOVE TEXT */
-    buffer += toFigurine(current.san) + renderNAG(current.nags) + " ";
+    /* MOVE TEXT — quality glyphs (!, ?, −+, …) are mainline-only, matching
+       pgn-player.js, which never carries glyphs into its variation
+       rendering (extractGlyph() there discards the glyph for var moves). */
+    buffer += toFigurine(current.san) + (isVariation ? "" : renderNAG(current.nags)) + " ";
 
     lastMoveNumber = current.moveNumber;
 
@@ -554,15 +524,6 @@ function renderLine(node, parent, isVariation) {
           buffer = "";
           createBoard(parent, current.fen, current);
           needsMoveNumber = true;
-        } else if (part.type === "puzzle" && !isVariation) {
-          /* Not supported inside variations — a variation line is built
-             as inline text in one buffer, with no room for a block-level
-             widget. The marker is silently ignored there. */
-          flushBuffer(parent, buffer, isVariation);
-          buffer = "";
-          createPuzzleFromNode(parent, current, part.plies);
-          needsMoveNumber = true;
-          skipAhead = part.plies;
         }
       }
     }
@@ -582,10 +543,6 @@ function renderLine(node, parent, isVariation) {
       needsMoveNumber = true;
     }
 
-    while (skipAhead > 0 && current.next) {
-      current = current.next;
-      skipAhead--;
-    }
     current = current.next;
   }
 
