@@ -5,35 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ChessPublica - Minimal Chess Publishing Engine</title>
     <meta name="description" content="Transform raw chess notation (FEN and PGN) into diagrams, puzzles, and interactive, video-style game players directly in the browser. Built for chess creators and educators.">
-
-    <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
-    <link rel="mask-icon" href="/assets/favicon.svg" color="#18181b">
-    <link rel="apple-touch-icon" href="/assets/favicon.svg">
-    <meta name="theme-color" content="#18181b">
-
-    <!-- Open Graph -->
-    <meta property="og:type" content="website">
-    <meta property="og:site_name" content="ChessPublica">
-    <meta property="og:title" content="ChessPublica — Minimal Chess Publishing Engine">
-    <meta property="og:description" content="Transform raw chess notation (FEN and PGN) into diagrams, puzzles, and interactive, video-style game players directly in the browser.">
-    <meta property="og:url" content="https://chesspublica.github.io/">
-    <meta property="og:image" content="https://chesspublica.github.io/assets/og-card.png">
-    <meta property="og:image:secure_url" content="https://chesspublica.github.io/assets/og-card.png">
-    <meta property="og:image:type" content="image/png">
-    <meta property="og:image:width" content="1200">
-    <meta property="og:image:height" content="630">
-    <meta property="og:image:alt" content="ChessPublica — Minimal Chess Publishing Engine">
-
-    <!-- Twitter -->
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="ChessPublica — Minimal Chess Publishing Engine">
-    <meta name="twitter:description" content="Transform raw chess notation (FEN and PGN) into diagrams, puzzles, and interactive, video-style game players directly in the browser.">
-    <meta name="twitter:image" content="https://chesspublica.github.io/assets/og-card.png">
-    <meta name="twitter:image:alt" content="ChessPublica — Minimal Chess Publishing Engine">
-
-    <link rel="stylesheet" href="../dist/ChessPublica.all.min.css?v=70d9de6">
-    <link rel="stylesheet" href="../styles.css?v=70d9de6">
+    <link rel="stylesheet" href="../dist/ChessPublica.all.min.css">
+    <link rel="stylesheet" href="../styles.css">
 </head>
 <body>
     
@@ -61,8 +34,8 @@
 1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Bxc6 { Günümüzde de üst seviyelerde karşılaşılan bu hamlenin amacı, kırışmalı İspanyol'u ( 1. e4 e5 2. ♘f3 ♘c6 3. ♗b5 a6 4. ♗xc6 dxc6 ) Siyahın az evvel geliştirdiği atın ve filin uygunsuz konumda olduğu iddiasıyla oynamaktır. } 6... dxc6 { [%csl Re7,Rf6] } 7. d3 { [%csl Ge5][%cal Gf3e5] } 7... Nd7 { Siyah hemen uygunsuz durumdaki atının yerini düzelterek başlıyor. Artık f-piyonu kullanılabilir. } 8. Nbd2 O-O { Beyaz genel olarak d4 veya f4 sürüşü ile merkezdeki üstünlüğünü ve taş etkinliğini arttırmak ister. Siyahınsa fil çiftiyle uzun vadeli bir oyun hedeflediği söylenebilir. } 9. Nc4 Bf6 (9... f6 { Bu hamle daha sık tercih ediliyor. } 10. Nh4 { Siyahın oyundaki fikriyle kaçınmak istediği hamle budur. } { [%cal Gh4f5] } 10... Nc5 11. Nf5 Bxf5 12. exf5 Qd5 13. Qg4 e4 14. Ne3 Qe5 15. Nc4 Qd5 { Karpov, Anatoly - Petrosian, Tigran V, 1/2-1/2, URS-chT, 1975, https://lichess.org/BTXbkyqM }) 10. b4!? { Siyahın vezir kanadı piyonlarının ilerleyişini önleyerek filini geliştirmek istiyor. } { [%csl Gc6,Gc7,Gb7,Ga6][%cal Gc1b2] } (10. b3 { Piyonlara artık tahtada olmayan açık renkli filinin görevini vermek daha yaygın bir yöntem. } 10... Re8 11. Bb2 c5 12. a4 b6 13. h3 { [%cal Gf3h2,Gf2f4] } 13... Rb8 14. Nh2 b5 15. axb5 axb5 16. Ne3 $14 { Kholmov, Ratmir D - Beliavsky, Alexander G, 1-0, URS, 1982, https://lichess.org/cfiMhpFM } { [%cal Gf2f4,Ge3d5,Ge3f5] }) 10... Re8 11. Bb2 b6 { [%cal Gc8b7,Ga6a5] } 12. Bc3 g6 13. Nfd2 { [%csl Gf4][%cal Gf2f4] } 13... c5 14. a3 cxb4 15. axb4 Nb8?! { [P] İlk kritik an. Siyah zaman bulabilirse atını d4-karesine götürmek istiyor. Bunu başarırsa güzel bir konumu olacak. } 16. f4! exf4 17. Bxf6 (17. e5 Bg7 18. Qf3 { [%csl Ra8] } 18... Ra7 19. Qxf4 Be6 20. Ne4 $16) 17... Qxf6 18. e5 Qc6 19. Ne4 { [%cal Ge4f6] } 19... Nd7 20. Rxf4 Bb7 21. Qd2 b5 22. Ne3 (22. Na5 Qb6+ 23. Kh1? Bxe4 24. Rxe4 Rxe5 $17) 22... Qb6 (22... Rxe5? { [P] Beyaz atların gazabından kurtulmak olanaksızlığını gösteren bir egzersiz olurdu. } 23. Ng4! { [%cal Gg4h6,Rg4f6] } 23... Re7 24. Nef6+ Nxf6 (24... Kh8 25. Nxd7 Rxd7 26. Ne5 $18) 25. Rxf6 { Siyah vezire kaçacak uygun bir kare yoktur. } 25... Qd5 { [P] } 26. Rxg6+! $18) 23. d4 (23. Nc5! Nxc5 (23... Rxe5 24. Ng4! Nxc5 25. bxc5 Rxc5 26. d4 Rd5 27. Nh6+! $18) 24. bxc5 Qxc5 25. d4 $18 { [%cal Ge3g4] }) 23... Bxe4 24. Rxe4 Rad8 { [%cal Gd7e5] } 25. Qf2 Nf6?! (25... f6 { Şahı böylesine zayıflatmak riskli görünüyor ancak Stockfish'e göre çok daha iyi savunma olanakları sunardı. }) 26. Rf4 Nh5 27. Rxf7 Qxd4 { [%csl Ga1][%cal Gd4a1] } 28. Rf1 Qxe5 { [P] } 29. Ng4! { Atın koyu renklerden saldırısı belirleyici olacak. } { [%cal Gg4h6,Gg4e5] } 29... Qg5 { [%csl Gh6] } (29... Qd4 30. Qxd4 Rxd4 31. Nh6+ Kh8 { [P] } 32. g4! $18) 30. h3 c6 31. Qf3 Qd2 32. c3 Qg5 33. Qxc6 Rf8 34. Qe6 Rxf7 35. Qxf7+ Kh8 36. Qc7 Qd2 { Bu hamleyle birlikte Siyah belki de terk ediyor. } 37. Qe5+ Ng7 38. Rf7 Rg8 39. Nf6 $18 { [%cal Rf6e8,Gf6g8] } 1-0
 </pgn>    
 
-    <script src="../dist/ChessPublica.all.min.js?v=70d9de6"></script>
-    <script type="module" src="../script.js?v=70d9de6"></script>
+    <script src="../dist/ChessPublica.all.min.js"></script>
+    <script type="module" src="../script.js"></script>
 </body>
 </html>
 
