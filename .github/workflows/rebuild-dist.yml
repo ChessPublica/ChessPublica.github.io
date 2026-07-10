@@ -41,8 +41,16 @@ jobs:
             echo "dist/ already up to date — nothing to commit."
             exit 0
           fi
+
+          # Cache-bust the local dist/script/style URLs so browsers and the
+          # Pages CDN can't keep serving a stale ChessPublica.all.min.js
+          # after this rebuild — see the dnm/ "No moves found in PGN" bug
+          # caused by a page holding onto a pre-fix cached bundle.
+          SHA=$(git rev-parse --short HEAD)
+          sed -i -E "s#(=\")(\.\./|/)(dist/ChessPublica\.all\.min\.(js|css)|styles\.css|script\.js)(\?v=[0-9a-f]+)?(\")#\1\2\3?v=${SHA}\6#g" index.html dnm/index.html
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add dist/
+          git add dist/ index.html dnm/index.html
           git commit -m "chore: auto-rebuild dist [skip ci]"
           git push
