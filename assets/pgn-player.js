@@ -4,6 +4,7 @@ import {
   parseCAL,
   parseCSL,
   NAG_TO_GLYPH,
+  nagsToGlyph,
   stripCommentAnnotations,
   toFigurine,
   applyFigurineNotation,
@@ -154,7 +155,7 @@ function loadPGN(pgn) {
   const comments    = [];
   const annotations = []; // cal/csl board annotations
   const variations  = [];
-  const glyphs      = []; // move quality glyphs: "!", "?", "!!", "??", "!?", "?!"
+  const nagsByMove  = []; // raw NAG tokens per main-line move — combined into glyphs below
   const puzzles     = []; // [P] / [Pn] puzzle markers: { plies }
 
   let moveIndex      = -1;
@@ -166,8 +167,8 @@ function loadPGN(pgn) {
      HELPERS
   --------------------------- */
 
-  // Strips trailing glyph suffixes from a SAN move token and returns
-  // { san, glyph } — glyph is null when none is present.
+  // Strips a trailing glyph suffix from a SAN move token and returns
+  // { san, nag } — nag is the raw suffix ("!", "!!", …), null if none.
   function extractGlyph(token) {
 
     // Try longest suffixes first so "!!" isn't mistaken for two "!"
@@ -175,11 +176,11 @@ function loadPGN(pgn) {
 
     for (const s of suffixes) {
       if (token.endsWith(s)) {
-        return { san: token.slice(0, -s.length), glyph: NAG_TO_GLYPH[s] };
+        return { san: token.slice(0, -s.length), nag: s };
       }
     }
 
-    return { san: token, glyph: null };
+    return { san: token, nag: null };
   }
 
   function isMove(token) {
@@ -213,9 +214,10 @@ function loadPGN(pgn) {
       variationDepth++;
 
       const newVar = {
-        moves:    [],
-        comments: [],
-        children: []
+        moves:      [],
+        comments:   [],
+        children:   [],
+        nagsByMove: [], // raw NAG tokens per variation move — combined into glyphs at render time
       };
 
       const parentMoveIndex = moveIndex;
@@ -294,13 +296,20 @@ function loadPGN(pgn) {
 
       if (isMoveNumber(val) || isResult(val)) continue;
 
-      // $N NAG — applies to the most recent main-line move
+      // $N NAG — applies to the most recent move (main-line or variation).
+      // Stored as a raw token alongside any inline suffix glyph on the
+      // same move; nagsToGlyph() combines up to one quality glyph (!, ?,
+      // …) and one positional-evaluation glyph (±, −+, …) at the end.
       if (isNAG(val)) {
-        if (variationDepth === 0 && moveIndex >= 0 && NAG_TO_GLYPH[val]) {
-          // Only store if we don't already have a suffix glyph
-          if (!glyphs[moveIndex]) {
-            glyphs[moveIndex] = NAG_TO_GLYPH[val];
-          }
+        if (!NAG_TO_GLYPH[val]) continue;
+        if (variationDepth === 0 && moveIndex >= 0) {
+          if (!nagsByMove[moveIndex]) nagsByMove[moveIndex] = [];
+          nagsByMove[moveIndex].push(val);
+        } else if (variationDepth > 0 && varStack.length > 0) {
+          const currentVar = varStack[varStack.length - 1].varObj;
+          const mi = Math.max(0, currentVar.moves.length - 1);
+          if (!currentVar.nagsByMove[mi]) currentVar.nagsByMove[mi] = [];
+          currentVar.nagsByMove[mi].push(val);
         }
         continue;
       }
@@ -308,7 +317,7 @@ function loadPGN(pgn) {
       if (variationDepth === 0) {
 
         if (isMove(val)) {
-          const { san, glyph } = extractGlyph(val);
+          const { san, nag } = extractGlyph(val);
           /* sloppy:true mirrors pgn.js so authored PGNs that use long
              algebraic notation (e2-e4) or lowercase piece letters parse
              the same in both renderers. */
@@ -316,15 +325,17 @@ function loadPGN(pgn) {
           if (result) {
             moves.push(san);
             moveIndex++;
-            if (glyph) glyphs[moveIndex] = glyph;
+            nagsByMove[moveIndex] = nag ? [nag] : [];
           }
         }
 
       } else {
 
         if (isMove(val) && varStack.length > 0) {
-          const { san } = extractGlyph(val);
-          varStack[varStack.length - 1].varObj.moves.push(san);
+          const { san, nag } = extractGlyph(val);
+          const currentVar = varStack[varStack.length - 1].varObj;
+          currentVar.moves.push(san);
+          currentVar.nagsByMove[currentVar.moves.length - 1] = nag ? [nag] : [];
         }
 
       }
@@ -363,6 +374,10 @@ function loadPGN(pgn) {
   /* ---------------------------
      RESULT
   --------------------------- */
+
+  // Combine each move's raw NAG tokens into its display glyph now that
+  // parsing is done — up to one quality glyph + one eval glyph per move.
+  const glyphs = nagsByMove.map(nagsToGlyph);
 
   return {
     moves,
@@ -1184,9 +1199,11 @@ class VideoComment {
             content.appendChild(numSpan);
           }
 
+          const varGlyph = nagsToGlyph(variation.nagsByMove[mi]) || "";
+
           const moveSpan = document.createElement("span");
           moveSpan.className   = "var-move";
-          moveSpan.textContent = toFigurine(san);
+          moveSpan.textContent = toFigurine(san) + varGlyph;
 
           const targetFEN = varFENs[mi + 1];
 

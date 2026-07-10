@@ -88,18 +88,39 @@ export var NAG_TO_GLYPH = {
   "$14": "⩲", "$15": "⩱", "$16": "±", "$17": "∓", "$18": "+−", "$19": "−+",
 };
 
+/* Move-quality codes (annotate the move itself: brilliant, dubious, …) —
+   distinct from positional-evaluation codes ($10/$13-$19: assess the
+   resulting position, e.g. "±" / "−+"). A move can legitimately carry
+   one of each at once ("Nd3! $19" — a good move leading to a winning
+   position), so nagsToGlyph() below shows up to one glyph from each
+   group instead of just the first NAG it sees. */
+var NAG_QUALITY_CODES = {
+  "!!": true, "??": true, "!?": true, "?!": true, "!": true, "?": true,
+  "$1": true, "$2": true, "$3": true, "$4": true, "$5": true, "$6": true,
+};
+
 /**
- * Scan a list of NAG tokens and return the first one that maps to a
- * move-quality glyph. Used to pick a badge when a move carries several
- * NAGs. Returns null when no known glyph is present.
+ * Scan a list of NAG tokens and return up to two glyphs concatenated: the
+ * first move-quality glyph (!, ?, !!, …) and the first positional-
+ * evaluation glyph (±, −+, …), in that order. Returns null when no known
+ * glyph is present at all.
  */
 export function nagsToGlyph(nags) {
   if (!nags) return null;
+  var quality = null;
+  var evalGlyph = null;
   for (var i = 0; i < nags.length; i++) {
-    var g = NAG_TO_GLYPH[nags[i]];
-    if (g) return g;
+    var code = nags[i];
+    var g = NAG_TO_GLYPH[code];
+    if (!g) continue;
+    if (NAG_QUALITY_CODES[code]) {
+      if (!quality) quality = g;
+    } else if (!evalGlyph) {
+      evalGlyph = g;
+    }
   }
-  return null;
+  if (!quality && !evalGlyph) return null;
+  return (quality || "") + (evalGlyph || "");
 }
 
 /**
