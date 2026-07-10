@@ -130,11 +130,16 @@ export function buildMoveTree(pgnText) {
      a standard start. Falls back to the standard start if the FEN is
      missing or invalid. Mirrors the same logic in pgn-player.js. */
   var hasFEN = !!headers.FEN && headers.SetUp !== "0";
-  if (!hasFEN || !chess.load(headers.FEN)) {
+  var fenLoaded = hasFEN && chess.load(headers.FEN);
+  if (!fenLoaded) {
     chess.reset();
   }
 
-  var root = { next: null, fen: chess.fen() };
+  /* A genuine SetUp/FEN start (as opposed to the standard starting
+     position) always gets an opening diagram, regardless of whether a
+     [D]/[P] marker is also present — readers can't otherwise tell the
+     game doesn't start from the normal array. */
+  var root = { next: null, fen: chess.fen(), hasDiagram: !!fenLoaded };
   parseSequence(tokens, chess, root, pgnText);
   if (root.preComments && root.next) {
     root.next.preComments = root.preComments;
