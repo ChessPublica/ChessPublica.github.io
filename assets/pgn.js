@@ -20,7 +20,6 @@ import {
 } from "./helpers.js";
 import { lucideIconUrl } from "./icons.js";
 import { createBoard } from "./board.js";
-import { createPuzzleFromNode } from "./puzzle.js";
 
 /* ================================================================
    1. PGN TOKENIZER
@@ -140,12 +139,6 @@ export function buildMoveTree(pgnText) {
   if (root.preComments && root.next) {
     root.next.preComments = root.preComments;
   }
-  if (root.prePuzzlePlies && root.next) {
-    /* [P] marker before the first move — the puzzle starts from the
-       game's starting position (root.fen/root.next chain), which is
-       exactly the { fen, next } shape createPuzzleFromNode() expects. */
-    root.next.prePuzzle = { node: root, plies: root.prePuzzlePlies };
-  }
   return root.next;
 }
 
@@ -214,16 +207,15 @@ function parseSequence(tokens, chess, parentNode, originalPgn) {
       if (lastMoveNode) {
         processComment(token.value, lastMoveNode, current, parentNode, chess, originalPgn);
       } else {
-        /* Comment before the very first move — e.g. a [P] puzzle marker
-           attached to a FEN-header start, or intro prose before move 1. */
+        /* Comment before the very first move — e.g. a [P]/[Pn] marker
+           attached to a FEN-header start, or intro prose before move 1.
+           [P] is treated the same as [D] here: stripped from the text,
+           no diagram (matching [D]'s existing behavior in this spot). */
         var puzzleMarker = extractPuzzleMarker(token.value);
         var cleaned = stripCommentAnnotations(puzzleMarker.text);
         if (cleaned.length) {
           if (!parentNode.preComments) parentNode.preComments = [];
           parentNode.preComments.push(cleaned);
-        }
-        if (puzzleMarker.plies) {
-          parentNode.prePuzzlePlies = puzzleMarker.plies;
         }
       }
       i++;
@@ -308,7 +300,8 @@ function processComment(commentText, lastMoveNode, current, parentNode, chess, o
 
   var hasDiagramMarker = /\[D\]/.test(commentText);
 
-  /* [P] / [Pn] puzzle marker (shared with pgn-player.js) — extracted
+  /* [P] / [Pn] puzzle marker — an interactive puzzle in <pgn-player>, but
+     in this static renderer it's just a diagram, same as [D]. Extracted
      before stripCommentAnnotations() since it's not part of the [%…]
      family that helper already strips. */
   var puzzleMarker = extractPuzzleMarker(commentText);
@@ -319,17 +312,12 @@ function processComment(commentText, lastMoveNode, current, parentNode, chess, o
      "(Grob's Attack)" are preserved. */
   var cleaned = stripCommentAnnotations(puzzleMarker.text);
 
-  /* Push parts in PGN order: diagram first, then text, then puzzle
-     (the marker typically closes out the prompting sentence, so the
-     interactive board reads naturally as following the setup text). */
-  if (hasDiagramMarker || hadArrows || hadSquareMarks) {
+  /* Push parts in PGN order: diagram first, then text. */
+  if (hasDiagramMarker || hadArrows || hadSquareMarks || puzzleMarker.plies) {
     lastMoveNode.parts.push({ type: "diagram" });
   }
   if (cleaned.length) {
     lastMoveNode.parts.push({ type: "text", value: cleaned });
-  }
-  if (puzzleMarker.plies) {
-    lastMoveNode.parts.push({ type: "puzzle", plies: puzzleMarker.plies });
   }
 }
 
@@ -453,54 +441,20 @@ export function renderMoveTree(rootNode, container, headers) {
     }
   }
 
-  var lineStart = rootNode;
-  var lineParent = movesDiv;
-  if (rootNode.prePuzzle) {
-    lineParent = attachPuzzleAndHideRest(
-      movesDiv,
-      rootNode.prePuzzle.node,
-      rootNode.prePuzzle.plies,
-    );
-    var skip = rootNode.prePuzzle.plies;
-    while (skip > 0 && lineStart) {
-      lineStart = lineStart.next;
-      skip--;
-    }
-  }
-
-  if (lineStart) {
-    lineParent = renderLine(lineStart, lineParent, false);
-  }
+  renderLine(rootNode, movesDiv, false);
 
   /* Append the game result (1-0 / 0-1 / ½-½) inline at the end of
-     the main line. Skip "*" (ongoing) and missing values. Goes into
-     the same (possibly puzzle-hidden) parent as the move text above. */
+     the main line. Skip "*" (ongoing) and missing values. */
   var rawResult = headers && headers.Result;
   if (rawResult && rawResult !== "*") {
     var label = rawResult === "1/2-1/2" ? "½-½" : rawResult;
     var resultP = document.createElement("p");
     resultP.className = "pgn-mainline pgn-result";
     resultP.textContent = label;
-    lineParent.appendChild(resultP);
+    movesDiv.appendChild(resultP);
   }
 
   container.appendChild(movesDiv);
-}
-
-/* Build an interactive puzzle from `node`/`plies` inside `parent`, then
-   append a wrapper div that holds everything that would render after it
-   (remaining moves, comments, the result, …) and keep that wrapper
-   hidden until the puzzle is solved. Returns the wrapper so callers can
-   redirect subsequent appends into it — the puzzle's answer, and the
-   rest of the article, stay spoiler-free until solved. */
-function attachPuzzleAndHideRest(parent, node, plies) {
-  var rest = document.createElement("div");
-  rest.className = "pgn-after-puzzle cp-hidden";
-  createPuzzleFromNode(parent, node, plies, function () {
-    rest.classList.remove("cp-hidden");
-  });
-  parent.appendChild(rest);
-  return rest;
 }
 
 function renderNAG(nags) {
@@ -517,12 +471,6 @@ function renderLine(node, parent, isVariation) {
   var needsMoveNumber = true;
 
   while (current) {
-    /* Set by a "puzzle" part below — the number of already-parsed nodes
-       ahead that the puzzle widget covers, so their SAN doesn't also get
-       printed as plain text (that would spoil the puzzle right next to
-       it). Reset each iteration; consumed at the bottom of the loop. */
-    var skipAhead = 0;
-
     var newMoveNumber = current.moveNumber !== lastMoveNumber;
 
     /* MOVE NUMBER */
@@ -576,15 +524,6 @@ function renderLine(node, parent, isVariation) {
           buffer = "";
           createBoard(parent, current.fen, current);
           needsMoveNumber = true;
-        } else if (part.type === "puzzle" && !isVariation) {
-          /* Not supported inside variations — a variation line is built
-             as inline text in one buffer, with no room for a block-level
-             widget. The marker is silently ignored there. */
-          flushBuffer(parent, buffer, isVariation);
-          buffer = "";
-          parent = attachPuzzleAndHideRest(parent, current, part.plies);
-          needsMoveNumber = true;
-          skipAhead = part.plies;
         }
       }
     }
@@ -604,19 +543,10 @@ function renderLine(node, parent, isVariation) {
       needsMoveNumber = true;
     }
 
-    while (skipAhead > 0 && current.next) {
-      current = current.next;
-      skipAhead--;
-    }
     current = current.next;
   }
 
   flushBuffer(parent, buffer, isVariation);
-  /* A mid-line puzzle part reassigns `parent` to a new hidden wrapper for
-     everything after it — return the final target so callers appending
-     content after this line (e.g. the game result) land in the same
-     place, staying spoiler-free until that puzzle is solved. */
-  return parent;
 }
 
 function flushBuffer(parent, text, isVariation) {

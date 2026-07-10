@@ -5,7 +5,7 @@
  *   1. Puzzle Engine     — renderLocalPuzzle() (interactive drag-and-drop)
  */
 
-import { PIECE_THEME, normalizeSAN, parseGame, toFigurine, formatComment, formatCommentClickable, getDestinationSquare, renderMoveQualityBadge, clearMoveQualityBadge, nagsToGlyph } from "./helpers.js";
+import { PIECE_THEME, normalizeSAN, parseGame, toFigurine, formatComment, formatCommentClickable, getDestinationSquare, renderMoveQualityBadge, clearMoveQualityBadge } from "./helpers.js";
 import { lucideIconUrl } from "./icons.js";
 import { renderAnnotations, clearAnnotations, makeBoardResizable } from "./board.js";
 
@@ -638,73 +638,6 @@ export function createPuzzle(el, cfg) {
       squareMarks: parsed.squareMarks || [],
       captionEl: cfg.captionEl || null,
       initialCaption: cfg.initialCaption || "",
-    },
-  );
-}
-
-/**
- * Build an interactive puzzle widget from a pgn.js move-tree node,
- * covering the `plies` moves starting at node.next. Used by <pgn>'s
- * static renderer for its own [P] / [Pn] support: the marked node's FEN
- * (position right after that move) becomes the puzzle's start, and the
- * following `plies` nodes supply the solution + their own comments,
- * glyphs, and [%cal]/[%csl] annotations — all already parsed onto each
- * node by pgn.js, so this just walks the chain and threads them into
- * renderLocalPuzzle() the same way createPuzzle() does for <puzzle>.
- *
- * Side-line variations attached to the covered nodes are intentionally
- * not surfaced inside the puzzle (matching <pgn-player>'s [P] scope) —
- * they stay attached to the node but the puzzle only exposes the main
- * solution line.
- *
- * @param {Function} [onSolved] optional callback fired once the puzzle's
- *   solution line has been fully played out.
- */
-export function createPuzzleFromNode(container, node, plies, onSolved) {
-  var wrapper = document.createElement("div");
-  wrapper.className = "cp-puzzle";
-  container.appendChild(wrapper);
-
-  var boardHost = document.createElement("div");
-  boardHost.className = "cp-puzzle-board";
-  wrapper.appendChild(boardHost);
-
-  var cap = document.createElement("div");
-  cap.className = "fen-caption";
-  wrapper.appendChild(cap);
-
-  var moves = [], comments = [], glyphs = [], arrows = [], squareMarks = [];
-
-  var walker = node.next;
-  for (var k = 0; k < plies && walker; k++) {
-    moves.push(walker.san);
-    glyphs.push(nagsToGlyph(walker.nags));
-    arrows.push(walker.arrows || []);
-    squareMarks.push(walker.squareMarks || []);
-
-    var textParts = (walker.parts || []).filter(function (p) { return p.type === "text"; });
-    comments.push(textParts.map(function (p) { return p.value; }).join(" "));
-
-    walker = walker.next;
-  }
-
-  renderLocalPuzzle(
-    boardHost,
-    node.fen,
-    moves,
-    false,
-    false,
-    onSolved || null,
-    null,
-    null,
-    false,
-    {
-      comments: comments,
-      glyphs: glyphs,
-      arrows: arrows,
-      squareMarks: squareMarks,
-      captionEl: cap,
-      initialCaption: "",
     },
   );
 }
