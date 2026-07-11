@@ -66,17 +66,36 @@ function initCustomElements(selector, wrapperClass, renderFn, opts) {
     var src = el.getAttribute("src");
 
     if (src) {
-      fetchText(src)
-        .then(function (text) {
-          try {
-            renderFn(text, wrapper);
-          } catch (e) {
-            showError(wrapper, "failed to render <" + selector + "> from " + src + ": " + e.message);
+      var loadFromSrc = function () {
+        fetchText(src)
+          .then(function (text) {
+            try {
+              renderFn(text, wrapper);
+            } catch (e) {
+              showError(wrapper, "failed to render <" + selector + "> from " + src + ": " + e.message);
+            }
+          })
+          .catch(function (e) {
+            showError(wrapper, "failed to load " + src + ": " + e.message);
+          });
+      };
+
+      /* Defer the network fetch until the element is about to scroll into
+         view — mirrors <pgn-player>'s own preload gate (see
+         pgn-player.js's connectedCallback) so a page embedding many
+         <pgn>/<puzzle> elements doesn't fire every fetch at once on load,
+         and instead loads top-to-bottom as the reader scrolls down. */
+      if (typeof IntersectionObserver !== "undefined") {
+        var preloadIo = new IntersectionObserver(function (entries) {
+          if (entries[0].isIntersecting) {
+            preloadIo.disconnect();
+            loadFromSrc();
           }
-        })
-        .catch(function (e) {
-          showError(wrapper, "failed to load " + src + ": " + e.message);
-        });
+        }, { rootMargin: "600px" });
+        preloadIo.observe(wrapper);
+      } else {
+        loadFromSrc();
+      }
     } else {
       var text = inlineRaw.trim();
       if (!text) {
@@ -376,12 +395,28 @@ export function initPuzzleElements() {
 
     var src = oldEl.getAttribute("src");
     if (src) {
-      fetchText(src)
-        .then(function (text) { renderPuzzleFromText(text, wrapper, markReady); })
-        .catch(function (e) {
-          showError(wrapper, "failed to load puzzle from " + src + ": " + e.message);
-          markReady.fail(e);
-        });
+      var loadFromSrc = function () {
+        fetchText(src)
+          .then(function (text) { renderPuzzleFromText(text, wrapper, markReady); })
+          .catch(function (e) {
+            showError(wrapper, "failed to load puzzle from " + src + ": " + e.message);
+            markReady.fail(e);
+          });
+      };
+
+      /* Defer until about to scroll into view — see the matching comment
+         in initCustomElements() above (<pgn>'s loader). */
+      if (typeof IntersectionObserver !== "undefined") {
+        var preloadIo = new IntersectionObserver(function (entries) {
+          if (entries[0].isIntersecting) {
+            preloadIo.disconnect();
+            loadFromSrc();
+          }
+        }, { rootMargin: "600px" });
+        preloadIo.observe(wrapper);
+      } else {
+        loadFromSrc();
+      }
     } else {
       /* Read innerHTML (not textContent) so inline HTML the author
          put inside comments — <br>, <strong>, Kramdown-produced
