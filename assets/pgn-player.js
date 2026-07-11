@@ -2318,6 +2318,35 @@ function normalizeLichessUrl(src) {
   return src;
 }
 
+/* Cap concurrent lichess PGN fetches across all <pgn-player> instances on
+   the page. Several players can become visible within the same instant
+   (e.g. a fast scroll past a run of games), and firing all of those
+   fetches at once has been observed to make lichess drop the connections
+   outright rather than queue them — which surfaces to fetch() as a plain
+   network/CORS TypeError, not an HTTP error. Serializing fetches through
+   a small shared queue keeps that burst from forming in the first place. */
+const MAX_CONCURRENT_PGN_FETCHES = 2;
+let activePgnFetches = 0;
+const pgnFetchQueue = [];
+
+function runQueuedFetch(task) {
+  return new Promise((resolve, reject) => {
+    const run = () => {
+      activePgnFetches++;
+      task().then(resolve, reject).finally(() => {
+        activePgnFetches--;
+        const next = pgnFetchQueue.shift();
+        if (next) next();
+      });
+    };
+    if (activePgnFetches < MAX_CONCURRENT_PGN_FETCHES) {
+      run();
+    } else {
+      pgnFetchQueue.push(run);
+    }
+  });
+}
+
 class PgnPlayerElement extends HTMLElement {
 
   constructor() {
@@ -2438,28 +2467,65 @@ class PgnPlayerElement extends HTMLElement {
 
     if (pgnSrc) {
       const fetchUrl = normalizeLichessUrl(pgnSrc);
-      const FETCH_TIMEOUT_MS = 20000;
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-      fetch(fetchUrl, { signal: controller.signal })
-        .then(r => {
-          if (!r.ok) throw new Error(`HTTP ${r.status}`);
-          return r.text();
-        })
-        .then(renderFromText)
-        .catch(err => {
-          // fetch() throws TypeError on network/CORS failures — the message
-          // ("Failed to fetch") is unhelpful on its own, so add context.
-          // An aborted fetch (our own timeout) throws a DOMException named
-          // AbortError instead.
-          const msg = (err && err.name === "AbortError")
-            ? `timed out after ${FETCH_TIMEOUT_MS}ms fetching ${fetchUrl}`
-            : (err && err.name === "TypeError")
-              ? `network or CORS error fetching ${fetchUrl}`
-              : err.message;
-          showError(msg);
-        })
-        .finally(() => clearTimeout(timer));
+
+      const loadFromSrc = () => {
+        const FETCH_TIMEOUT_MS = 20000;
+        const RETRY_DELAYS_MS = [1500, 3000]; // two retries after a network/CORS failure
+
+        const attemptFetch = () => runQueuedFetch(() => {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+          return fetch(fetchUrl, { signal: controller.signal })
+            .then(r => {
+              if (!r.ok) throw new Error(`HTTP ${r.status}`);
+              return r.text();
+            })
+            .finally(() => clearTimeout(timer));
+        });
+
+        const tryLoad = (retriesLeft) => {
+          attemptFetch()
+            .then(renderFromText)
+            .catch(err => {
+              // fetch() throws TypeError on network/CORS failures — this is
+              // usually the connection getting dropped in a burst rather than
+              // a permanent CORS misconfiguration, so retry a couple of times
+              // before giving up. An aborted fetch (our own timeout) throws a
+              // DOMException named AbortError instead, which we don't retry.
+              if (err && err.name === "TypeError" && retriesLeft > 0) {
+                const delay = RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - retriesLeft];
+                setTimeout(() => tryLoad(retriesLeft - 1), delay);
+                return;
+              }
+              const msg = (err && err.name === "AbortError")
+                ? `timed out after ${FETCH_TIMEOUT_MS}ms fetching ${fetchUrl}`
+                : (err && err.name === "TypeError")
+                  ? `network or CORS error fetching ${fetchUrl}`
+                  : err.message;
+              showError(msg);
+            });
+        };
+
+        tryLoad(RETRY_DELAYS_MS.length);
+      };
+
+      /* Defer the network fetch until the player is about to scroll into
+         view. Pages that embed many players (e.g. a lesson with dozens of
+         games) otherwise fire all of their fetches at once on load, which
+         can overwhelm lichess's rate limits and cause unrelated players to
+         time out — loading only what the reader is about to see avoids
+         that pile-up. */
+      if (typeof IntersectionObserver !== "undefined") {
+        const preloadIo = new IntersectionObserver((entries) => {
+          if (entries[0].isIntersecting) {
+            preloadIo.disconnect();
+            loadFromSrc();
+          }
+        }, { rootMargin: "600px" });
+        preloadIo.observe(this);
+      } else {
+        loadFromSrc();
+      }
     } else if (inlineText) {
       try {
         renderFromText(inlineText);
