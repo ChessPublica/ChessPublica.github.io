@@ -234,6 +234,7 @@ function loadPGN(pgn) {
         commentsByMove: [], // comment text per move index — sparse, parallel to moves
         children:   [],
         nagsByMove: [], // raw NAG tokens per variation move — combined into glyphs at render time
+        puzzles:    [], // [P]/[Pn] markers per move index — sparse, parallel to moves
         /* Approximate branch position — the main line's current FEN when
            this variation starts. A comment-embedded PGN reference line
            inside this variation's comments always branches from here
@@ -316,6 +317,9 @@ function loadPGN(pgn) {
         if (cal.length || csl.length) {
           if (!currentVar.moveAnnotations) currentVar.moveAnnotations = [];
           currentVar.moveAnnotations[mi] = { cal, csl };
+        }
+        if (puzzlePlies) {
+          currentVar.puzzles[mi] = { plies: puzzlePlies };
         }
       } else {
         /* moveIndex is -1 for a comment before the very first main-line
@@ -554,6 +558,15 @@ function loadPGN(pgn) {
 
     // Don't hijack keys while the user is typing in a form control
     if (isTypingTarget(e.target)) return;
+
+    /* Solving an unsolved puzzle (mainline or inside a variation) is the
+       only way to advance past it — bail before any nav path runs.
+       goTo() has its own version of this guard, but the variation
+       exit-to-mainline branches below call exitVariation() (which tears
+       down the variation state a variation puzzle depends on) before
+       goTo() ever gets a chance to no-op, so the guard has to live here
+       too. */
+    if (engine.puzzle && engine.puzzle.active) return;
 
     // Only handle arrow keys if the player is visible in the viewport
     const rect = engine.container.getBoundingClientRect();
@@ -981,11 +994,12 @@ class PuzzleMode {
     this.engine        = engine;
     this.active         = false;
     this.chess          = null;
-    this.startIndex     = null; // 0-based moveIndex the [P] marker is attached to
+    this.startIndex     = null; // 0-based moveIndex (mainline) or variation-move index the [P] marker is attached to
     this.plies          = 0;
     this.solvedCount    = 0;
     this.expected       = [];   // SAN moves the reader/auto-reply must play, in order
-    this.solvedIndices  = new Set(); // startIndex values already solved this session
+    this.marker         = null; // the puzzle marker object currently being solved — flagged .solved on completion
+    this._ctx           = null; // source of fens/moves: mainline state or an active variation
     this.selectedSquare = null; // click-to-move: square holding the picked-up piece, if any
   }
 
@@ -993,32 +1007,71 @@ class PuzzleMode {
   handleArrival(moveIndex) {
     const marker = this.engine.state.puzzles && this.engine.state.puzzles[moveIndex];
 
-    if (!marker || this.solvedIndices.has(moveIndex)) {
+    if (!marker || marker.solved) {
       if (this.active) this._deactivate();
       return;
     }
 
-    if (this.active && this.startIndex === moveIndex) return; // already solving this one
+    if (this.active && !this._ctx.isVariation && this.startIndex === moveIndex) return; // already solving this one
 
-    this._activate(moveIndex, marker.plies);
+    const engine = this.engine;
+    this._activate(moveIndex, marker, {
+      isVariation: false,
+      fens: () => engine.state.cache,
+      moves: () => engine.state.moves,
+    });
   }
 
-  _activate(moveIndex, plies) {
+  /* Called after entering/moving within a variation (var-move click and
+     ArrowLeft/ArrowRight variation nav) — mirrors handleArrival() above but
+     reads the marker/FENs/SAN moves from the variation instead of the
+     mainline state. varIndex is the 0-based index into variation.moves the
+     marker is attached to, fens/verbose are the variation's own FEN and
+     move-detail arrays (varFENs/varVerbose), built fresh each render. */
+  handleVariationArrival(varIndex, variation, fens, verbose) {
+    const marker = variation.puzzles && variation.puzzles[varIndex];
+
+    if (!marker || marker.solved) {
+      if (this.active) this._deactivate();
+      return;
+    }
+
+    if (this.active && this._ctx.isVariation && this.startIndex === varIndex && this._ctx.variation === variation) return;
+
+    this._activate(varIndex, marker, {
+      isVariation: true,
+      variation,
+      fens: () => fens,
+      moves: () => variation.moves,
+      verbose,
+      moveAnnotations: variation.moveAnnotations,
+    });
+  }
+
+  _activate(startIndex, marker, ctx) {
     const engine = this.engine;
 
     this.active      = true;
-    this.startIndex  = moveIndex;
-    this.plies       = plies;
+    this.startIndex  = startIndex;
+    this.marker      = marker;
+    this.plies       = marker.plies;
     this.solvedCount = 0;
-    this.chess       = new Chess(engine.state.cache[moveIndex + 1]);
-    this.expected    = engine.state.moves.slice(moveIndex + 1, moveIndex + 1 + plies);
+    this._ctx        = ctx;
+    const fens       = ctx.fens();
+    const moves      = ctx.moves();
+    this.chess       = new Chess(fens[startIndex + 1]);
+    this.expected    = moves.slice(startIndex + 1, startIndex + 1 + this.plies);
 
     /* Stop the autoplay loop outright — a bare [P] with no prose comment
        leaves state.comments[moveIndex] empty, so the usual
        hasComment-triggered pause() never fires and _loopRAF() would
-       otherwise keep advancing the game out from under the puzzle. */
-    engine.state.playing = false;
-    engine.container.classList.add("paused");
+       otherwise keep advancing the game out from under the puzzle. Only
+       relevant to the mainline autoplay loop — variation nav never
+       autoplays. */
+    if (!ctx.isVariation) {
+      engine.state.playing = false;
+      engine.container.classList.add("paused");
+    }
 
     engine._puzzleActive = true;
     engine.container.classList.add("puzzle-active");
@@ -1044,6 +1097,8 @@ class PuzzleMode {
     this.startIndex  = null;
     this.chess       = null;
     this.expected    = [];
+    this.marker      = null;
+    this._ctx        = null;
     this.engine._puzzleActive = false;
     this.engine.container.classList.remove("puzzle-active");
     if (this.engine.hintText) this.engine.hintText.textContent = "";
@@ -1181,6 +1236,24 @@ class PuzzleMode {
      races a stale arrow paint. */
   _renderPly(idx) {
     const engine = this.engine;
+    const ctx    = this._ctx;
+
+    if (ctx.isVariation) {
+      const fen  = ctx.fens()[idx + 1];
+      const move = ctx.verbose[idx] || null;
+      const ann  = ctx.moveAnnotations ? ctx.moveAnnotations[idx] : null;
+      engine.showVariationPosition(fen, ann, move);
+      if (engine._variation) {
+        engine._variation.index = idx + 1;
+        const spans = engine._variation.contentEl
+          ? engine._variation.contentEl.querySelectorAll(".var-move")
+          : [];
+        spans.forEach(s => s.classList.remove("active"));
+        if (idx >= 0 && idx < spans.length) spans[idx].classList.add("active");
+      }
+      return;
+    }
+
     engine.board.position(engine.state.cache[idx + 1], true);
     engine._drawLastMoveArrow(idx);
     engine.renderAnnotations(idx);
@@ -1207,11 +1280,14 @@ class PuzzleMode {
     }
 
     /* Auto-play the opponent's forced reply, then wait for the next
-       solver move — mirrors autoReply() in puzzle.js. */
+       solver move — mirrors autoReply() in puzzle.js. The reply is just
+       the next entry in `expected` (already sourced from the right game/
+       variation moves in _activate), so no separate mainline-only lookup
+       is needed here. */
     setTimeout(() => {
       if (!this.active) return; // torn down (nav away) while waiting
       const replyIdx = this.startIndex + 1 + this.solvedCount;
-      this.chess.move(this.engine.state.moves[replyIdx], { sloppy: true });
+      this.chess.move(this.expected[this.solvedCount], { sloppy: true });
       this.solvedCount++;
       this._renderPly(replyIdx);
       if (this.solvedCount >= this.plies) this._finish();
@@ -1219,12 +1295,29 @@ class PuzzleMode {
   }
 
   _finish() {
-    const engine = this.engine;
+    const engine    = this.engine;
     const startIndex = this.startIndex;
-    const plies = this.plies;
+    const plies      = this.plies;
+    const ctx        = this._ctx;
 
-    this.solvedIndices.add(startIndex);
+    this.marker.solved = true;
     this._deactivate();
+
+    if (ctx.isVariation) {
+      /* Resume normal (manual) variation navigation right where solving
+         left off — variations never autoplay, unlike the mainline below.
+         variationGoTo() doesn't clamp its index (nothing needed to before
+         a puzzle could land the solver exactly at the variation's last
+         move), so only call it while the target index is still in range;
+         otherwise the last solved ply — already on the board via
+         _advance()'s final _renderPly() — is exactly where solving should
+         leave the reader. */
+      const resumeIndex = startIndex + 1 + plies;
+      if (engine._variation && resumeIndex < ctx.fens().length) {
+        engine.variationGoTo(resumeIndex);
+      }
+      return;
+    }
 
     /* Auto-resume: play() advances state.index by 1 itself, so pre-set it
        to the position we're already showing (right after the last solved
@@ -1353,11 +1446,16 @@ class VideoComment {
           const targetFEN = varFENs[mi + 1];
 
           moveSpan.onclick = () => {
+            /* Don't let clicking elsewhere abandon an unsolved puzzle —
+               mirrors goTo()'s own guard for mainline navigation. */
+            if (this.engine.puzzle && this.engine.puzzle.active) return;
+
             content.querySelectorAll(".var-move").forEach(s => s.classList.remove("active"));
             moveSpan.classList.add("active");
             const ann = variation.moveAnnotations?.[mi];
-            this.engine.enterVariation(varFENs, variation.moveAnnotations, mi + 1, content, varVerbose);
+            this.engine.enterVariation(varFENs, variation.moveAnnotations, mi + 1, content, varVerbose, variation);
             this.engine.showVariationPosition(targetFEN, ann, varVerbose[mi]);
+            if (this.engine.puzzle) this.engine.puzzle.handleVariationArrival(mi, variation, varFENs, varVerbose);
           };
 
           content.appendChild(moveSpan);
@@ -1716,14 +1814,15 @@ class VideoEngine {
      VARIATION NAVIGATION
   =========================== */
 
-  enterVariation(fens, moveAnnotations, index, contentEl, verbose) {
+  enterVariation(fens, moveAnnotations, index, contentEl, verbose, variationObj) {
     this._variation = {
       fens,
       moveAnnotations: moveAnnotations || [],
       verbose: verbose || [],
       index,
       mainStateIndex: this.state.index,
-      contentEl
+      contentEl,
+      variationObj: variationObj || null, // parsed { moves, puzzles, ... } — needed to look up [P] markers
     };
   }
 
@@ -1736,6 +1835,10 @@ class VideoEngine {
   }
 
   variationGoTo(index) {
+    /* Solving is the only way to advance past an unsolved variation puzzle
+       — mirrors goTo()'s own guard for the mainline. */
+    if (this.puzzle && this.puzzle.active) return;
+
     this._variation.index = index;
     const fen = this._variation.fens[index];
     const ann = this._variation.moveAnnotations?.[index - 1];
@@ -1749,6 +1852,10 @@ class VideoEngine {
       if (index > 0 && index - 1 < spans.length) {
         spans[index - 1].classList.add("active");
       }
+    }
+
+    if (this.puzzle && this._variation.variationObj) {
+      this.puzzle.handleVariationArrival(index - 1, this._variation.variationObj, this._variation.fens, this._variation.verbose);
     }
   }
 
