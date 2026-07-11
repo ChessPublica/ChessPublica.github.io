@@ -2343,7 +2343,9 @@ class PgnPlayerElement extends HTMLElement {
        their --icon CSS custom property after insertion — keeps the icon
        data URIs (~7 KB) out of every rendered HTML string. */
     wrapper.innerHTML = `
-      <div class="video-title"></div>
+      <div class="video-title">
+        <span class="video-title-emoji lucide-icon" data-lucide="swords"></span>
+      </div>
 
       <div class="player-container">
         <div class="board-toolbar">
