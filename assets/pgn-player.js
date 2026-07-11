@@ -2438,28 +2438,49 @@ class PgnPlayerElement extends HTMLElement {
 
     if (pgnSrc) {
       const fetchUrl = normalizeLichessUrl(pgnSrc);
-      const FETCH_TIMEOUT_MS = 20000;
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-      fetch(fetchUrl, { signal: controller.signal })
-        .then(r => {
-          if (!r.ok) throw new Error(`HTTP ${r.status}`);
-          return r.text();
-        })
-        .then(renderFromText)
-        .catch(err => {
-          // fetch() throws TypeError on network/CORS failures — the message
-          // ("Failed to fetch") is unhelpful on its own, so add context.
-          // An aborted fetch (our own timeout) throws a DOMException named
-          // AbortError instead.
-          const msg = (err && err.name === "AbortError")
-            ? `timed out after ${FETCH_TIMEOUT_MS}ms fetching ${fetchUrl}`
-            : (err && err.name === "TypeError")
-              ? `network or CORS error fetching ${fetchUrl}`
-              : err.message;
-          showError(msg);
-        })
-        .finally(() => clearTimeout(timer));
+
+      const loadFromSrc = () => {
+        const FETCH_TIMEOUT_MS = 20000;
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+        fetch(fetchUrl, { signal: controller.signal })
+          .then(r => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.text();
+          })
+          .then(renderFromText)
+          .catch(err => {
+            // fetch() throws TypeError on network/CORS failures — the message
+            // ("Failed to fetch") is unhelpful on its own, so add context.
+            // An aborted fetch (our own timeout) throws a DOMException named
+            // AbortError instead.
+            const msg = (err && err.name === "AbortError")
+              ? `timed out after ${FETCH_TIMEOUT_MS}ms fetching ${fetchUrl}`
+              : (err && err.name === "TypeError")
+                ? `network or CORS error fetching ${fetchUrl}`
+                : err.message;
+            showError(msg);
+          })
+          .finally(() => clearTimeout(timer));
+      };
+
+      /* Defer the network fetch until the player is about to scroll into
+         view. Pages that embed many players (e.g. a lesson with dozens of
+         games) otherwise fire all of their fetches at once on load, which
+         can overwhelm lichess's rate limits and cause unrelated players to
+         time out — loading only what the reader is about to see avoids
+         that pile-up. */
+      if (typeof IntersectionObserver !== "undefined") {
+        const preloadIo = new IntersectionObserver((entries) => {
+          if (entries[0].isIntersecting) {
+            preloadIo.disconnect();
+            loadFromSrc();
+          }
+        }, { rootMargin: "600px" });
+        preloadIo.observe(this);
+      } else {
+        loadFromSrc();
+      }
     } else if (inlineText) {
       try {
         renderFromText(inlineText);
