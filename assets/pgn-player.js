@@ -131,7 +131,24 @@ function loadPGN(pgn) {
       let j = i;
       while (j < src.length && !/\s|\{|\}|\(|\)/.test(src[j])) j++;
 
-      tokens.push({ type: "text", value: src.slice(i, j) });
+      const raw = src.slice(i, j);
+
+      /* A move number glued directly to the move that follows it (e.g.
+         "3.exd5", "12.Bxc6" — common in human-authored PGNs that omit the
+         space after the period) scans as a single whitespace-delimited
+         chunk. isMoveNumber() below tests only the *prefix* of a token, so
+         without splitting here the whole chunk — including the move —
+         gets classified as a move number and silently dropped. pgn.js's
+         tokenizer never hits this: it consumes just the "\d+\." prefix
+         and re-scans from there, so the move becomes its own token.
+         Mirror that here by splitting the prefix off. */
+      const numMatch = raw.match(/^\d+(\.\.\.?)?\./);
+      if (numMatch && numMatch[0].length < raw.length) {
+        tokens.push({ type: "text", value: numMatch[0] });
+        tokens.push({ type: "text", value: raw.slice(numMatch[0].length) });
+      } else {
+        tokens.push({ type: "text", value: raw });
+      }
       i = j;
     }
 
