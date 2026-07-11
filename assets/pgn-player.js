@@ -7,7 +7,7 @@ import {
   nagsToGlyph,
   stripCommentAnnotations,
   toFigurine,
-  applyFigurineNotation,
+  formatComment,
   createReadyGate,
   normalizeSAN,
   extractPuzzleMarker,
@@ -20,15 +20,6 @@ import {
   createGridOverlaySVG,
   getSquareCenter,
 } from "./board.js";
-
-/* Convert SAN piece-move tokens in a plain-text comment to figurine
-   notation. The comment text is rendered via textContent so it carries
-   no real HTML tags; the helper's tag-aware regex still works because
-   the tag-matching alternative simply finds nothing to skip and the
-   piece-move alternative does the substitution. */
-function figurineComment(text) {
-  return applyFigurineNotation(text);
-}
 
 /* Skip global keyboard shortcuts while the user is editing a form field,
    otherwise Space / arrow keys would be swallowed instead of typed. */
@@ -1389,8 +1380,12 @@ class VideoComment {
       textBlock.className = "comment-text-block";
 
       const body = document.createElement("span");
-      body.className   = "comment-body";
-      body.textContent = figurineComment(comment);
+      body.className = "comment-body";
+      /* formatComment() returns sanitized HTML (markdown + figurine
+         notation already applied) — matches how <pgn> and <puzzle> render
+         comments, instead of printing raw markdown emphasis characters
+         as literal text. */
+      body.innerHTML = formatComment(comment);
       textBlock.appendChild(body);
 
       div.appendChild(icon);
@@ -1523,7 +1518,7 @@ class VideoComment {
             vcom.dataset.forMi = String(mi);
 
             const vbody = document.createElement("span");
-            vbody.textContent = figurineComment(moveComment);
+            vbody.innerHTML = formatComment(moveComment);
 
             vcom.appendChild(vbody);
             if (hidden) vcom.style.display = "none";
