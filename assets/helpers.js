@@ -177,31 +177,87 @@ export function clearMoveQualityBadge(boardEl) {
    FETCH HELPER
 ================================================================ */
 
+/* Cap concurrent remote fetches (PGN/puzzle text, mostly from lichess)
+   across every <pgn-player>, <pgn>, and <puzzle> element on the page to
+   one at a time. Lichess appears to strictly enforce a one-request
+   concurrency limit per client — anything beyond that gets its
+   connection dropped or stalled rather than queued, which surfaces here
+   as a network/CORS-style TypeError or a hang that ends in our own
+   timeout, not a clean HTTP error. A single shared, site-wide queue
+   removes that contention entirely rather than just reducing it. */
+var MAX_CONCURRENT_FETCHES = 1;
+var activeFetchCount = 0;
+var fetchQueue = [];
+
+function runQueuedFetch(task) {
+  return new Promise(function (resolve, reject) {
+    function run() {
+      activeFetchCount++;
+      task().then(resolve, reject).finally(function () {
+        activeFetchCount--;
+        var next = fetchQueue.shift();
+        if (next) next();
+      });
+    }
+    if (activeFetchCount < MAX_CONCURRENT_FETCHES) {
+      run();
+    } else {
+      fetchQueue.push(run);
+    }
+  });
+}
+
 /**
  * Fetch a text resource, aborting (and rejecting) if the server hasn't
  * responded within `timeoutMs`. Without this, a request that never
  * completes (host unreachable but not yet refused, etc.) leaves callers
  * — e.g. the <puzzle>/<pgn> readiness gate — waiting forever with no
  * reject path.
+ *
+ * Requests are serialized through a single shared queue (see above) and,
+ * on a network/CORS-style failure, retried a couple of times with a
+ * short backoff before giving up — that failure mode has proven
+ * transient (a request landing while another was still in flight)
+ * rather than a permanent CORS misconfiguration.
+ *
  * Returns a Promise<string>.
  */
 export function fetchText(url, timeoutMs) {
   timeoutMs = timeoutMs || 20000;
-  var controller = new AbortController();
-  var timer = setTimeout(function () { controller.abort(); }, timeoutMs);
+  var RETRY_DELAYS_MS = [1500, 3000];
 
-  return fetch(url, { signal: controller.signal })
-    .then(function (r) {
-      if (!r.ok) throw new Error("HTTP " + r.status);
-      return r.text();
-    })
-    .catch(function (err) {
-      if (err && err.name === "AbortError") {
-        throw new Error("timed out after " + timeoutMs + "ms fetching " + url);
-      }
-      throw err;
-    })
-    .finally(function () { clearTimeout(timer); });
+  function attempt() {
+    return runQueuedFetch(function () {
+      var controller = new AbortController();
+      var timer = setTimeout(function () { controller.abort(); }, timeoutMs);
+      return fetch(url, { signal: controller.signal })
+        .then(function (r) {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          return r.text();
+        })
+        .finally(function () { clearTimeout(timer); });
+    });
+  }
+
+  return new Promise(function (resolve, reject) {
+    function tryLoad(retriesLeft) {
+      attempt().then(resolve, function (err) {
+        if (err && err.name === "TypeError" && retriesLeft > 0) {
+          var delay = RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - retriesLeft];
+          setTimeout(function () { tryLoad(retriesLeft - 1); }, delay);
+          return;
+        }
+        if (err && err.name === "AbortError") {
+          reject(new Error("timed out after " + timeoutMs + "ms fetching " + url));
+        } else if (err && err.name === "TypeError") {
+          reject(new Error("network or CORS error fetching " + url));
+        } else {
+          reject(err);
+        }
+      });
+    }
+    tryLoad(RETRY_DELAYS_MS.length);
+  });
 }
 
 /* ================================================================
