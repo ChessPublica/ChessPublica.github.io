@@ -44,6 +44,34 @@ function isBracketHeaderForm(text) {
 
 /* ── <pgn> ────────────────────────────────────────────────── */
 
+/* Shown in place of a <pgn>'s content while its src is being fetched —
+   mirrors <pgn-player>'s title-icon + spinner loading state (see
+   pgn-player.js) so a page with several <pgn> elements doesn't just show
+   blank space while each one loads. Cleared (wrapper.innerHTML = "")
+   before the real content — or an error — replaces it. */
+function showLoading(wrapper) {
+  var title = document.createElement("div");
+  title.className = "video-title pgn-title";
+
+  var emojiSpan = document.createElement("span");
+  emojiSpan.className = "video-title-emoji lucide-icon";
+  emojiSpan.style.setProperty("--icon", lucideIconUrl("text-initial"));
+  title.appendChild(emojiSpan);
+
+  wrapper.appendChild(title);
+
+  var line = document.createElement("p");
+  line.className = "pgn-loading-line";
+  wrapper.appendChild(line);
+
+  var spinnerWrap = document.createElement("div");
+  spinnerWrap.className = "pgn-spinner-wrap";
+  var spinner = document.createElement("div");
+  spinner.className = "pgn-spinner";
+  spinnerWrap.appendChild(spinner);
+  wrapper.appendChild(spinnerWrap);
+}
+
 function initCustomElements(selector, wrapperClass, renderFn, opts) {
   var preserveInlineHTML = !!(opts && opts.preserveInlineHTML);
 
@@ -66,10 +94,13 @@ function initCustomElements(selector, wrapperClass, renderFn, opts) {
     var src = el.getAttribute("src");
 
     if (src) {
+      showLoading(wrapper);
+
       var loadFromSrc = function () {
         fetchText(src)
           .then(function (text) {
             try {
+              wrapper.innerHTML = "";
               renderFn(text, wrapper);
             } catch (e) {
               showError(wrapper, "failed to render <" + selector + "> from " + src + ": " + e.message);
