@@ -934,14 +934,25 @@ class GoodMove {
     if (moveIndex < 0 || moveIndex >= moves.length) return;
 
     const glyph = glyphs[moveIndex];
-    if (!glyph) return;
+    if (!lastMove || !lastMove.to) return;
+
+    this._show(glyph, lastMove.to);
+  }
+
+  /* Same badge as render() above, but for a variation move — those aren't
+     indexed into the mainline glyphs/moves/history arrays render() reads
+     from, so the caller (showVariationPosition()) already has the glyph
+     and destination square in hand and passes them straight through. */
+  renderGlyph(glyph, toSquare) {
+    this._clear();
+    this._show(glyph, toSquare);
+  }
+
+  _show(glyph, toSquare) {
+    if (!glyph || !toSquare) return;
 
     const meta = GLYPH_META[glyph];
     if (!meta) return;
-
-    if (!lastMove || !lastMove.to) return;
-
-    const toSquare  = lastMove.to; // e.g. "e4"
 
     // Locate the square DOM element inside the board
     const squareEl = this.boardEl.querySelector(`[data-square="${toSquare}"]`);
@@ -1239,10 +1250,11 @@ class PuzzleMode {
     const ctx    = this._ctx;
 
     if (ctx.isVariation) {
-      const fen  = ctx.fens()[idx + 1];
-      const move = ctx.verbose[idx] || null;
-      const ann  = ctx.moveAnnotations ? ctx.moveAnnotations[idx] : null;
-      engine.showVariationPosition(fen, ann, move);
+      const fen   = ctx.fens()[idx + 1];
+      const move  = ctx.verbose[idx] || null;
+      const ann   = ctx.moveAnnotations ? ctx.moveAnnotations[idx] : null;
+      const glyph = ctx.variation ? nagsToGlyph(ctx.variation.nagsByMove[idx]) : null;
+      engine.showVariationPosition(fen, ann, move, glyph);
       if (engine._variation) {
         engine._variation.index = idx + 1;
         const contentEl = engine._variation.contentEl;
@@ -1495,7 +1507,7 @@ class VideoComment {
             moveSpan.classList.add("active");
             const ann = variation.moveAnnotations?.[mi];
             this.engine.enterVariation(varFENs, variation.moveAnnotations, mi + 1, content, varVerbose, variation);
-            this.engine.showVariationPosition(targetFEN, ann, varVerbose[mi]);
+            this.engine.showVariationPosition(targetFEN, ann, varVerbose[mi], varGlyph);
             if (this.engine.puzzle) this.engine.puzzle.handleVariationArrival(mi, variation, varFENs, varVerbose);
           };
 
@@ -1733,7 +1745,10 @@ class VideoEngine {
                 const vi = this._variation.index;
                 const ann = this._variation.moveAnnotations?.[vi - 1];
                 const move = vi > 0 ? this._variation.verbose[vi - 1] : null;
-                this.showVariationPosition(this._variation.fens[vi], ann, move);
+                const glyph = vi > 0 && this._variation.variationObj
+                  ? nagsToGlyph(this._variation.variationObj.nagsByMove[vi - 1])
+                  : null;
+                this.showVariationPosition(this._variation.fens[vi], ann, move, glyph);
               } else {
                 const moveIdx = this.state.index - 1;
                 this._drawLastMoveArrow(moveIdx);
@@ -1883,10 +1898,13 @@ class VideoEngine {
     if (this.puzzle && this.puzzle.active) return;
 
     this._variation.index = index;
-    const fen = this._variation.fens[index];
-    const ann = this._variation.moveAnnotations?.[index - 1];
-    const move = index > 0 ? this._variation.verbose[index - 1] : null;
-    this.showVariationPosition(fen, ann, move);
+    const fen   = this._variation.fens[index];
+    const ann   = this._variation.moveAnnotations?.[index - 1];
+    const move  = index > 0 ? this._variation.verbose[index - 1] : null;
+    const glyph = index > 0 && this._variation.variationObj
+      ? nagsToGlyph(this._variation.variationObj.nagsByMove[index - 1])
+      : null;
+    this.showVariationPosition(fen, ann, move, glyph);
 
     // Update active highlighting on variation move spans
     if (this._variation.contentEl) {
@@ -1904,10 +1922,14 @@ class VideoEngine {
 
 
   /* FIX 3 ── clear last-move arrow when showing a variation position */
-  showVariationPosition(fen, ann, move) {
+  showVariationPosition(fen, ann, move, glyph) {
     this._clearLastMoveArrow();
     this.board.position(fen, true);
-    if (this.goodMove) this.goodMove._clear();
+    /* Quality-glyph badge (!, ??, …) for the variation move, mirroring
+       goTo()'s GoodMove.render() for the mainline — renderGlyph() clears
+       any existing badge itself, so a move with no glyph correctly ends
+       up with none, same as before this was wired up. */
+    if (this.goodMove) this.goodMove.renderGlyph(glyph, move && move.to);
 
     /* Draw last-move arrow for the variation move */
     if (move && move.from && move.to) {
