@@ -2366,6 +2366,9 @@ class PgnPlayerElement extends HTMLElement {
 
         <div class="board-wrap">
           <div class="board"></div>
+          <div class="board-loading">
+            <div class="board-spinner"></div>
+          </div>
           <div class="play" aria-label="Play">
             <span class="lucide-icon" data-lucide="play"></span>
           </div>
@@ -2417,8 +2420,16 @@ class PgnPlayerElement extends HTMLElement {
       engine._observers.push(io);
     }
 
+    /* Covers the board (which chessboard.js has already painted with the
+       default starting position, above) with a spinner until the PGN is
+       fetched and parsed — otherwise the reader briefly sees a "game" that
+       isn't the one being loaded. Cleared on both success and failure. */
+    const loadingEl = wrapper.querySelector(".board-loading");
+    const hideLoading = () => { if (loadingEl) loadingEl.classList.add("hidden"); };
+
     const showError = (msg) => {
       console.error("PGN load error:", msg);
+      hideLoading();
       const titleEl = wrapper.querySelector(".video-title");
       if (titleEl) {
         titleEl.textContent = `⚠️ Could not load game: ${msg}`;
@@ -2432,6 +2443,7 @@ class PgnPlayerElement extends HTMLElement {
         throw new Error("No moves found in PGN");
       }
       engine.load(data, pgnText);
+      hideLoading();
       this._markReady({ engine });
     };
 
