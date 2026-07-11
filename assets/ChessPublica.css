@@ -391,7 +391,16 @@ pgn-player {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #b58863;
+  /* Empty 8x8 checkerboard (same light/dark squares as the real board —
+     see .chessboard-63f37 above) dimmed under a flat scrim, rather than a
+     solid color block, so it reads as "this board, not loaded yet"
+     instead of an opaque placeholder. The conic-gradient paints one 2x2
+     checker tile; background-size repeats it 4x4 times to fill all 8x8
+     squares, so it stays correct at any board size. */
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2)),
+    conic-gradient(#b58863 90deg, #f0d9b5 90deg 180deg, #b58863 180deg 270deg, #f0d9b5 270deg);
+  background-size: 100% 100%, 25% 25%;
   z-index: 25;
   opacity: 1;
   transition: opacity 0.2s ease;
