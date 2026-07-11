@@ -1245,11 +1245,23 @@ class PuzzleMode {
       engine.showVariationPosition(fen, ann, move);
       if (engine._variation) {
         engine._variation.index = idx + 1;
-        const spans = engine._variation.contentEl
-          ? engine._variation.contentEl.querySelectorAll(".var-move")
-          : [];
+        const contentEl = engine._variation.contentEl;
+        const spans = contentEl ? contentEl.querySelectorAll(".var-move") : [];
         spans.forEach(s => s.classList.remove("active"));
-        if (idx >= 0 && idx < spans.length) spans[idx].classList.add("active");
+        if (idx >= 0 && idx < spans.length) {
+          /* Reveal this ply now that it's actually been played — mirrors
+             VideoMoveList.reveal() for the mainline move list, so the
+             variation's own move text doesn't spoil moves still ahead of
+             where solving has reached. */
+          spans[idx].style.display = "";
+          if (contentEl) {
+            const numSpan = contentEl.querySelector(`.var-move-number[data-for-mi="${idx}"]`);
+            if (numSpan) numSpan.style.display = "";
+            const commentEl = contentEl.querySelector(`.variation-comment[data-for-mi="${idx}"]`);
+            if (commentEl) commentEl.style.display = "";
+          }
+          spans[idx].classList.add("active");
+        }
       }
       return;
     }
@@ -1415,6 +1427,25 @@ class VideoComment {
            needsMoveNumber in pgn.js's renderLine(). */
         let needsRenumber = false;
 
+        /* A [P]/[Pn] marker inside this variation hides every move (and
+           any comment attached to one) from the puzzle's first covered
+           ply onward, exactly like VideoMoveList.build() does for a
+           mainline puzzle — otherwise the whole variation block, printed
+           in full immediately, would print the solution right under the
+           board before the reader ever gets to solve it. A solved marker
+           (marker.solved, set by PuzzleMode._finish()) is excluded so a
+           previously-solved puzzle stays fully revealed across re-renders
+           of this block (e.g. leaving and re-entering the branch move). */
+        const puzzleHideFrom = (() => {
+          const vp = variation.puzzles || [];
+          const idxs = [];
+          vp.forEach((marker, markerMi) => {
+            if (!marker || marker.solved) return;
+            for (let k = 1; k <= marker.plies; k++) idxs.push(markerMi + k);
+          });
+          return idxs.length ? Math.min(...idxs) : Infinity;
+        })();
+
         variation.moves.forEach((san, mi) => {
 
           const isBlackVarMove = branchIsBlack ? (mi % 2 === 0) : (mi % 2 === 1);
@@ -1428,12 +1459,16 @@ class VideoComment {
           const needsNumber = !isBlackVarMove || mi === 0 || needsRenumber;
           needsRenumber = false;
 
+          const hidden = mi >= puzzleHideFrom;
+
           if (needsNumber) {
             const numSpan = document.createElement("span");
             numSpan.className = "var-move-number";
+            numSpan.dataset.forMi = String(mi);
             numSpan.textContent = isBlackVarMove
               ? `${fullNum}…`
               : `${fullNum}.`;
+            if (hidden) numSpan.style.display = "none";
             content.appendChild(numSpan);
           }
 
@@ -1441,7 +1476,9 @@ class VideoComment {
 
           const moveSpan = document.createElement("span");
           moveSpan.className   = "var-move";
+          moveSpan.dataset.mi   = String(mi);
           moveSpan.textContent = toFigurine(san) + varGlyph;
+          if (hidden) moveSpan.style.display = "none";
 
           const targetFEN = varFENs[mi + 1];
 
@@ -1449,6 +1486,10 @@ class VideoComment {
             /* Don't let clicking elsewhere abandon an unsolved puzzle —
                mirrors goTo()'s own guard for mainline navigation. */
             if (this.engine.puzzle && this.engine.puzzle.active) return;
+
+            /* A hidden move belongs to an unsolved puzzle's solution —
+               jumping straight to it would skip solving entirely. */
+            if (moveSpan.style.display === "none") return;
 
             content.querySelectorAll(".var-move").forEach(s => s.classList.remove("active"));
             moveSpan.classList.add("active");
@@ -1467,11 +1508,13 @@ class VideoComment {
           if (moveComment) {
             const vcom = document.createElement("div");
             vcom.className = "variation-comment";
+            vcom.dataset.forMi = String(mi);
 
             const vbody = document.createElement("span");
             vbody.textContent = figurineComment(moveComment);
 
             vcom.appendChild(vbody);
+            if (hidden) vcom.style.display = "none";
             content.appendChild(vcom);
             needsRenumber = true;
           }
