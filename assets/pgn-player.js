@@ -2320,12 +2320,14 @@ function normalizeLichessUrl(src) {
 
 /* Cap concurrent lichess PGN fetches across all <pgn-player> instances on
    the page. Several players can become visible within the same instant
-   (e.g. a fast scroll past a run of games), and firing all of those
-   fetches at once has been observed to make lichess drop the connections
-   outright rather than queue them — which surfaces to fetch() as a plain
-   network/CORS TypeError, not an HTTP error. Serializing fetches through
-   a small shared queue keeps that burst from forming in the first place. */
-const MAX_CONCURRENT_PGN_FETCHES = 2;
+   (e.g. a fast scroll past a run of games), and firing more than one
+   fetch to lichess at a time has been observed to make it drop or stall
+   connections rather than queue them — which surfaces to fetch() as a
+   plain network/CORS TypeError, or a hang that ends in our own timeout,
+   rather than a clean HTTP error. Serializing every fetch through a
+   single shared queue (one request in flight at a time, site-wide) keeps
+   that contention from forming in the first place. */
+const MAX_CONCURRENT_PGN_FETCHES = 1;
 let activePgnFetches = 0;
 const pgnFetchQueue = [];
 
