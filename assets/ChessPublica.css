@@ -366,6 +366,15 @@ pgn-player {
   gap: 10px;
 }
 
+/* A variation nested inside another variation — indented and given a
+   left rule so its depth relative to the parent line is visible at a
+   glance, rather than reading as a continuation of it. */
+.variation-block--nested {
+  margin: 0.5rem 0 0.5rem 0.75rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid rgba(128, 128, 128, 0.3);
+}
+
 .variation-content {
   flex: 1 1 auto;
 }
