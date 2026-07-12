@@ -29,6 +29,23 @@
             .sadler-grid > hr {
                 display: none;
             }
+            /* Chessbase-style reading layout: the board stays pinned in the
+               viewport (it "resists" scroll) while the PGN text column
+               scrolls past it in normal document flow. Only makes sense
+               once the two columns actually sit side by side. */
+            .sadler-grid > .sadler-col:first-child {
+                position: sticky;
+                top: 1rem;
+                align-self: start;
+            }
+        }
+        /* Highlights the move in the static <pgn> column that matches
+           whatever the <pgn-player> on the left is currently showing —
+           see the sync script near the end of <body>. */
+        .pgn-move.pgn-move-active {
+            background: #c8e6c9;
+            border-radius: 3px;
+            box-shadow: 0 0 0 2px #c8e6c9;
         }
     </style>
 </head>
@@ -76,5 +93,36 @@
     </div>
     <script src="../dist/ChessPublica.all.min.js"></script>
     <script type="module" src="../script.js"></script>
+    <script type="module">
+        /* Chessbase-style reading sync: when the <pgn-player> on the left
+           shows a move, highlight and scroll to the matching move in the
+           static <pgn> column on the right (see pgn-player.js's "cp-move"
+           event and pgn.js's .pgn-move[data-ply] spans). The left column
+           itself stays put via the sticky CSS above. */
+        document.addEventListener('DOMContentLoaded', () => {
+            const playerEl = document.querySelector('.sadler-grid pgn-player');
+            const movesRoot = document.querySelector('.sadler-grid .pgn-container .pgn-moves');
+            if (!playerEl || !movesRoot) return;
+
+            let activeEl = null;
+
+            playerEl.addEventListener('cp-move', (e) => {
+                if (activeEl) {
+                    activeEl.classList.remove('pgn-move-active');
+                    activeEl = null;
+                }
+
+                const moveIndex = e.detail.moveIndex;
+                if (moveIndex == null || moveIndex < 0) return;
+
+                const target = movesRoot.querySelector(`.pgn-move[data-ply="${moveIndex}"]`);
+                if (!target) return;
+
+                target.classList.add('pgn-move-active');
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                activeEl = target;
+            });
+        });
+    </script>
 </body>
 </html>

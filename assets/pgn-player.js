@@ -2348,6 +2348,17 @@ class VideoEngine {
     }
 
     this.renderAnnotations(moveIdx);
+
+    /* Notify the page that a new mainline move is showing — e.g. so a
+       static <pgn> rendering of the same game elsewhere on the page can
+       scroll its matching move (see pgn.js's .pgn-move[data-ply]) into
+       view. moveIdx is -1 at the starting position (no move played yet).
+       headers is passed through so a page with more than one game on it
+       can match the event to the right <pgn>. */
+    this.container.dispatchEvent(new CustomEvent("cp-move", {
+      bubbles: true,
+      detail: { moveIndex: moveIdx, headers: this.state.headers },
+    }));
   }
 
 
