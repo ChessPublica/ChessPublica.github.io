@@ -14,16 +14,47 @@
            for both. NOTE: this must resolve to a visible `display` at
            every width; a bare `column-count` (CSS multicol) doesn't put
            the two children side by side the way a two-column grid does,
-           and doesn't override `display` back to visible on its own. */
-        pgn-app { display: flex; flex-direction: column; gap: 2rem; }
+           and doesn't override `display` back to visible on its own.
+
+           Everything below is scoped to `pgn-app`/its descendants (a
+           tag that only exists on this page), so none of it reaches any
+           other <pgn>/<pgn-player> on the site. */
+        pgn-app {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            padding: 1.5rem;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
         @media (min-width: 900px) {
-            pgn-app { display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
+            pgn-app { display: grid; grid-template-columns: 1fr 1fr; align-items: start; padding: 2.5rem; }
             /* Chessbase-style reading layout: the board stays pinned in the
                viewport (it "resists" scroll) while the PGN text column
                scrolls past it in normal document flow. Only makes sense
                once the two columns actually sit side by side. */
-            pgn-app > pgn-player { position: sticky; top: 1rem; }
+            pgn-app > pgn-player { position: sticky; top: 1.5rem; }
+            /* 125% board — kept inside this breakpoint (rather than
+               applied unconditionally) so it doesn't fight the mobile
+               `--board-size: min(400px, calc(100vw - 5rem))` shrink in
+               styles.css and overflow narrow viewports; there's no
+               shortage of room once the two columns are side by side. */
+            pgn-app pgn-player { --board-size: calc(400px * 1.25); }
         }
+
+        /* A leaner reading board for this page: no title/icon (the same
+           game info is already shown by the static <pgn> on the right —
+           see its own .pgn-title), no settings gear, no move list or
+           comment/variation box under it — just the board. Scoped to
+           <pgn-app>'s own player, so every other <pgn-player> on the site
+           (which relies on these for navigation) keeps them. */
+        pgn-app pgn-player .video-title,
+        pgn-app pgn-player .board-toolbar,
+        pgn-app pgn-player .video-moves,
+        pgn-app pgn-player .video-comment {
+            display: none;
+        }
+
         .pgn-move.pgn-move-active { background: #c8e6c9; border-radius: 3px; box-shadow: 0 0 0 2px #c8e6c9; }
         .pgn-container .pgn-move { cursor: pointer; }
         .pgn-container .pgn-move:hover { background: #eee; border-radius: 3px;}
