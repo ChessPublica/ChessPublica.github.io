@@ -2396,7 +2396,27 @@ class VideoEngine {
     this.goTo(this.state.index);
   }
 
+  /* Spacebar (and clicking the board) call this. Inside a variation
+     (this._variation set — via a var-move click, enterVariation(), or
+     variationGoTo()), toggling play now plays through the variation's
+     own remaining moves and stops at its last one, using the same
+     tick loop toggleVariationPlay()'s icon click already drives —
+     rather than falling through to the mainline play/pause below,
+     which would ignore the variation entirely. Mirrors ArrowRight's
+     existing `if (engine._variation) { … }` branch (see
+     setupGestures()) doing the equivalent for single-step navigation. */
   togglePlay(showIcon = true) {
+    if (this._variation) {
+      this.state.playing = false;
+      if (this._variation.playing) {
+        this._pauseVariationPlay();
+      } else {
+        this._variation.maxIndex = this._variation.fens.length - 1;
+        this._variation.playing = true;
+        this._variationPlayTick(this._variation, null);
+      }
+      return;
+    }
     this.state.playing ? this.pause() : this.play();
   }
 
