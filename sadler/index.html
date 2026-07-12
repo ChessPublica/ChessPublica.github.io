@@ -47,6 +47,17 @@
             border-radius: 3px;
             box-shadow: 0 0 0 2px #c8e6c9;
         }
+        /* Moves in the static <pgn> column are clickable — see the sync
+           script near the end of <body> — so give them a hand cursor and
+           a hover cue, matching the affordance of the player's own move
+           list. */
+        .pgn-container .pgn-move {
+            cursor: pointer;
+        }
+        .pgn-container .pgn-move:hover {
+            background: #eee;
+            border-radius: 3px;
+        }
     </style>
 </head>
 <body>
@@ -94,12 +105,14 @@
     <script src="../dist/ChessPublica.all.min.js"></script>
     <script type="module" src="../script.js"></script>
     <script type="module">
-        /* Chessbase-style reading sync: when the <pgn-player> on the left
-           shows a move, highlight and scroll to the matching move in the
-           static <pgn> column on the right (see pgn-player.js's "cp-move"
-           event and pgn.js's .pgn-move[data-ply] spans). The left column
-           itself stays put via the sticky CSS above. */
-        document.addEventListener('DOMContentLoaded', () => {
+        /* Chessbase-style reading sync between the <pgn-player> on the left
+           and the static <pgn> column on the right — both keyed off the
+           same 0-based ply index (pgn-player.js's "cp-move" event detail /
+           pgn.js's .pgn-move[data-ply] spans):
+             - player shows a move  -> highlight + scroll to it on the right
+             - reader clicks a move on the right -> player jumps to it
+           The left column itself stays put via the sticky CSS above. */
+        document.addEventListener('DOMContentLoaded', async () => {
             const playerEl = document.querySelector('.sadler-grid pgn-player');
             const movesRoot = document.querySelector('.sadler-grid .pgn-container .pgn-moves');
             if (!playerEl || !movesRoot) return;
@@ -121,6 +134,22 @@
                 target.classList.add('pgn-move-active');
                 target.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 activeEl = target;
+            });
+
+            // Player isn't ready to accept goTo() calls until its PGN has
+            // been parsed and the board built — see helpers.js's createReadyGate.
+            const engine = await playerEl.ready.catch(() => null);
+            if (!engine) return;
+
+            movesRoot.addEventListener('click', (e) => {
+                const moveEl = e.target.closest('.pgn-move[data-ply]');
+                if (!moveEl) return;
+
+                const moveIndex = parseInt(moveEl.dataset.ply, 10);
+                if (Number.isNaN(moveIndex)) return;
+
+                engine.pause();
+                engine.goTo(moveIndex + 1); // goTo() takes a position index (ply + 1), not a move index
             });
         });
     </script>
