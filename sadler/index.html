@@ -8,55 +8,20 @@
     <link rel="stylesheet" href="../dist/ChessPublica.all.min.css">
     <link rel="stylesheet" href="../styles.css">
     <style>
-        /* Page-specific layout: stack the player and the static PGN in a
-           single column on narrow screens, place them side by side in two
-           columns — board pinned on the left — once there's enough width
-           for both. NOTE: this must resolve to a visible `display` at
-           every width; a bare `column-count` (CSS multicol) doesn't put
-           the two children side by side the way a two-column grid does,
-           and doesn't override `display` back to visible on its own.
-
-           Everything below is scoped to `pgn-app`/its descendants (a
-           tag that only exists on this page), so none of it reaches any
-           other <pgn>/<pgn-player> on the site. */
         pgn-app {
-            /* +35% on every font-size across the page: setting it here,
-               on the page's outermost element, works because unstyled
-               descendant text inherits/cascades proportionally from
-               this — anything sized in rem instead of em won't scale
-               (rem is always relative to the root <html> element, not a
-               local ancestor like this one), but nothing text-related
-               on this page uses rem, only fixed-size icons/board pixels
-               do, which is exactly what should stay untouched here. */
             font-size: 135%;
             display: flex;
             flex-direction: column;
-            gap: 2rem;
             padding: 1.5rem;
             max-width: 1600px;
             margin: 0 auto;
         }
         @media (min-width: 900px) {
             pgn-app { display: grid; grid-template-columns: 1fr 2fr; align-items: start; padding: 2.5rem; }
-            /* Chessbase-style reading layout: the board stays pinned in the
-               viewport (it "resists" scroll) while the PGN text column
-               scrolls past it in normal document flow. Only makes sense
-               once the two columns actually sit side by side. */
             pgn-app > pgn-player { position: sticky; top: 1.5rem; }
-            /* 125% board — kept inside this breakpoint (rather than
-               applied unconditionally) so it doesn't fight the mobile
-               `--board-size: min(400px, calc(100vw - 5rem))` shrink in
-               styles.css and overflow narrow viewports; there's no
-               shortage of room once the two columns are side by side. */
             pgn-app pgn-player { --board-size: calc(400px * 1.25); }
         }
 
-        /* A leaner reading board for this page: no title/icon (the same
-           game info is already shown by the static <pgn> on the right —
-           see its own .pgn-title), no settings gear, no move list, and
-           no on-board play button. Scoped to <pgn-app>'s own player, so
-           every other <pgn-player> on the site (which relies on these)
-           keeps them. */
         pgn-app pgn-player .video-title,
         pgn-app pgn-player .board-toolbar,
         pgn-app pgn-player .video-moves,
@@ -64,24 +29,11 @@
             display: none;
         }
 
-        /* .video-comment itself stays visible — this is what actually
-           puts a move's prose comment (with its icon, same as anywhere
-           else on the site) right under the board. Only its two other
-           pieces are hidden: variation-block (<pgn-player>'s own full
-           variation text) is replaced by the compact move-picker built
-           below, and comment-play-btn (the floating Continue/Replay
-           button) was dropped per an earlier request — the picker
-           already covers "how do I continue" without it. */
         pgn-app pgn-player .video-comment .variation-block,
         pgn-app pgn-player .video-comment .comment-play-btn {
             display: none;
         }
 
-        /* Move picker: at a branch point (a mainline move with recorded
-           alternatives), lists just the mainline move and each
-           alternative's opening move — one line each, click to preview —
-           instead of full variation text. Built by the sync script from
-           <pgn-player>'s own engine.state, not by <pgn-player> itself. */
         .sadler-move-picker {
             margin: 0.5rem 0;
             display: flex;
@@ -103,16 +55,7 @@
         .sadler-picker-row.active {
             background: #c8e6c9;
         }
-        /* .lucide-icon (ChessPublica.css) does the actual mask-image
-           rendering — this only sizes/colors it. --icon itself is set on
-           .sadler-move-picker (inherited down) by the sync script,
-           copied from the board's own play button, so this renders as
-           the exact same icon the rest of the site uses instead of a
-           plain "▶" character. Sized to match that same button's own
-           icon (.play .lucide-icon in ChessPublica.css is 2rem) rather
-           than shrinking it down to text size — align-items: center on
-           .sadler-picker-row (above) centers the move text against it
-           vertically regardless of how much taller the icon is. */
+
         .sadler-picker-icon {
             flex-shrink: 0;
             width: 2rem;
@@ -123,9 +66,6 @@
             font-weight: bold;
         }
 
-        /* Everything from here down styles the static <pgn> reading
-           column, scoped to `pgn-app .pgn-container` so it never reaches
-           any other <pgn> on the site. */
         pgn-app .pgn-container .pgn-move,
         pgn-app .pgn-container .pgn-clickable-diagram {
             cursor: pointer;
@@ -143,18 +83,11 @@
             border-radius: 3px;
             box-shadow: 0 0 0 2px #c8e6c9;
         }
-        /* A diagram is a whole board image, not a run of text — a
-           background tint would just look like a rendering glitch, so
-           the active state is the ring alone. */
+        
         pgn-app .pgn-container .pgn-clickable-diagram.pgn-move-active {
             background: transparent;
         }
 
-        /* Sub-variations, indented one level per nesting depth. Plain
-           block-level margins on a class that's already nested inside
-           itself for every sub-variation-of-a-sub-variation — each level
-           adds its own margin relative to its (already indented) parent,
-           so this needs no per-depth selectors to keep compounding. */
         pgn-app .pgn-container .pgn-variation {
             margin-left: 1.25rem;
             padding-left: 0.75rem;
@@ -168,11 +101,7 @@
         pgn-app .pgn-container .pgn-moves {
             column-count: 1;
         }
-        /* Diagrams (createBoard()'s .cp-board-wrapper — both the
-           full-size opening diagram and the 75%-sized [D]/[#] ones
-           inside comments/variations) default to flush-left: width:100%
-           capped by max-width, with only top/bottom margins. Centering
-           needs explicit auto left/right margins. */
+
         pgn-app .pgn-container .cp-board-wrapper {
             margin-left: auto;
             margin-right: auto;
