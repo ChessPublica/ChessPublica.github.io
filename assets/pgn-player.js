@@ -244,7 +244,7 @@ function loadPGN(pgn) {
       const newVar = {
         moves:      [],
         commentsByMove: [], // comment text per move index — sparse, parallel to moves
-        children:   [],
+        childrenByMove: [], // move index -> array of nested variation objects branching from that move
         nagsByMove: [], // raw NAG tokens per variation move — combined into glyphs at render time
         puzzles:    [], // [P]/[Pn] markers per move index — sparse, parallel to moves
         diagramByMove: [], // move index -> true where that move's comment carried a [D]/[#] marker
@@ -259,15 +259,31 @@ function loadPGN(pgn) {
 
       const parentMoveIndex = moveIndex;
 
-      if (parentMoveIndex >= 0) {
-        if (variationDepth === 1) {
+      if (variationDepth === 1) {
+        /* Top-level variation — an alternative to a main-line move, keyed
+           by that move's mainline index. moveIndex is still -1 before the
+           first main-line move exists (e.g. a comment-only preamble), so
+           there's nothing to attach this to yet. */
+        if (parentMoveIndex >= 0) {
           if (!variations[parentMoveIndex]) {
             variations[parentMoveIndex] = [];
           }
           variations[parentMoveIndex].push(newVar);
-        } else if (varStack.length > 0) {
-          varStack[varStack.length - 1].varObj.children.push(newVar);
         }
+      } else if (varStack.length > 0) {
+        /* Nested variation (depth 2+) — an alternative to one of the
+           *parent variation's own* moves, so it must be keyed by that
+           move's index within the parent's own moves array, not by the
+           stale main-line moveIndex (which stops advancing the instant
+           parsing enters a variation and stays frozen for every depth
+           below it — using it here would silently misattach every
+           nested variation to the wrong move, or lose it). Mirrors the
+           mi computed for commentsByMove above: the parent variation's
+           own most-recent move, or index 0 if it has none yet. */
+        const parentVar = varStack[varStack.length - 1].varObj;
+        const mi = Math.max(0, parentVar.moves.length - 1);
+        if (!parentVar.childrenByMove[mi]) parentVar.childrenByMove[mi] = [];
+        parentVar.childrenByMove[mi].push(newVar);
       }
 
       varStack.push({ varObj: newVar, parentMoveIndex });
@@ -1450,179 +1466,8 @@ class VideoComment {
       hasContent = true;
 
       variationList.forEach((variation) => {
-        if (!variation.moves || !variation.moves.length) return;
-
-        /* Two-column layout: icon on left, content on right
-           — same pattern as .comment-line / .video-title */
-        const block = document.createElement("div");
-        block.className = "variation-block";
-
-        const icon = document.createElement("span");
-        icon.className = "variation-icon lucide-icon variation-play-btn";
-        icon.setAttribute("role", "button");
-        icon.setAttribute("tabindex", "0");
-        icon.setAttribute("aria-label", "Play variation");
-        icon.style.setProperty("--icon", lucideIconUrl("play"));
-
-        const content = document.createElement("div");
-        content.className = "variation-content";
-
-        const varFENs = [];
-        const varVerbose = []; // from/to for each variation move
-        const tempChess = new Chess();
-        if (branchFEN) tempChess.load(branchFEN);
-        varFENs.push(tempChess.fen());
-
-        variation.moves.forEach(m => {
-          /* sloppy:true matches the parser so variation replays accept
-             the same notation the parser already accepted. */
-          const result = tempChess.move(m, { sloppy: true });
-          varFENs.push(tempChess.fen());
-          varVerbose.push(result ? { from: result.from, to: result.to } : null);
-        });
-
-        /* Set after a move's comment renders (see below) so the next
-           move's number is shown even when it wouldn't otherwise be
-           (a non-first black move) — otherwise a move immediately
-           following a rendered comment reads as an unnumbered
-           continuation instead of the fresh move it is. Mirrors
-           needsMoveNumber in pgn.js's renderLine(). */
-        let needsRenumber = false;
-
-        /* A [P]/[Pn] marker inside this variation hides every move (and
-           any comment attached to one) from the puzzle's first covered
-           ply onward, exactly like VideoMoveList.build() does for a
-           mainline puzzle — otherwise the whole variation block, printed
-           in full immediately, would print the solution right under the
-           board before the reader ever gets to solve it. A solved marker
-           (marker.solved, set by PuzzleMode._finish()) is excluded so a
-           previously-solved puzzle stays fully revealed across re-renders
-           of this block (e.g. leaving and re-entering the branch move). */
-        const puzzleHideFrom = (() => {
-          const vp = variation.puzzles || [];
-          const idxs = [];
-          vp.forEach((marker, markerMi) => {
-            if (!marker || marker.solved) return;
-            for (let k = 1; k <= marker.plies; k++) idxs.push(markerMi + k);
-          });
-          return idxs.length ? Math.min(...idxs) : Infinity;
-        })();
-
-        /* Icon doubles as a play button: clicking it steps the board
-           through the variation move by move, same pace as the main
-           Continue button, instead of forcing the reader to click each
-           move span individually. Playback never runs past an unsolved
-           puzzle marker — it stops right where the moveSpan click handler
-           above would have refused to reveal the hidden moves, handing
-           off to PuzzleMode the same way a manual click does. */
-        const playLimit = puzzleHideFrom === Infinity ? variation.moves.length : puzzleHideFrom;
-        const playVariation = () => {
-          if (this.engine.puzzle && this.engine.puzzle.active) return;
-          this.engine.toggleVariationPlay(variation, varFENs, varVerbose, content, icon, playLimit);
-        };
-        icon.onclick = playVariation;
-        icon.onkeydown = (e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            playVariation();
-          }
-        };
-
-        variation.moves.forEach((san, mi) => {
-
-          const isBlackVarMove = branchIsBlack ? (mi % 2 === 0) : (mi % 2 === 1);
-          /* branchIsBlack fixes whether this variation's moves alternate
-             black/white/black/... or white/black/white/...; the pair
-             number only advances on the second half of each pair. */
-          const fullNum = branchIsBlack
-            ? branchMoveNum + Math.floor((mi + 1) / 2)
-            : branchMoveNum + Math.floor(mi / 2);
-
-          const needsNumber = !isBlackVarMove || mi === 0 || needsRenumber;
-          needsRenumber = false;
-
-          const hidden = mi >= puzzleHideFrom;
-
-          if (needsNumber) {
-            const numSpan = document.createElement("span");
-            numSpan.className = "var-move-number";
-            numSpan.dataset.forMi = String(mi);
-            numSpan.textContent = isBlackVarMove
-              ? `${fullNum}…`
-              : `${fullNum}.`;
-            if (hidden) numSpan.style.display = "none";
-            content.appendChild(numSpan);
-          }
-
-          const varGlyph = nagsToGlyph(variation.nagsByMove[mi]) || "";
-
-          const moveSpan = document.createElement("span");
-          moveSpan.className   = "var-move";
-          moveSpan.dataset.mi   = String(mi);
-          moveSpan.textContent = toFigurine(san) + varGlyph;
-          if (hidden) moveSpan.style.display = "none";
-
-          const targetFEN = varFENs[mi + 1];
-
-          moveSpan.onclick = () => {
-            /* Don't let clicking elsewhere abandon an unsolved puzzle —
-               mirrors goTo()'s own guard for mainline navigation. */
-            if (this.engine.puzzle && this.engine.puzzle.active) return;
-
-            /* A hidden move belongs to an unsolved puzzle's solution —
-               jumping straight to it would skip solving entirely. */
-            if (moveSpan.style.display === "none") return;
-
-            content.querySelectorAll(".var-move").forEach(s => s.classList.remove("active"));
-            moveSpan.classList.add("active");
-            const ann = variation.moveAnnotations?.[mi];
-            this.engine.enterVariation(varFENs, variation.moveAnnotations, mi + 1, content, varVerbose, variation);
-            this.engine.showVariationPosition(targetFEN, ann, varVerbose[mi], varGlyph);
-            if (this.engine.puzzle) this.engine.puzzle.handleVariationArrival(mi, variation, varFENs, varVerbose);
-          };
-
-          content.appendChild(moveSpan);
-
-          /* [D]/[#] diagram for this variation move — rendered right after
-             the move like its comment below, diagram-then-text (same
-             order as pgn.js), and hidden along with everything else past
-             an unsolved puzzle marker. */
-          if (variation.diagramByMove && variation.diagramByMove[mi]) {
-            const dWrap = document.createElement("div");
-            dWrap.className = "comment-diagram";
-            dWrap.dataset.forMi = String(mi);
-            const ann = variation.moveAnnotations?.[mi];
-            const node = { fen: targetFEN, squareMarks: [], arrows: [] };
-            ann?.cal?.forEach(entry => node.arrows.push(...parseCAL(entry)));
-            ann?.csl?.forEach(entry => node.squareMarks.push(...parseCSL(entry)));
-            createBoard(dWrap, targetFEN, node, { small: true });
-            if (hidden) dWrap.style.display = "none";
-            content.appendChild(dWrap);
-            needsRenumber = true;
-          }
-
-          /* Comments render right after the move they're attached to —
-             in PGN order, same as pgn.js — rather than all together at
-             the end. */
-          const moveComment = variation.commentsByMove && variation.commentsByMove[mi];
-          if (moveComment) {
-            const vcom = document.createElement("div");
-            vcom.className = "variation-comment";
-            vcom.dataset.forMi = String(mi);
-
-            const vbody = document.createElement("span");
-            vbody.innerHTML = formatComment(moveComment);
-
-            vcom.appendChild(vbody);
-            if (hidden) vcom.style.display = "none";
-            content.appendChild(vcom);
-            needsRenumber = true;
-          }
-        });
-
-        block.appendChild(icon);
-        block.appendChild(content);
-        this.el.appendChild(block);
+        const block = this._renderVariationBlock(variation, branchFEN, branchMoveNum, branchIsBlack, 0);
+        if (block) this.el.appendChild(block);
       });
     }
 
@@ -1653,6 +1498,210 @@ class VideoComment {
     }
 
     return hasContent;
+  }
+
+  /* Builds one variation's DOM block: play/pause icon + its move list
+     (numbers, moves, diagrams, comments, in PGN order), recursing into
+     any nested variations (variation.childrenByMove) so a sub-variation
+     of a sub-variation renders too, instead of silently vanishing —
+     depth only adds a visual nesting class, the recursion itself goes
+     as deep as the PGN does. branchFEN/branchMoveNum/branchIsBlack
+     describe the position and move-number context this variation
+     branches from: the main line's, for the top-level call from
+     update(), or a parent variation's own move, for a recursive call
+     rendering one of its children. Returns null for an empty variation
+     (nothing to render). */
+  _renderVariationBlock(variation, branchFEN, branchMoveNum, branchIsBlack, depth) {
+    if (!variation.moves || !variation.moves.length) return null;
+
+    /* Two-column layout: icon on left, content on right
+       — same pattern as .comment-line / .video-title */
+    const block = document.createElement("div");
+    block.className = "variation-block";
+    if (depth > 0) block.classList.add("variation-block--nested");
+
+    const icon = document.createElement("span");
+    icon.className = "variation-icon lucide-icon variation-play-btn";
+    icon.setAttribute("role", "button");
+    icon.setAttribute("tabindex", "0");
+    icon.setAttribute("aria-label", "Play variation");
+    icon.style.setProperty("--icon", lucideIconUrl("play"));
+
+    const content = document.createElement("div");
+    content.className = "variation-content";
+
+    const varFENs = [];
+    const varVerbose = []; // from/to for each variation move
+    const tempChess = new Chess();
+    if (branchFEN) tempChess.load(branchFEN);
+    varFENs.push(tempChess.fen());
+
+    variation.moves.forEach(m => {
+      /* sloppy:true matches the parser so variation replays accept
+         the same notation the parser already accepted. */
+      const result = tempChess.move(m, { sloppy: true });
+      varFENs.push(tempChess.fen());
+      varVerbose.push(result ? { from: result.from, to: result.to } : null);
+    });
+
+    /* Set after a move's comment renders (see below) so the next
+       move's number is shown even when it wouldn't otherwise be
+       (a non-first black move) — otherwise a move immediately
+       following a rendered comment reads as an unnumbered
+       continuation instead of the fresh move it is. Mirrors
+       needsMoveNumber in pgn.js's renderLine(). */
+    let needsRenumber = false;
+
+    /* A [P]/[Pn] marker inside this variation hides every move (and
+       any comment attached to one) from the puzzle's first covered
+       ply onward, exactly like VideoMoveList.build() does for a
+       mainline puzzle — otherwise the whole variation block, printed
+       in full immediately, would print the solution right under the
+       board before the reader ever gets to solve it. A solved marker
+       (marker.solved, set by PuzzleMode._finish()) is excluded so a
+       previously-solved puzzle stays fully revealed across re-renders
+       of this block (e.g. leaving and re-entering the branch move). */
+    const puzzleHideFrom = (() => {
+      const vp = variation.puzzles || [];
+      const idxs = [];
+      vp.forEach((marker, markerMi) => {
+        if (!marker || marker.solved) return;
+        for (let k = 1; k <= marker.plies; k++) idxs.push(markerMi + k);
+      });
+      return idxs.length ? Math.min(...idxs) : Infinity;
+    })();
+
+    /* Icon doubles as a play button: clicking it steps the board
+       through the variation move by move, same pace as the main
+       Continue button, instead of forcing the reader to click each
+       move span individually. Playback never runs past an unsolved
+       puzzle marker — it stops right where the moveSpan click handler
+       above would have refused to reveal the hidden moves, handing
+       off to PuzzleMode the same way a manual click does. */
+    const playLimit = puzzleHideFrom === Infinity ? variation.moves.length : puzzleHideFrom;
+    const playVariation = () => {
+      if (this.engine.puzzle && this.engine.puzzle.active) return;
+      this.engine.toggleVariationPlay(variation, varFENs, varVerbose, content, icon, playLimit);
+    };
+    icon.onclick = playVariation;
+    icon.onkeydown = (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        playVariation();
+      }
+    };
+
+    variation.moves.forEach((san, mi) => {
+
+      const isBlackVarMove = branchIsBlack ? (mi % 2 === 0) : (mi % 2 === 1);
+      /* branchIsBlack fixes whether this variation's moves alternate
+         black/white/black/... or white/black/white/...; the pair
+         number only advances on the second half of each pair. */
+      const fullNum = branchIsBlack
+        ? branchMoveNum + Math.floor((mi + 1) / 2)
+        : branchMoveNum + Math.floor(mi / 2);
+
+      const needsNumber = !isBlackVarMove || mi === 0 || needsRenumber;
+      needsRenumber = false;
+
+      const hidden = mi >= puzzleHideFrom;
+
+      if (needsNumber) {
+        const numSpan = document.createElement("span");
+        numSpan.className = "var-move-number";
+        numSpan.dataset.forMi = String(mi);
+        numSpan.textContent = isBlackVarMove
+          ? `${fullNum}…`
+          : `${fullNum}.`;
+        if (hidden) numSpan.style.display = "none";
+        content.appendChild(numSpan);
+      }
+
+      const varGlyph = nagsToGlyph(variation.nagsByMove[mi]) || "";
+
+      const moveSpan = document.createElement("span");
+      moveSpan.className   = "var-move";
+      moveSpan.dataset.mi   = String(mi);
+      moveSpan.textContent = toFigurine(san) + varGlyph;
+      if (hidden) moveSpan.style.display = "none";
+
+      const targetFEN = varFENs[mi + 1];
+
+      moveSpan.onclick = () => {
+        /* Don't let clicking elsewhere abandon an unsolved puzzle —
+           mirrors goTo()'s own guard for mainline navigation. */
+        if (this.engine.puzzle && this.engine.puzzle.active) return;
+
+        /* A hidden move belongs to an unsolved puzzle's solution —
+           jumping straight to it would skip solving entirely. */
+        if (moveSpan.style.display === "none") return;
+
+        content.querySelectorAll(".var-move").forEach(s => s.classList.remove("active"));
+        moveSpan.classList.add("active");
+        const ann = variation.moveAnnotations?.[mi];
+        this.engine.enterVariation(varFENs, variation.moveAnnotations, mi + 1, content, varVerbose, variation);
+        this.engine.showVariationPosition(targetFEN, ann, varVerbose[mi], varGlyph);
+        if (this.engine.puzzle) this.engine.puzzle.handleVariationArrival(mi, variation, varFENs, varVerbose);
+      };
+
+      content.appendChild(moveSpan);
+
+      /* [D]/[#] diagram for this variation move — rendered right after
+         the move like its comment below, diagram-then-text (same
+         order as pgn.js), and hidden along with everything else past
+         an unsolved puzzle marker. */
+      if (variation.diagramByMove && variation.diagramByMove[mi]) {
+        const dWrap = document.createElement("div");
+        dWrap.className = "comment-diagram";
+        dWrap.dataset.forMi = String(mi);
+        const ann = variation.moveAnnotations?.[mi];
+        const node = { fen: targetFEN, squareMarks: [], arrows: [] };
+        ann?.cal?.forEach(entry => node.arrows.push(...parseCAL(entry)));
+        ann?.csl?.forEach(entry => node.squareMarks.push(...parseCSL(entry)));
+        createBoard(dWrap, targetFEN, node, { small: true });
+        if (hidden) dWrap.style.display = "none";
+        content.appendChild(dWrap);
+        needsRenumber = true;
+      }
+
+      /* Comments render right after the move they're attached to —
+         in PGN order, same as pgn.js — rather than all together at
+         the end. */
+      const moveComment = variation.commentsByMove && variation.commentsByMove[mi];
+      if (moveComment) {
+        const vcom = document.createElement("div");
+        vcom.className = "variation-comment";
+        vcom.dataset.forMi = String(mi);
+
+        const vbody = document.createElement("span");
+        vbody.innerHTML = formatComment(moveComment);
+
+        vcom.appendChild(vbody);
+        if (hidden) vcom.style.display = "none";
+        content.appendChild(vcom);
+        needsRenumber = true;
+      }
+
+      /* Nested sub-variations branching from this move — an alternative
+         to one of this variation's own moves, same idea as the main
+         line's variations but one level deeper. Recurses to any depth
+         so a sub-variation of a sub-variation renders too. */
+      const nestedVariations = variation.childrenByMove && variation.childrenByMove[mi];
+      if (nestedVariations && nestedVariations.length) {
+        nestedVariations.forEach((child) => {
+          const nestedBlock = this._renderVariationBlock(child, varFENs[mi], fullNum, isBlackVarMove, depth + 1);
+          if (nestedBlock) {
+            if (hidden) nestedBlock.style.display = "none";
+            content.appendChild(nestedBlock);
+            needsRenumber = true;
+          }
+        });
+      }
+    });
+
+    block.appendChild(icon);
+    block.appendChild(content);
+    return block;
   }
 
 }
