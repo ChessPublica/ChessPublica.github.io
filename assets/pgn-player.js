@@ -1424,8 +1424,11 @@ class VideoComment {
         block.className = "variation-block";
 
         const icon = document.createElement("span");
-        icon.className = "variation-icon lucide-icon";
-        icon.style.setProperty("--icon", lucideIconUrl("search"));
+        icon.className = "variation-icon lucide-icon variation-play-btn";
+        icon.setAttribute("role", "button");
+        icon.setAttribute("tabindex", "0");
+        icon.setAttribute("aria-label", "Play variation");
+        icon.style.setProperty("--icon", lucideIconUrl("play"));
 
         const content = document.createElement("div");
         content.className = "variation-content";
@@ -1470,6 +1473,26 @@ class VideoComment {
           });
           return idxs.length ? Math.min(...idxs) : Infinity;
         })();
+
+        /* Icon doubles as a play button: clicking it steps the board
+           through the variation move by move, same pace as the main
+           Continue button, instead of forcing the reader to click each
+           move span individually. Playback never runs past an unsolved
+           puzzle marker — it stops right where the moveSpan click handler
+           above would have refused to reveal the hidden moves, handing
+           off to PuzzleMode the same way a manual click does. */
+        const playLimit = puzzleHideFrom === Infinity ? variation.moves.length : puzzleHideFrom;
+        const playVariation = () => {
+          if (this.engine.puzzle && this.engine.puzzle.active) return;
+          this.engine.toggleVariationPlay(variation, varFENs, varVerbose, content, icon, playLimit);
+        };
+        icon.onclick = playVariation;
+        icon.onkeydown = (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            playVariation();
+          }
+        };
 
         variation.moves.forEach((san, mi) => {
 
@@ -1811,6 +1834,7 @@ class VideoEngine {
       this._observers = [];
     }
     this.state.playing = false;
+    this._variation = null; // stops any in-flight variation playback loop on its next tick
     if (VideoEngine.activeEngine === this) {
       VideoEngine.activeEngine = null;
     }
@@ -1931,6 +1955,95 @@ class VideoEngine {
     if (this.puzzle && this._variation.variationObj) {
       this.puzzle.handleVariationArrival(index - 1, this._variation.variationObj, this._variation.fens, this._variation.verbose);
     }
+  }
+
+
+  /* ===========================
+     VARIATION PLAYBACK
+     (the magnifying-glass-turned-play-button beside a variation block)
+  =========================== */
+
+  /* Click handler for a variation's play icon. Toggles play/pause on the
+     variation already active in that block, or — if a different variation
+     (or none) is active — stops whatever else was playing and starts this
+     one from its first move. maxIndex stops playback one move short of an
+     unsolved puzzle marker, same boundary the move-span click handler
+     already enforces, so autoplay hands off to PuzzleMode instead of
+     revealing the solution. */
+  toggleVariationPlay(variation, fens, verbose, contentEl, iconEl, maxIndex) {
+    if (this.puzzle && this.puzzle.active) return;
+
+    const isSameBlock = this._variation
+      && this._variation.variationObj === variation
+      && this._variation.contentEl === contentEl;
+
+    if (isSameBlock && this._variation.playing) {
+      this._pauseVariationPlay();
+      return;
+    }
+
+    if (this.state.playing) this.pause();
+
+    // A different variation was mid-playback — leave its icon back at "play".
+    if (this._variation && this._variation.iconEl && this._variation.iconEl !== iconEl) {
+      this._setVariationIcon(this._variation.iconEl, "play");
+    }
+
+    // Fresh start: new variation, or replaying one that already finished.
+    if (!isSameBlock || this._variation.index >= maxIndex) {
+      this.enterVariation(fens, variation.moveAnnotations, 0, contentEl, verbose, variation);
+      this.showVariationPosition(fens[0], null, null, null);
+      contentEl.querySelectorAll(".var-move").forEach(s => s.classList.remove("active"));
+    }
+
+    const session = this._variation;
+    session.iconEl   = iconEl;
+    session.playing  = true;
+    session.maxIndex = maxIndex;
+    this._setVariationIcon(iconEl, "pause");
+    this._variationPlayTick(session, null);
+  }
+
+  _pauseVariationPlay() {
+    if (!this._variation) return;
+    this._variation.playing = false;
+    if (this._variation.iconEl) this._setVariationIcon(this._variation.iconEl, "play");
+  }
+
+  _setVariationIcon(iconEl, mode) {
+    iconEl.style.setProperty("--icon", lucideIconUrl(mode === "pause" ? "pause" : "play"));
+    iconEl.setAttribute("aria-label", mode === "pause" ? "Pause variation" : "Play variation");
+  }
+
+  /* Timestamp-based RAF loop, same pacing as _loopRAF() for the mainline.
+     Keyed off `session` (the exact _variation object captured at play()
+     time) rather than a boolean, because entering/exiting a variation
+     always replaces this._variation wholesale — so any navigation away
+     (a var-move click, mainline goTo(), exitVariation(), destroy()) is
+     automatically detected on the next tick without needing its own
+     cancellation path. */
+  _variationPlayTick(session, ts) {
+    if (this._variation !== session || !session.playing) {
+      if (session.iconEl) this._setVariationIcon(session.iconEl, "play");
+      return;
+    }
+
+    const delay = 1000 / this.state.speed;
+    if (session._lastTick == null) session._lastTick = ts;
+
+    if (ts == null || ts - session._lastTick >= delay) {
+      session._lastTick = ts;
+
+      if (session.index >= session.maxIndex) {
+        session.playing = false;
+        if (session.iconEl) this._setVariationIcon(session.iconEl, "play");
+        return;
+      }
+
+      this.variationGoTo(session.index + 1);
+    }
+
+    requestAnimationFrame((nextTs) => this._variationPlayTick(session, nextTs));
   }
 
 
