@@ -621,7 +621,10 @@ function loadPGN(pgn) {
         engine.state.playing = false;
         if (engine._variation.index < engine._variation.fens.length - 1) {
           engine.variationGoTo(engine._variation.index + 1);
-        } else {
+        } else if (!engine.exitToParentVariation()) {
+          // No parent variation waiting to resume (a top-level one, or
+          // exitToParentVariation() found the stack empty) — exit all
+          // the way out to the mainline, same as always.
           const mainIdx = engine._variation.mainStateIndex;
           engine.exitVariation();
           engine.goTo(mainIdx + 1);
@@ -639,7 +642,7 @@ function loadPGN(pgn) {
         engine.state.playing = false;
         if (engine._variation.index > 1) {
           engine.variationGoTo(engine._variation.index - 1);
-        } else {
+        } else if (!engine.exitToParentVariation()) {
           const mainIdx = engine._variation.mainStateIndex;
           engine.exitVariation();
           engine.goTo(mainIdx);
@@ -1797,6 +1800,7 @@ class VideoEngine {
 
     this._loopLastTick = null;
     this._variation    = null; // active variation nav state
+    this._variationStack = []; // saved parent variation(s) — see enterVariation()
 
     /* ---- Board click (toggle play/pause, or puzzle click-to-move) ---- */
     this.boardEl.addEventListener("click", (e) => {
@@ -1936,6 +1940,7 @@ class VideoEngine {
     }
     this.state.playing = false;
     this._variation = null; // stops any in-flight variation playback loop on its next tick
+    this._variationStack = [];
     if (VideoEngine.activeEngine === this) {
       VideoEngine.activeEngine = null;
     }
@@ -2011,7 +2016,17 @@ class VideoEngine {
      VARIATION NAVIGATION
   =========================== */
 
+  /* Called both to enter a fresh top-level variation from the mainline
+     (this._variation is null beforehand) and — from inside an already-
+     active variation, e.g. a nested var-move click — to enter one of
+     ITS sub-variations. In the second case, the variation being left is
+     saved on _variationStack rather than discarded, so reaching the end
+     of the nested one can resume the parent exactly where it left off
+     (see exitToParentVariation() below) instead of always exiting all
+     the way out to the mainline — multiple levels deep, each nesting
+     level pushes one more. */
   enterVariation(fens, moveAnnotations, index, contentEl, verbose, variationObj) {
+    if (this._variation) this._variationStack.push(this._variation);
     this._variation = {
       fens,
       moveAnnotations: moveAnnotations || [],
@@ -2023,12 +2038,33 @@ class VideoEngine {
     };
   }
 
+  /* Leaves every variation level, all the way back out to the mainline
+     — not just the innermost one. exitToParentVariation() below is the
+     one-level-at-a-time counterpart used when there's a parent to
+     resume instead of leaving entirely. */
   exitVariation() {
     if (this._variation?.contentEl) {
       this._variation.contentEl.querySelectorAll(".var-move")
         .forEach(s => s.classList.remove("active"));
     }
     this._variation = null;
+    this._variationStack = [];
+  }
+
+  /* Pops one level: resumes the parent variation exactly where it was
+     left off (its own saved .index), rather than exiting all the way to
+     the mainline. Returns true if there was a parent to resume, false
+     if the stack was already empty (nothing to do — caller falls back
+     to the mainline-exit path instead). */
+  exitToParentVariation() {
+    if (!this._variationStack.length) return false;
+    if (this._variation?.contentEl) {
+      this._variation.contentEl.querySelectorAll(".var-move")
+        .forEach(s => s.classList.remove("active"));
+    }
+    this._variation = this._variationStack.pop();
+    this.variationGoTo(this._variation.index);
+    return true;
   }
 
   variationGoTo(index) {
@@ -2281,6 +2317,7 @@ class VideoEngine {
     if (this.puzzle && this.puzzle.active) return;
 
     this._variation = null;
+    this._variationStack = [];
 
     if (i < 0) i = 0;
     if (i >= this.state.cache.length) i = this.state.cache.length - 1;

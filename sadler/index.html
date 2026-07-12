@@ -20,6 +20,15 @@
            tag that only exists on this page), so none of it reaches any
            other <pgn>/<pgn-player> on the site. */
         pgn-app {
+            /* +35% on every font-size across the page: setting it here,
+               on the page's outermost element, works because unstyled
+               descendant text inherits/cascades proportionally from
+               this — anything sized in rem instead of em won't scale
+               (rem is always relative to the root <html> element, not a
+               local ancestor like this one), but nothing text-related
+               on this page uses rem, only fixed-size icons/board pixels
+               do, which is exactly what should stay untouched here. */
+            font-size: 135%;
             display: flex;
             flex-direction: column;
             gap: 2rem;
@@ -44,18 +53,27 @@
 
         /* A leaner reading board for this page: no title/icon (the same
            game info is already shown by the static <pgn> on the right —
-           see its own .pgn-title), no settings gear, no move list, no
-           on-board play button, and no comment/variation box (including
-           its floating Continue/Replay button) — <pgn-player>'s own
-           rendering of these is replaced by the compact move-picker
-           built below (see the sync script). Scoped to <pgn-app>'s own
-           player, so every other <pgn-player> on the site (which relies
-           on these) keeps them. */
+           see its own .pgn-title), no settings gear, no move list, and
+           no on-board play button. Scoped to <pgn-app>'s own player, so
+           every other <pgn-player> on the site (which relies on these)
+           keeps them. */
         pgn-app pgn-player .video-title,
         pgn-app pgn-player .board-toolbar,
         pgn-app pgn-player .video-moves,
-        pgn-app pgn-player .play,
-        pgn-app pgn-player .video-comment {
+        pgn-app pgn-player .play {
+            display: none;
+        }
+
+        /* .video-comment itself stays visible — this is what actually
+           puts a move's prose comment (with its icon, same as anywhere
+           else on the site) right under the board. Only its two other
+           pieces are hidden: variation-block (<pgn-player>'s own full
+           variation text) is replaced by the compact move-picker built
+           below, and comment-play-btn (the floating Continue/Replay
+           button) was dropped per an earlier request — the picker
+           already covers "how do I continue" without it. */
+        pgn-app pgn-player .video-comment .variation-block,
+        pgn-app pgn-player .video-comment .comment-play-btn {
             display: none;
         }
 
@@ -90,11 +108,15 @@
            .sadler-move-picker (inherited down) by the sync script,
            copied from the board's own play button, so this renders as
            the exact same icon the rest of the site uses instead of a
-           plain "▶" character. */
+           plain "▶" character. Sized to match that same button's own
+           icon (.play .lucide-icon in ChessPublica.css is 2rem) rather
+           than shrinking it down to text size — align-items: center on
+           .sadler-picker-row (above) centers the move text against it
+           vertically regardless of how much taller the icon is. */
         .sadler-picker-icon {
             flex-shrink: 0;
-            width: 0.85em;
-            height: 0.85em;
+            width: 2rem;
+            height: 2rem;
             color: #555;
         }
         .sadler-picker-row.mainline {
