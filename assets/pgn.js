@@ -583,7 +583,8 @@ export function renderMoveTree(rootNode, container, headers, options) {
      same as any other comment diagram; a bare FEN/SetUp start's diagram
      stays full-size since it isn't "inside a comment" at all. */
   if (rootNode.startDiagram) {
-    createBoard(movesDiv, rootNode.startDiagram.fen, rootNode.startDiagram, { small: rootNode.startDiagram.fromComment });
+    var startWrapper = createBoard(movesDiv, rootNode.startDiagram.fen, rootNode.startDiagram, { small: rootNode.startDiagram.fromComment });
+    markDiagramClickable(startWrapper, rootNode.startDiagram.fen, null, options);
   }
 
   if (rootNode.preComments && rootNode.preComments.length) {
@@ -613,6 +614,22 @@ export function renderMoveTree(rootNode, container, headers, options) {
 
 function renderNAG(nags) {
   return nagsToGlyph(nags) || "";
+}
+
+/* Same opt-in as the .pgn-move[data-ply]/[data-fen] spans (see the
+   options.clickableMoves doc comment on renderFullPGN() below) — tags a
+   diagram's `.cp-board-wrapper` (returned by createBoard()) with the
+   FEN (and, for a move-attached diagram, the from/to squares) a host
+   page needs to jump <pgn-player> to that position. `node` is null for
+   the game's opening diagram (no preceding move to draw an arrow for). */
+function markDiagramClickable(wrapper, fen, node, options) {
+  if (!wrapper || !options || !options.clickableMoves) return;
+  wrapper.classList.add("pgn-clickable-diagram");
+  wrapper.dataset.fen = fen;
+  if (node && node.from && node.to) {
+    wrapper.dataset.from = node.from;
+    wrapper.dataset.to = node.to;
+  }
 }
 
 function renderLine(node, parent, isVariation, plyCounter, options) {
@@ -714,7 +731,8 @@ function renderLine(node, parent, isVariation, plyCounter, options) {
         } else if (part.type === "diagram") {
           flushBuffer(parent, buffer, isVariation);
           buffer = "";
-          createBoard(parent, current.fen, current, { small: true });
+          var diagWrapper = createBoard(parent, current.fen, current, { small: true });
+          markDiagramClickable(diagWrapper, current.fen, current, options);
           needsMoveNumber = true;
         }
       }
@@ -758,14 +776,19 @@ function flushBuffer(parent, text, isVariation) {
 /**
  * @param {object} [options]
  * @param {boolean} [options.clickableMoves] — opt-in, off by default so
- *   every existing <pgn> renders exactly as before. When set, every move
- *   (mainline and variation) is wrapped in a `.pgn-move` span carrying
- *   either `data-ply` (mainline) or `data-fen`/`data-from`/`data-to`
- *   (variation) — see renderLine() below — for a host page to wire up
- *   click-to-navigate itself. Introduced for chesspublica.github.io/sadler/;
- *   scoped to a per-element opt-in (via <pgn clickable-moves>, read in
- *   init.js) rather than turned on globally, so no other <pgn> on the site
- *   is affected.
+ *   every existing <pgn> renders exactly as before. When set:
+ *     - every move (mainline and variation) is wrapped in a `.pgn-move`
+ *       span carrying either `data-ply` (mainline) or
+ *       `data-fen`/`data-from`/`data-to` (variation) — see renderLine()
+ *       below;
+ *     - every diagram's `.cp-board-wrapper` is tagged
+ *       `.pgn-clickable-diagram` with `data-fen` (and `data-from`/
+ *       `data-to` when it's attached to a move) — see
+ *       markDiagramClickable() below;
+ *   for a host page to wire up click-to-navigate itself. Introduced for
+ *   chesspublica.github.io/sadler/; scoped to a per-element opt-in (via
+ *   <pgn clickable-moves>, read in init.js) rather than turned on
+ *   globally, so no other <pgn> on the site is affected.
  */
 export function renderFullPGN(pgnText, container, options) {
   try {

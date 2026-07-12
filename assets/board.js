@@ -18,6 +18,10 @@ import {
  *   comment (as opposed to a page's one primary board), matching how
  *   ChessBase/print tools shrink [D]/[#] diagrams relative to the main
  *   board.
+ * @returns {HTMLElement} the `.cp-board-wrapper` element, so a caller can
+ *   tag it (classes/data attributes) for its own purposes — e.g. a
+ *   reader-facing page making diagrams clickable. Unused by every
+ *   existing caller today, so this is purely additive.
  */
 export function createBoard(container, fen, moveNode, opts) {
   var wrapper = document.createElement("div");
@@ -58,6 +62,8 @@ export function createBoard(container, fen, moveNode, opts) {
     renderOverlay();
     makeBoardResizable(boardDiv, widget, renderOverlay);
   });
+
+  return wrapper;
 }
 
 /* ================================================================
