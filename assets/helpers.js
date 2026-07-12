@@ -621,8 +621,28 @@ var _RE_BRACKET_ANNOT = /\[%[^\]]*\]/g;
    Plain prose like "(Grob's Attack)" does NOT start with digits+dots. */
 var _RE_PGN_PAREN = /\(\s*\d+\.+[^()]*\)/g;
 
+/* Diagram markers — [D] is the ChessBase/print convention, [#] is the
+   same thing under a different name some tools emit. Both mean "insert a
+   diagram of the position here". The brackets are what make this safe to
+   detect: a bare trailing "#" in SAN (e.g. "Qxf7#") means checkmate and
+   is never mistaken for this marker since it isn't bracketed.
+   Two copies: a non-global one for .test() (a global regex's .test()
+   mutates lastIndex, so repeated calls on the same instance would
+   alternate true/false), and a global one for .replace(). */
+var _RE_DIAGRAM_MARKER_TEST = /\[D\]|\[#\]/;
+var _RE_DIAGRAM_MARKER = /\[D\]|\[#\]/g;
+
 /**
- * Strip [%…] annotation tags, [D] diagram markers, and move-number-led
+ * True if a raw comment string contains a [D] or [#] diagram marker.
+ * Shared by pgn.js and pgn-player.js so both renderers agree on what
+ * counts as "insert a diagram here".
+ */
+export function hasDiagramMarker(raw) {
+  return _RE_DIAGRAM_MARKER_TEST.test(String(raw || ""));
+}
+
+/**
+ * Strip [%…] annotation tags, [D]/[#] diagram markers, and move-number-led
  * parentheticals (inline PGN variations) from a raw comment string.
  * Plain-text parentheticals like "(Grob's Attack)" are preserved.
  * Shared by pgn.js and pgn-player.js so both renderers produce identical
@@ -632,7 +652,7 @@ export function stripCommentAnnotations(raw) {
   return String(raw || "")
     .replace(_RE_PGN_PAREN, "")
     .replace(_RE_BRACKET_ANNOT, "")
-    .replace(/\[D\]/g, "")
+    .replace(_RE_DIAGRAM_MARKER, "")
     .replace(/\s+/g, " ")
     .trim();
 }

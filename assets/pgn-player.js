@@ -6,6 +6,7 @@ import {
   NAG_TO_GLYPH,
   nagsToGlyph,
   stripCommentAnnotations,
+  hasDiagramMarker,
   toFigurine,
   formatComment,
   createReadyGate,
@@ -20,6 +21,7 @@ import {
   clearAnnotations,
   createGridOverlaySVG,
   getSquareCenter,
+  createBoard,
 } from "./board.js";
 
 /* Skip global keyboard shortcuts while the user is editing a form field,
@@ -167,6 +169,7 @@ function loadPGN(pgn) {
   const variations  = [];
   const nagsByMove  = []; // raw NAG tokens per main-line move — combined into glyphs below
   const puzzles     = []; // [P] / [Pn] puzzle markers: { plies }
+  const diagrams    = []; // moveIndex -> true where a comment carried a [D]/[#] marker
   const fenBeforeMove = []; // FEN just before each main-line move — for renderInlinePgnReferences()
 
   let moveIndex      = -1;
@@ -244,6 +247,7 @@ function loadPGN(pgn) {
         children:   [],
         nagsByMove: [], // raw NAG tokens per variation move — combined into glyphs at render time
         puzzles:    [], // [P]/[Pn] markers per move index — sparse, parallel to moves
+        diagramByMove: [], // move index -> true where that move's comment carried a [D]/[#] marker
         /* Approximate branch position — the main line's current FEN when
            this variation starts. A comment-embedded PGN reference line
            inside this variation's comments always branches from here
@@ -312,6 +316,11 @@ function loadPGN(pgn) {
 
       const cleaned = stripCommentAnnotations(commentSrc);
 
+      /* [D]/[#] — "insert a diagram here", same convention as <pgn>. Checked
+         on commentValue (before the marker itself is stripped from the
+         displayed text by stripCommentAnnotations() above). */
+      const hasDiagram = hasDiagramMarker(commentValue);
+
       if (inVariation) {
         const currentVar = varStack[varStack.length - 1].varObj;
         /* Matches moveAnnotations' existing convention just below: a
@@ -330,6 +339,9 @@ function loadPGN(pgn) {
         if (puzzlePlies) {
           currentVar.puzzles[mi] = { plies: puzzlePlies };
         }
+        if (hasDiagram) {
+          currentVar.diagramByMove[mi] = true;
+        }
       } else {
         /* moveIndex is -1 for a comment before the very first main-line
            move (e.g. a puzzle marker attached to a FEN-header start, or
@@ -344,6 +356,9 @@ function loadPGN(pgn) {
         }
         if (puzzlePlies) {
           puzzles[moveIndex] = { plies: puzzlePlies };
+        }
+        if (hasDiagram) {
+          diagrams[moveIndex] = true;
         }
       }
 
@@ -452,6 +467,7 @@ function loadPGN(pgn) {
     annotations,
     glyphs,
     puzzles,
+    diagrams,
     startFEN,
     startColor,
     startMoveNumber,
@@ -1372,7 +1388,7 @@ class VideoComment {
     this.engine = engine;
   }
 
-  update(moveIndex, comments, variations, isPaused, branchFEN, branchMoveNum, branchIsBlack, isGameOver) {
+  update(moveIndex, comments, variations, diagrams, currentFEN, isPaused, branchFEN, branchMoveNum, branchIsBlack, isGameOver) {
 
     if (!this.el) return false;
 
@@ -1381,6 +1397,24 @@ class VideoComment {
 
     let hasContent = false;
     this.el.innerHTML = "";
+
+    /* [D]/[#] in the comment attached to this move — a diagram inside a
+       comment, rendered at 75% of the page's regular board size (same
+       convention as <pgn>), diagram-then-text like a mid-game comment's
+       parts. The live board already shows this exact position, but the
+       marker is an explicit request to also snapshot it inline with the
+       prose, e.g. for a reader skimming comments without navigating. */
+    if (diagrams?.[moveIndex] && currentFEN) {
+      hasContent = true;
+      const dWrap = document.createElement("div");
+      dWrap.className = "comment-diagram";
+      const ann = this.engine.state.annotations?.[moveIndex];
+      const node = { fen: currentFEN, squareMarks: [], arrows: [] };
+      ann?.cal?.forEach(entry => node.arrows.push(...parseCAL(entry)));
+      ann?.csl?.forEach(entry => node.squareMarks.push(...parseCSL(entry)));
+      createBoard(dWrap, currentFEN, node, { small: true });
+      this.el.appendChild(dWrap);
+    }
 
     if (comment) {
       hasContent = true;
@@ -1548,6 +1582,24 @@ class VideoComment {
           };
 
           content.appendChild(moveSpan);
+
+          /* [D]/[#] diagram for this variation move — rendered right after
+             the move like its comment below, diagram-then-text (same
+             order as pgn.js), and hidden along with everything else past
+             an unsolved puzzle marker. */
+          if (variation.diagramByMove && variation.diagramByMove[mi]) {
+            const dWrap = document.createElement("div");
+            dWrap.className = "comment-diagram";
+            dWrap.dataset.forMi = String(mi);
+            const ann = variation.moveAnnotations?.[mi];
+            const node = { fen: targetFEN, squareMarks: [], arrows: [] };
+            ann?.cal?.forEach(entry => node.arrows.push(...parseCAL(entry)));
+            ann?.csl?.forEach(entry => node.squareMarks.push(...parseCSL(entry)));
+            createBoard(dWrap, targetFEN, node, { small: true });
+            if (hidden) dWrap.style.display = "none";
+            content.appendChild(dWrap);
+            needsRenumber = true;
+          }
 
           /* Comments render right after the move they're attached to —
              in PGN order, same as pgn.js — rather than all together at
@@ -1854,6 +1906,7 @@ class VideoEngine {
     this.state.annotations = data.annotations || [];
     this.state.glyphs      = data.glyphs      || [];
     this.state.puzzles     = data.puzzles     || [];
+    this.state.diagrams    = data.diagrams    || [];
     this.state.startFEN        = data.startFEN        || null;
     this.state.startColor      = data.startColor      || "w";
     this.state.startMoveNumber = data.startMoveNumber || 1;
@@ -2196,6 +2249,7 @@ class VideoEngine {
 
     if (this.commentBox) {
       const branchFEN = this.state.cache[Math.max(moveIdx, 0)] || null;
+      const currentFEN = this.state.cache[i] || null; // position after moveIdx's move — what a [D]/[#] diagram in its comment should show
       const ctx       = moveIdx >= 0
         ? this._moveContext(moveIdx)
         : { fullMoveNum: this.state.startMoveNumber || 1, isBlack: this.state.startColor === "b" };
@@ -2207,6 +2261,8 @@ class VideoEngine {
           moveIdx,
           this.state.comments,
           this.state.variations,
+          this.state.diagrams,
+          currentFEN,
           false,
           branchFEN,
           ctx.fullMoveNum,
@@ -2220,6 +2276,8 @@ class VideoEngine {
           moveIdx,
           this.state.comments,
           this.state.variations,
+          this.state.diagrams,
+          currentFEN,
           true,
           branchFEN,
           ctx.fullMoveNum,

@@ -46,6 +46,11 @@
 /* CHESSBOARD — Board wrapper + SVG overlay */
 
 .cp-board-wrapper {position:relative;display:block;margin:1rem 0;width:100%;max-width:var(--board-size);box-sizing:content-box!important;}
+
+/* Diagram inside a comment (from a [D]/[#] marker, board annotations, or
+   a puzzle marker) — rendered at 75% of the page's regular board size,
+   relative to whatever --board-size is in scope. */
+.cp-board-wrapper--small {max-width:calc(var(--board-size) * 0.75);}
 .cp-board {display:block;width:100%;max-width:var(--board-size);margin:1rem 0;break-inside:avoid;}
 .cp-board *,.cp-board *::before,.cp-board *::after,
 .board-wrapper{box-sizing:content-box!important;}

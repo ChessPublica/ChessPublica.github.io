@@ -9,9 +9,20 @@ import {
   nagsToGlyph,
 } from "./helpers.js";
 
-export function createBoard(container, fen, moveNode) {
+/**
+ * @param {HTMLElement} container
+ * @param {string}      fen
+ * @param {?Object}     moveNode  optional { squareMarks, arrows, nags, san, color }
+ * @param {?Object}     opts      { small: true } shrinks the diagram to 75%
+ *   of --board-size — used for diagrams that appear inline inside a
+ *   comment (as opposed to a page's one primary board), matching how
+ *   ChessBase/print tools shrink [D]/[#] diagrams relative to the main
+ *   board.
+ */
+export function createBoard(container, fen, moveNode, opts) {
   var wrapper = document.createElement("div");
   wrapper.className = "cp-board-wrapper";
+  if (opts && opts.small) wrapper.classList.add("cp-board-wrapper--small");
 
   var boardDiv = document.createElement("div");
   boardDiv.className = "cp-board";
