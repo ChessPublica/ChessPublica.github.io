@@ -643,12 +643,17 @@ function renderLine(node, parent, isVariation) {
 
     /* MOVE TEXT — a node flagged .invalid (see parseSequence's MOVE
        handling above) couldn't be played, so there's no legal SAN to
-       show; print a plain-text marker in its place instead so a reader
+       show; print a highlighted marker in its place instead so a reader
        can see exactly where the source PGN broke, rather than the move
        silently vanishing (or worse, the next token being quietly
        replayed from this same un-advanced position as if it were the
-       real continuation). */
-    buffer += (current.invalid ? "[Invalid PGN]" : (toFigurine(current.san) + renderNAG(current.nags))) + " ";
+       real continuation). Safe as raw HTML: current.san never reaches
+       here (the marker text is a fixed string, not the offending SAN
+       token), and flushBuffer() renders both mainline and variation
+       buffers via innerHTML for exactly this reason. */
+    buffer += (current.invalid
+      ? '<span class="pgn-invalid-move">Invalid PGN</span>'
+      : (toFigurine(current.san) + renderNAG(current.nags))) + " ";
 
     lastMoveNumber = current.moveNumber;
 
@@ -712,15 +717,12 @@ function flushBuffer(parent, text, isVariation) {
   if (!trimmed) return;
   var p = document.createElement("p");
   p.className = isVariation ? "pgn-variation-line" : "pgn-mainline";
-  /* Variation buffers carry already-sanitized comment HTML mixed with
-     plain SAN move text, so innerHTML is needed to render them.
-     Main-line buffers only ever hold move text, so textContent is fine
-     (and also slightly safer). */
-  if (isVariation) {
-    p.innerHTML = trimmed;
-  } else {
-    p.textContent = trimmed;
-  }
+  /* Both buffers are innerHTML: variation buffers carry already-sanitized
+     comment HTML mixed with plain SAN move text; main-line buffers only
+     ever hold move text plus the fixed, code-generated "Invalid PGN"
+     marker span (see renderLine()'s MOVE TEXT handling) — never raw PGN
+     content, so this stays safe. */
+  p.innerHTML = trimmed;
   parent.appendChild(p);
 }
 

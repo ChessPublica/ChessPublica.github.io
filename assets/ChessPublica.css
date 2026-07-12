@@ -16,6 +16,7 @@
 .pgn-variation-line{display:inline;margin:0;}
 .pgn-variation-line::after{content: " ";}
 .pgn-error{color:red;}
+.pgn-invalid-move{color:red;font-weight:bold;}
 
 /* <pgn> LOADING STATE — title icon + empty placeholder line + spinner,
    shown while a <pgn>'s src is being fetched (see showLoading() in
