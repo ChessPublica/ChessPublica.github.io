@@ -2178,6 +2178,21 @@ class VideoEngine {
         applyBoardAnnotations(this.boardEl, node);
       }
     }
+
+    /* Notify the page a variation position is showing — the "cp-move"
+       counterpart (see goTo()) for every path that lands here:
+       variationGoTo() (arrow-key stepping and the variation
+       auto-play/spacebar tick loop alike), toggleVariationPlay()'s
+       fresh start, and a host page's own direct call (e.g. a static
+       <pgn> rendering elsewhere on the page previewing a variation/
+       diagram move). Keyed by FEN, not a ply index — a variation
+       position has no mainline moveIndex to key off of — so a listener
+       matches it against whatever it tagged with that same FEN (see
+       pgn.js's .pgn-move[data-fen] / .pgn-clickable-diagram[data-fen]). */
+    this.container.dispatchEvent(new CustomEvent("cp-variation-move", {
+      bubbles: true,
+      detail: { fen, headers: this.state.headers },
+    }));
   }
 
 

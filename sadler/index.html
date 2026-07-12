@@ -232,6 +232,22 @@
                 target.scrollIntoView({ behavior: 'smooth', block: 'center' });
             });
 
+            // Counterpart to "cp-move" above, but for a variation position
+            // (arrow-key stepping, the spacebar auto-play tick loop, or a
+            // fresh variation/diagram click — see pgn-player.js's
+            // showVariationPosition()). There's no mainline ply index to
+            // match on here, so key off the FEN instead — every
+            // data-fen-carrying element in the reading column (mainline
+            // spans never carry one) is a candidate.
+            playerEl.addEventListener('cp-variation-move', (e) => {
+                const fen = e.detail.fen;
+                const target = fen ? movesRoot.querySelector(`[data-fen="${fen}"]`) : null;
+                if (!target) { setActiveMove(null); return; }
+
+                setActiveMove(target);
+                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+
             // Player isn't ready to accept goTo()/showVariationPosition()
             // calls until its PGN has been parsed and the board built —
             // see helpers.js's createReadyGate.
