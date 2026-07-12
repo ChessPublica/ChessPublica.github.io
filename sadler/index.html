@@ -44,20 +44,75 @@
 
         /* A leaner reading board for this page: no title/icon (the same
            game info is already shown by the static <pgn> on the right —
-           see its own .pgn-title), no settings gear, no move list or
-           comment/variation box under it — just the board. Scoped to
+           see its own .pgn-title), no settings gear, no move list, and
+           no on-board play button — just the board itself. Scoped to
            <pgn-app>'s own player, so every other <pgn-player> on the site
            (which relies on these for navigation) keeps them. */
         pgn-app pgn-player .video-title,
         pgn-app pgn-player .board-toolbar,
         pgn-app pgn-player .video-moves,
-        pgn-app pgn-player .video-comment {
+        pgn-app pgn-player .play {
             display: none;
         }
 
-        .pgn-move.pgn-move-active { background: #c8e6c9; border-radius: 3px; box-shadow: 0 0 0 2px #c8e6c9; }
-        .pgn-container .pgn-move { cursor: pointer; }
-        .pgn-container .pgn-move:hover { background: #eee; border-radius: 3px;}
+        /* Comments and a short preview of each variation (with its play
+           icon, still fully clickable/playable) stay under the board —
+           just clamped to a couple of lines each so they read as a
+           glance/preview rather than the full text already available in
+           the reading column on the right. */
+        pgn-app pgn-player .variation-content {
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            overflow: hidden;
+        }
+
+        /* Everything from here down styles the static <pgn> reading
+           column, scoped to `pgn-app .pgn-container` so it never reaches
+           any other <pgn> on the site. */
+        pgn-app .pgn-container .pgn-move,
+        pgn-app .pgn-container .pgn-clickable-diagram {
+            cursor: pointer;
+        }
+        pgn-app .pgn-container .pgn-move:hover {
+            background: #eee;
+            border-radius: 3px;
+        }
+        pgn-app .pgn-container .pgn-clickable-diagram:hover {
+            box-shadow: 0 0 0 3px #c8e6c9;
+            border-radius: 4px;
+        }
+        pgn-app .pgn-container .pgn-move-active {
+            background: #c8e6c9;
+            border-radius: 3px;
+            box-shadow: 0 0 0 2px #c8e6c9;
+        }
+        /* A diagram is a whole board image, not a run of text — a
+           background tint would just look like a rendering glitch, so
+           the active state is the ring alone. */
+        pgn-app .pgn-container .pgn-clickable-diagram.pgn-move-active {
+            background: transparent;
+        }
+
+        /* Sub-variations, indented one level per nesting depth. Plain
+           block-level margins on a class that's already nested inside
+           itself for every sub-variation-of-a-sub-variation — each level
+           adds its own margin relative to its (already indented) parent,
+           so this needs no per-depth selectors to keep compounding. */
+        pgn-app .pgn-container .pgn-variation {
+            margin-left: 1.25rem;
+            padding-left: 0.75rem;
+            border-left: 2px solid rgba(128, 128, 128, 0.3);
+        }
+        /* The static reading column defaults to 2 sub-columns
+           (ChessPublica.css's .pgn-moves) for narrower single-column
+           blog layouts elsewhere on the site; with a dedicated column
+           this wide, and variations now indented, a column break mid-line
+           reads as broken rather than efficient. */
+        pgn-app .pgn-container .pgn-moves {
+            column-count: 1;
+        }
     </style>
 </head>
 <body>
@@ -118,12 +173,12 @@
              - reader clicks a mainline move on the right -> player jumps
                to it (engine.goTo(), which re-fires "cp-move" and keeps
                everything above in sync)
-             - reader clicks a variation/sub-variation move on the right
-               -> the player just shows that position directly
-               (engine.showVariationPosition() — the same primitive
-               <pgn-player> uses to preview a variation move from its own
-               comment box — since a variation move has no mainline ply
-               index to hand to goTo())
+             - reader clicks a variation/sub-variation move, or any
+               diagram, on the right -> the player just shows that
+               position directly (engine.showVariationPosition() — the
+               same primitive <pgn-player> uses to preview a variation
+               move from its own comment box — since neither has a
+               mainline ply index to hand to goTo())
            The left column itself stays put via the sticky CSS above. */
         document.addEventListener('DOMContentLoaded', async () => {
             // <pgn> only becomes `.pgn-container` (see init.js) once
@@ -158,7 +213,9 @@
             if (!engine) return;
 
             movesRoot.addEventListener('click', (e) => {
-                const moveEl = e.target.closest('.pgn-move');
+                // .pgn-move: mainline (data-ply) or variation (data-fen) move text.
+                // .pgn-clickable-diagram: an inline [D]/[#] board — always data-fen.
+                const moveEl = e.target.closest('.pgn-move, .pgn-clickable-diagram');
                 if (!moveEl) return;
 
                 engine.pause();
