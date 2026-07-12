@@ -303,24 +303,36 @@
                 );
                 setActiveRow(mainlineRow); // board is already showing this move
 
-                // Each alternative — preview only (no ply index of its
-                // own to hand to goTo()), same primitive the reading
-                // column's variation-move clicks use.
+                // Each alternative — replay its *entire* move list (not
+                // just the first move) into a fens/verbose sequence, the
+                // same shape pgn.js's collectVariationSequence() stashes
+                // on a .pgn-variation in the reading column. Handing that
+                // to enterVariation() (not just the first move's FEN via
+                // showVariationPosition()) is what lets arrow keys/
+                // spacebar step through the rest of the alternative
+                // afterward instead of falling back to mainline nav.
                 alternatives.forEach((variation) => {
-                    const san = variation.moves && variation.moves[0];
-                    if (!san) return;
+                    if (!variation.moves || !variation.moves.length) return;
 
                     const chess = new Chess(branchFEN);
-                    const move = chess.move(san, { sloppy: true });
-                    if (!move) return;
+                    const fens = [branchFEN];
+                    const verbose = [];
+                    for (const san of variation.moves) {
+                        const move = chess.move(san, { sloppy: true });
+                        if (!move) break; // stop at the first unparseable move, keep what came before it
+                        fens.push(chess.fen());
+                        verbose.push({ from: move.from, to: move.to });
+                    }
+                    if (verbose.length === 0) return; // even the first move failed
 
                     // No engine.pause() here — the engine is already
                     // paused by the time this picker has any rows (goTo()
                     // auto-pauses on a move with variations; see the
                     // guard above for why calling it again would be
                     // actively harmful here, not just redundant).
-                    makeRow(formatLabel(san, ctx.fullMoveNum, ctx.isBlack), false, () => {
-                        engine.showVariationPosition(chess.fen(), null, { from: move.from, to: move.to }, null);
+                    makeRow(formatLabel(variation.moves[0], ctx.fullMoveNum, ctx.isBlack), false, () => {
+                        engine.enterVariation(fens, variation.moveAnnotations, 1, null, verbose, variation);
+                        engine.showVariationPosition(fens[1], null, verbose[0], null);
                     });
                 });
             }
@@ -348,6 +360,21 @@
                 const move = moveEl.dataset.from && moveEl.dataset.to
                     ? { from: moveEl.dataset.from, to: moveEl.dataset.to }
                     : null;
+
+                // A variation move (not a diagram) carries data-vindex —
+                // its 0-based index into the fens/verbose sequence pgn.js
+                // stashed on the enclosing .pgn-variation (see
+                // collectVariationSequence() there). Handing that whole
+                // sequence to enterVariation(), not just this one FEN, is
+                // what makes arrow keys/spacebar step through the rest of
+                // the variation afterward instead of falling back to
+                // mainline navigation.
+                const vIndex = moveEl.dataset.vindex;
+                const varWrapper = vIndex !== undefined ? moveEl.closest('.pgn-variation') : null;
+                if (varWrapper && varWrapper.cpFens) {
+                    engine.enterVariation(varWrapper.cpFens, null, parseInt(vIndex, 10) + 1, null, varWrapper.cpVerbose, null);
+                }
+
                 engine.showVariationPosition(fen, null, move, null);
                 setActiveMove(moveEl);
             });

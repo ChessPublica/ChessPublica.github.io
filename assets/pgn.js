@@ -632,11 +632,48 @@ function markDiagramClickable(wrapper, fen, node, options) {
   }
 }
 
+/* Walks a variation's own move chain (firstMoveNode, firstMoveNode.next,
+   …) — never into nested sub-variations, which branch off individual
+   moves via `.variations`/`.childrenByMove` rather than continuing this
+   same `.next` chain — collecting the FEN after each move plus its
+   from/to squares. Every node already carries its own post-move `.fen`
+   (set during parsing) and `.from`/`.to` (added alongside the mainline
+   .pgn-move[data-ply] click support), so this is just a linear read, no
+   replaying the moves through chess.js again.
+
+   `firstMoveNode.parent` is the placeholder root parseSequence() creates
+   for every variation (`{ next: null, fen: branchFen }`, see the
+   VARIATION branch above) — never a real move — so `.parent.fen` is
+   exactly the FEN this variation branches from, giving fens[0].
+
+   Returns { fens, verbose } shaped for VideoEngine.enterVariation():
+   fens[0] is the branch position, fens[k] is the position after the
+   k-th move; verbose[k-1] is that move's { from, to }. */
+function collectVariationSequence(firstMoveNode) {
+  var fens = [firstMoveNode.parent ? firstMoveNode.parent.fen : firstMoveNode.fen];
+  var verbose = [];
+  var n = firstMoveNode;
+  while (n) {
+    fens.push(n.fen);
+    verbose.push(n.from && n.to ? { from: n.from, to: n.to } : null);
+    n = n.next;
+  }
+  return { fens: fens, verbose: verbose };
+}
+
 function renderLine(node, parent, isVariation, plyCounter, options) {
   var current = node;
   var buffer = "";
   var lastMoveNumber = null;
   var needsMoveNumber = true;
+  /* 0-based index of a variation move within *this* variation/
+     sub-variation only (a fresh renderLine() call per variation, so
+     this naturally resets at each nesting level) — pairs with the
+     fens/verbose sequence stashed on `parent` (see the VARIATIONS
+     block below) so a click handler can hand both to <pgn-player>'s
+     enterVariation() and get real keyboard (arrow/space) stepping
+     through the variation, not just a single-position preview. */
+  var vIndex = 0;
 
   while (current) {
     var newMoveNumber = current.moveNumber !== lastMoveNumber;
@@ -696,7 +733,8 @@ function renderLine(node, parent, isVariation, plyCounter, options) {
         ? moveHTML
         : isVariation
           ? ('<span class="pgn-move" data-fen="' + current.fen +
-              '" data-from="' + current.from + '" data-to="' + current.to + '">' +
+              '" data-from="' + current.from + '" data-to="' + current.to +
+              '" data-vindex="' + (vIndex++) + '">' +
               moveHTML + '</span>')
           : ('<span class="pgn-move" data-ply="' + (plyCounter.n++) + '">' +
               moveHTML + '</span>')) + " ";
@@ -747,6 +785,17 @@ function renderLine(node, parent, isVariation, plyCounter, options) {
         var variationWrapper = document.createElement("div");
         variationWrapper.className = "pgn-variation";
         parent.appendChild(variationWrapper);
+        /* Stashed as plain DOM-element properties (not data-* attributes
+           — these are arrays of FEN/verbose-move objects, not strings)
+           so a click on any move inside — via data-vindex, its 0-based
+           index into this exact sequence — can hand the whole thing to
+           enterVariation() for real keyboard stepping. Only computed
+           under the same clickableMoves opt-in as everything else here. */
+        if (options && options.clickableMoves) {
+          var seq = collectVariationSequence(variationRoot);
+          variationWrapper.cpFens = seq.fens;
+          variationWrapper.cpVerbose = seq.verbose;
+        }
         renderLine(variationRoot, variationWrapper, true, plyCounter, options);
       });
 
@@ -779,8 +828,14 @@ function flushBuffer(parent, text, isVariation) {
  *   every existing <pgn> renders exactly as before. When set:
  *     - every move (mainline and variation) is wrapped in a `.pgn-move`
  *       span carrying either `data-ply` (mainline) or
- *       `data-fen`/`data-from`/`data-to` (variation) — see renderLine()
- *       below;
+ *       `data-fen`/`data-from`/`data-to`/`data-vindex` (variation) — see
+ *       renderLine() below. A variation move's `.pgn-variation` wrapper
+ *       also carries the whole variation's `fens`/`verbose` sequence
+ *       (as `.cpFens`/`.cpVerbose` element properties, not
+ *       attributes — see collectVariationSequence()) so a host page can
+ *       hand both to <pgn-player>'s enterVariation() and get real
+ *       keyboard (arrow-key/spacebar) stepping through the variation,
+ *       not just a single-position preview;
  *     - every diagram's `.cp-board-wrapper` is tagged
  *       `.pgn-clickable-diagram` with `data-fen` (and `data-from`/
  *       `data-to` when it's attached to a move) — see
