@@ -56,16 +56,27 @@
         }
 
         /* Comments and a short preview of each variation (with its play
-           icon, still fully clickable/playable) stay under the board —
-           just clamped to a couple of lines each so they read as a
-           glance/preview rather than the full text already available in
-           the reading column on the right. */
+           icon, still fully clickable/playable) stay under the board — a
+           height-capped, fading peek rather than the full text already
+           available in the reading column on the right.
+
+           NOT -webkit-line-clamp: a variation's move number/move text is
+           inline, but its attached comment (.variation-comment) and any
+           nested sub-variation (.variation-block) are block-level rows —
+           line-clamp only counts wrapped *text* lines within a single
+           inline flow, so against a mix of block children it just lets
+           each one render in full as its own row instead of truncating
+           (the move on one line, the whole comment on the next, then the
+           entire nested variation spilling out untruncated below that).
+           A flat max-height crops the box wherever it lands regardless
+           of what's inside, so it doesn't have that problem — the fade
+           (mask-image) softens the cut instead of slicing text off
+           mid-row. */
         pgn-app pgn-player .variation-content {
-            display: -webkit-box;
-            -webkit-box-orient: vertical;
-            -webkit-line-clamp: 2;
-            line-clamp: 2;
+            max-height: 3.4em;
             overflow: hidden;
+            -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+                    mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
         }
 
         /* Everything from here down styles the static <pgn> reading
