@@ -91,6 +91,13 @@ function initCustomElements(selector, wrapperClass, renderFn, opts) {
     wrapper.className = wrapperClass;
     el.replaceWith(wrapper);
 
+    /* Per-element opt-in, off by default, so every <pgn> renders exactly
+       as it always has — see renderFullPGN()'s doc comment in pgn.js.
+       chesspublica.github.io/sadler/ sets this attribute on its own
+       <pgn> to get clickable moves; no other page does, so their output
+       is unaffected. */
+    var renderOptions = { clickableMoves: el.hasAttribute("clickable-moves") };
+
     var src = el.getAttribute("src");
 
     if (src) {
@@ -101,7 +108,7 @@ function initCustomElements(selector, wrapperClass, renderFn, opts) {
           .then(function (text) {
             try {
               wrapper.innerHTML = "";
-              renderFn(text, wrapper);
+              renderFn(text, wrapper, renderOptions);
             } catch (e) {
               showError(wrapper, "failed to render <" + selector + "> from " + src + ": " + e.message);
             }
@@ -134,7 +141,7 @@ function initCustomElements(selector, wrapperClass, renderFn, opts) {
         return;
       }
       try {
-        renderFn(text, wrapper);
+        renderFn(text, wrapper, renderOptions);
       } catch (e) {
         showError(wrapper, "failed to render <" + selector + ">: " + e.message);
       }

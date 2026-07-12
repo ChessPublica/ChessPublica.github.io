@@ -226,6 +226,8 @@ function parseSequence(tokens, chess, parentNode, originalPgn) {
       var node = {
         san: token.value,
         fen: fen,
+        from: move.from,
+        to: move.to,
         moveNumber: move.color === "w" ? fenMoveNum : fenMoveNum - 1,
         color: move.color,
         next: null,
@@ -570,7 +572,7 @@ export function renderHeaders(headers, container) {
   container.appendChild(title);
 }
 
-export function renderMoveTree(rootNode, container, headers) {
+export function renderMoveTree(rootNode, container, headers, options) {
   var movesDiv = document.createElement("div");
   movesDiv.className = "pgn-moves";
 
@@ -593,7 +595,7 @@ export function renderMoveTree(rootNode, container, headers) {
     }
   }
 
-  renderLine(rootNode, movesDiv, false, { n: 0 });
+  renderLine(rootNode, movesDiv, false, { n: 0 }, options);
 
   /* Append the game result (1-0 / 0-1 / ½-½) inline at the end of
      the main line. Skip "*" (ongoing) and missing values. */
@@ -613,7 +615,7 @@ function renderNAG(nags) {
   return nagsToGlyph(nags) || "";
 }
 
-function renderLine(node, parent, isVariation, plyCounter) {
+function renderLine(node, parent, isVariation, plyCounter, options) {
   var current = node;
   var buffer = "";
   var lastMoveNumber = null;
@@ -652,19 +654,35 @@ function renderLine(node, parent, isVariation, plyCounter) {
        token), and flushBuffer() renders both mainline and variation
        buffers via innerHTML for exactly this reason.
 
-       Mainline moves are additionally wrapped in a `.pgn-move[data-ply]`
-       span — a 0-based ply index matching <pgn-player>'s own moveIndex
-       (both walk the same move sequence, skipping invalid/unplayable
-       moves the same way) — so a reader-facing page can scroll/highlight
-       the exact move text as the player advances. Variation moves aren't
-       tagged: <pgn-player> tracks those against a separate per-variation
-       index space that doesn't line up with this flat counter. */
+       options.clickableMoves (opt-in, off by default — see
+       renderFullPGN()'s doc comment) wraps every valid move — mainline
+       or (sub-)variation — in a `.pgn-move` span so a reader-facing page
+       can make the whole PGN clickable, not just the mainline:
+         - Mainline moves carry `data-ply`, a 0-based ply index matching
+           <pgn-player>'s own moveIndex (both walk the same move sequence,
+           skipping invalid/unplayable moves the same way) — a listener
+           can hand that straight to the player's own goTo().
+         - Variation/sub-variation moves instead carry `data-fen` (and
+           `data-from`/`data-to` for a last-move arrow): <pgn-player>
+           tracks its own variation moves against a separate per-variation
+           index space that doesn't line up with this flat counter, but
+           every node here already has the FEN after that move, which is
+           enough to just show the position directly (see
+           <pgn-player>'s showVariationPosition()).
+       Left off, this renders exactly as it did before .pgn-move existed —
+       plain move text, no wrapper. */
+    var moveHTML = toFigurine(current.san) + renderNAG(current.nags);
+    var clickable = options && options.clickableMoves;
     buffer += (current.invalid
       ? '<span class="pgn-invalid-move">Invalid PGN</span>'
-      : isVariation
-        ? (toFigurine(current.san) + renderNAG(current.nags))
-        : ('<span class="pgn-move" data-ply="' + (plyCounter.n++) + '">' +
-            toFigurine(current.san) + renderNAG(current.nags) + '</span>')) + " ";
+      : !clickable
+        ? moveHTML
+        : isVariation
+          ? ('<span class="pgn-move" data-fen="' + current.fen +
+              '" data-from="' + current.from + '" data-to="' + current.to + '">' +
+              moveHTML + '</span>')
+          : ('<span class="pgn-move" data-ply="' + (plyCounter.n++) + '">' +
+              moveHTML + '</span>')) + " ";
 
     lastMoveNumber = current.moveNumber;
 
@@ -711,7 +729,7 @@ function renderLine(node, parent, isVariation, plyCounter) {
         var variationWrapper = document.createElement("div");
         variationWrapper.className = "pgn-variation";
         parent.appendChild(variationWrapper);
-        renderLine(variationRoot, variationWrapper, true, plyCounter);
+        renderLine(variationRoot, variationWrapper, true, plyCounter, options);
       });
 
       needsMoveNumber = true;
@@ -737,14 +755,26 @@ function flushBuffer(parent, text, isVariation) {
   parent.appendChild(p);
 }
 
-export function renderFullPGN(pgnText, container) {
+/**
+ * @param {object} [options]
+ * @param {boolean} [options.clickableMoves] — opt-in, off by default so
+ *   every existing <pgn> renders exactly as before. When set, every move
+ *   (mainline and variation) is wrapped in a `.pgn-move` span carrying
+ *   either `data-ply` (mainline) or `data-fen`/`data-from`/`data-to`
+ *   (variation) — see renderLine() below — for a host page to wire up
+ *   click-to-navigate itself. Introduced for chesspublica.github.io/sadler/;
+ *   scoped to a per-element opt-in (via <pgn clickable-moves>, read in
+ *   init.js) rather than turned on globally, so no other <pgn> on the site
+ *   is affected.
+ */
+export function renderFullPGN(pgnText, container, options) {
   try {
     var headers = parseHeaders(pgnText);
     renderHeaders(headers, container);
 
     var rootNode = buildMoveTree(pgnText);
     if (rootNode) {
-      renderMoveTree(rootNode, container, headers);
+      renderMoveTree(rootNode, container, headers, options);
     }
   } catch (e) {
     var errorDiv = document.createElement("div");
