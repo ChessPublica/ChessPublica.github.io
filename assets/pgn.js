@@ -593,7 +593,7 @@ export function renderMoveTree(rootNode, container, headers) {
     }
   }
 
-  renderLine(rootNode, movesDiv, false);
+  renderLine(rootNode, movesDiv, false, { n: 0 });
 
   /* Append the game result (1-0 / 0-1 / ½-½) inline at the end of
      the main line. Skip "*" (ongoing) and missing values. */
@@ -613,7 +613,7 @@ function renderNAG(nags) {
   return nagsToGlyph(nags) || "";
 }
 
-function renderLine(node, parent, isVariation) {
+function renderLine(node, parent, isVariation, plyCounter) {
   var current = node;
   var buffer = "";
   var lastMoveNumber = null;
@@ -650,10 +650,21 @@ function renderLine(node, parent, isVariation) {
        real continuation). Safe as raw HTML: current.san never reaches
        here (the marker text is a fixed string, not the offending SAN
        token), and flushBuffer() renders both mainline and variation
-       buffers via innerHTML for exactly this reason. */
+       buffers via innerHTML for exactly this reason.
+
+       Mainline moves are additionally wrapped in a `.pgn-move[data-ply]`
+       span — a 0-based ply index matching <pgn-player>'s own moveIndex
+       (both walk the same move sequence, skipping invalid/unplayable
+       moves the same way) — so a reader-facing page can scroll/highlight
+       the exact move text as the player advances. Variation moves aren't
+       tagged: <pgn-player> tracks those against a separate per-variation
+       index space that doesn't line up with this flat counter. */
     buffer += (current.invalid
       ? '<span class="pgn-invalid-move">Invalid PGN</span>'
-      : (toFigurine(current.san) + renderNAG(current.nags))) + " ";
+      : isVariation
+        ? (toFigurine(current.san) + renderNAG(current.nags))
+        : ('<span class="pgn-move" data-ply="' + (plyCounter.n++) + '">' +
+            toFigurine(current.san) + renderNAG(current.nags) + '</span>')) + " ";
 
     lastMoveNumber = current.moveNumber;
 
@@ -700,7 +711,7 @@ function renderLine(node, parent, isVariation) {
         var variationWrapper = document.createElement("div");
         variationWrapper.className = "pgn-variation";
         parent.appendChild(variationWrapper);
-        renderLine(variationRoot, variationWrapper, true);
+        renderLine(variationRoot, variationWrapper, true, plyCounter);
       });
 
       needsMoveNumber = true;
