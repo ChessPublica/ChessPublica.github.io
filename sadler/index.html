@@ -90,11 +90,15 @@
            .sadler-move-picker (inherited down) by the sync script,
            copied from the board's own play button, so this renders as
            the exact same icon the rest of the site uses instead of a
-           plain "▶" character. */
+           plain "▶" character. Sized to match that same button's own
+           icon (.play .lucide-icon in ChessPublica.css is 2rem) rather
+           than shrinking it down to text size — align-items: center on
+           .sadler-picker-row (above) centers the move text against it
+           vertically regardless of how much taller the icon is. */
         .sadler-picker-icon {
             flex-shrink: 0;
-            width: 0.85em;
-            height: 0.85em;
+            width: 2rem;
+            height: 2rem;
             color: #555;
         }
         .sadler-picker-row.mainline {
