@@ -181,12 +181,19 @@ function parseSequence(tokens, chess, parentNode, originalPgn) {
     if (token.type === "move") {
       var move = chess.move(token.value, { sloppy: true });
       if (!move) {
-        var currentFen = chess.fen();
-        var error = new Error(
-          "Invalid move: " + token.value + "\nMove number: " + getMoveNumber(currentFen),
+        /* Some PGN sources (engine-analysis dumps, copy/paste mangling)
+           carry a stray illegal move buried deep in a variation. Skip it
+           and keep parsing the rest of the document instead of aborting
+           the whole render — one bad move several variations deep
+           shouldn't take down the entire game. Matches <pgn-player>'s
+           loadPGN(), which silently drops an illegal move the same way
+           (see its MOVE token handling) rather than throwing. */
+        console.error(
+          "Skipping invalid move in PGN:", token.value,
+          "at move number", getMoveNumber(chess.fen()),
         );
-        error.pgnIndex = originalPgn.indexOf(token.value);
-        throw error;
+        i++;
+        continue;
       }
 
       var fen = chess.fen();
