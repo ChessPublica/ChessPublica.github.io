@@ -179,19 +179,43 @@ function parseSequence(tokens, chess, parentNode, originalPgn) {
 
     /* MOVE */
     if (token.type === "move") {
+      var beforeFen = chess.fen();
       var move = chess.move(token.value, { sloppy: true });
       if (!move) {
         /* Some PGN sources (engine-analysis dumps, copy/paste mangling)
-           carry a stray illegal move buried deep in a variation. Skip it
-           and keep parsing the rest of the document instead of aborting
-           the whole render — one bad move several variations deep
-           shouldn't take down the entire game. Matches <pgn-player>'s
-           loadPGN(), which silently drops an illegal move the same way
-           (see its MOVE token handling) rather than throwing. */
+           carry a stray illegal move buried deep in a variation. Rather
+           than aborting the whole render (killing the entire game over
+           one bad move several variations deep) or dropping the token
+           silently (chess.move() left the position unchanged, so the
+           NEXT token then gets tried from that same stale position —
+           if it happens to be legal there too, e.g. a totally unrelated
+           later move that coincidentally fits, it splices straight into
+           the display with nothing to show anything was wrong), insert
+           a visible placeholder node in its place and keep parsing from
+           the same position, same as before. */
         console.error(
-          "Skipping invalid move in PGN:", token.value,
-          "at move number", getMoveNumber(chess.fen()),
+          "Invalid move in PGN:", token.value,
+          "at move number", getMoveNumber(beforeFen),
         );
+
+        var invalidNode = {
+          san: token.value,
+          invalid: true,
+          fen: beforeFen,
+          moveNumber: getMoveNumber(beforeFen),
+          color: beforeFen.split(" ")[1] === "b" ? "b" : "w",
+          next: null,
+          parent: current,
+          variations: [],
+          parts: [],
+          nags: [],
+          arrows: [],
+          squareMarks: [],
+        };
+
+        current.next = invalidNode;
+        current = invalidNode;
+        lastMoveNode = invalidNode;
         i++;
         continue;
       }
@@ -617,8 +641,14 @@ function renderLine(node, parent, isVariation) {
 
     needsMoveNumber = false;
 
-    /* MOVE TEXT */
-    buffer += toFigurine(current.san) + renderNAG(current.nags) + " ";
+    /* MOVE TEXT — a node flagged .invalid (see parseSequence's MOVE
+       handling above) couldn't be played, so there's no legal SAN to
+       show; print a plain-text marker in its place instead so a reader
+       can see exactly where the source PGN broke, rather than the move
+       silently vanishing (or worse, the next token being quietly
+       replayed from this same un-advanced position as if it were the
+       real continuation). */
+    buffer += (current.invalid ? "[Invalid PGN]" : (toFigurine(current.san) + renderNAG(current.nags))) + " ";
 
     lastMoveNumber = current.moveNumber;
 
