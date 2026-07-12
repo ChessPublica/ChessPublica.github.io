@@ -44,39 +44,54 @@
 
         /* A leaner reading board for this page: no title/icon (the same
            game info is already shown by the static <pgn> on the right —
-           see its own .pgn-title), no settings gear, no move list, and
-           no on-board play button — just the board itself. Scoped to
-           <pgn-app>'s own player, so every other <pgn-player> on the site
-           (which relies on these for navigation) keeps them. */
+           see its own .pgn-title), no settings gear, no move list, no
+           on-board play button, and no comment/variation box (including
+           its floating Continue/Replay button) — <pgn-player>'s own
+           rendering of these is replaced by the compact move-picker
+           built below (see the sync script). Scoped to <pgn-app>'s own
+           player, so every other <pgn-player> on the site (which relies
+           on these) keeps them. */
         pgn-app pgn-player .video-title,
         pgn-app pgn-player .board-toolbar,
         pgn-app pgn-player .video-moves,
-        pgn-app pgn-player .play {
+        pgn-app pgn-player .play,
+        pgn-app pgn-player .video-comment {
             display: none;
         }
 
-        /* Comments and a short preview of each variation (with its play
-           icon, still fully clickable/playable) stay under the board — a
-           height-capped, fading peek rather than the full text already
-           available in the reading column on the right.
-
-           NOT -webkit-line-clamp: a variation's move number/move text is
-           inline, but its attached comment (.variation-comment) and any
-           nested sub-variation (.variation-block) are block-level rows —
-           line-clamp only counts wrapped *text* lines within a single
-           inline flow, so against a mix of block children it just lets
-           each one render in full as its own row instead of truncating
-           (the move on one line, the whole comment on the next, then the
-           entire nested variation spilling out untruncated below that).
-           A flat max-height crops the box wherever it lands regardless
-           of what's inside, so it doesn't have that problem — the fade
-           (mask-image) softens the cut instead of slicing text off
-           mid-row. */
-        pgn-app pgn-player .variation-content {
-            max-height: 3.4em;
-            overflow: hidden;
-            -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
-                    mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+        /* Move picker: at a branch point (a mainline move with recorded
+           alternatives), lists just the mainline move and each
+           alternative's opening move — one line each, click to preview —
+           instead of full variation text. Built by the sync script from
+           <pgn-player>'s own engine.state, not by <pgn-player> itself. */
+        .sadler-move-picker {
+            margin: 0.5rem 0;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .sadler-picker-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 3px 6px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: fit-content;
+        }
+        .sadler-picker-row:hover {
+            background: #eee;
+        }
+        .sadler-picker-row.active {
+            background: #c8e6c9;
+        }
+        .sadler-picker-icon {
+            flex-shrink: 0;
+            font-size: 0.75em;
+            color: #555;
+        }
+        .sadler-picker-row.mainline {
+            font-weight: bold;
         }
 
         /* Everything from here down styles the static <pgn> reading
@@ -222,6 +237,96 @@
             // see helpers.js's createReadyGate.
             const engine = await playerEl.ready.catch(() => null);
             if (!engine) return;
+
+            /* Move picker — replaces <pgn-player>'s own comment/variation
+               box (hidden in the CSS above) with just the mainline move
+               and each alternative's opening move, one line each, so the
+               reader can see the choices at a branch point and click one
+               instead of reading the full variation text again (already
+               available in the column on the right). Built straight from
+               <pgn-player>'s own engine.state — variations[moveIdx] are
+               the PGN "(...)" alternatives to state.moves[moveIdx], and
+               cache[moveIdx] is the FEN they all branch from — rather
+               than re-parsing anything. */
+            const pickerEl = document.createElement('div');
+            pickerEl.className = 'sadler-move-picker';
+            playerEl.querySelector('.player-wrapper').appendChild(pickerEl);
+
+            const toFigurine = window.ChessPublica.toFigurine;
+            const formatLabel = (san, fullNum, isBlack) =>
+                `${fullNum}${isBlack ? '…' : '.'} ${toFigurine(san)}`;
+
+            // Rebuilding on every "cp-move" is correct when the player
+            // actually lands on a new move, but engine.pause() *also*
+            // fires "cp-move" (it calls goTo() on the current index to
+            // re-render as paused) without changing state.index at all —
+            // e.g. from this very picker's own click handlers below. Without
+            // this guard, that self-triggered event would wipe and rebuild
+            // the picker (resetting which row is marked .active) a moment
+            // after a click handler had already set it correctly.
+            let lastPickerMoveIdx;
+
+            function renderPicker() {
+                const moveIdx = engine.state.index - 1;
+                if (moveIdx === lastPickerMoveIdx) return;
+                lastPickerMoveIdx = moveIdx;
+
+                pickerEl.replaceChildren();
+
+                const alternatives = moveIdx >= 0 ? engine.state.variations[moveIdx] : null;
+                if (!alternatives || !alternatives.length) return;
+
+                const ctx = engine._moveContext(moveIdx);
+                const branchFEN = engine.state.cache[moveIdx];
+
+                const setActiveRow = (row) => {
+                    pickerEl.querySelectorAll('.sadler-picker-row').forEach(r => r.classList.remove('active'));
+                    row.classList.add('active');
+                };
+
+                const makeRow = (label, isMainline, onClick) => {
+                    const row = document.createElement('div');
+                    row.className = 'sadler-picker-row' + (isMainline ? ' mainline' : '');
+                    row.innerHTML = '<span class="sadler-picker-icon">▶</span><span></span>';
+                    row.lastElementChild.textContent = label;
+                    row.onclick = () => { setActiveRow(row); onClick(); };
+                    pickerEl.appendChild(row);
+                    return row;
+                };
+
+                // Mainline — "continue reading" — resumes normal playback
+                // forward from here, same as pressing play.
+                const mainlineRow = makeRow(
+                    formatLabel(engine.state.moves[moveIdx], ctx.fullMoveNum, ctx.isBlack),
+                    true,
+                    () => engine.play(),
+                );
+                setActiveRow(mainlineRow); // board is already showing this move
+
+                // Each alternative — preview only (no ply index of its
+                // own to hand to goTo()), same primitive the reading
+                // column's variation-move clicks use.
+                alternatives.forEach((variation) => {
+                    const san = variation.moves && variation.moves[0];
+                    if (!san) return;
+
+                    const chess = new Chess(branchFEN);
+                    const move = chess.move(san, { sloppy: true });
+                    if (!move) return;
+
+                    // No engine.pause() here — the engine is already
+                    // paused by the time this picker has any rows (goTo()
+                    // auto-pauses on a move with variations; see the
+                    // guard above for why calling it again would be
+                    // actively harmful here, not just redundant).
+                    makeRow(formatLabel(san, ctx.fullMoveNum, ctx.isBlack), false, () => {
+                        engine.showVariationPosition(chess.fen(), null, { from: move.from, to: move.to }, null);
+                    });
+                });
+            }
+
+            renderPicker();
+            playerEl.addEventListener('cp-move', renderPicker);
 
             movesRoot.addEventListener('click', (e) => {
                 // .pgn-move: mainline (data-ply) or variation (data-fen) move text.
