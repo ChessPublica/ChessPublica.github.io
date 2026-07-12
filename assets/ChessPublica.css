@@ -365,6 +365,17 @@ pgn-player {
   flex: 1 1 auto;
 }
 
+.variation-play-btn {
+  cursor: pointer;
+  opacity: 0.85;
+  transition: opacity 0.15s ease;
+}
+
+.variation-play-btn:hover,
+.variation-play-btn:focus-visible {
+  opacity: 1;
+}
+
 .variation-comment {
   display: flex;
   align-items: flex-start;
