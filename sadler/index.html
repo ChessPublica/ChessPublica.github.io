@@ -85,9 +85,16 @@
         .sadler-picker-row.active {
             background: #c8e6c9;
         }
+        /* .lucide-icon (ChessPublica.css) does the actual mask-image
+           rendering — this only sizes/colors it. --icon itself is set on
+           .sadler-move-picker (inherited down) by the sync script,
+           copied from the board's own play button, so this renders as
+           the exact same icon the rest of the site uses instead of a
+           plain "▶" character. */
         .sadler-picker-icon {
             flex-shrink: 0;
-            font-size: 0.75em;
+            width: 0.85em;
+            height: 0.85em;
             color: #555;
         }
         .sadler-picker-row.mainline {
@@ -138,6 +145,15 @@
            reads as broken rather than efficient. */
         pgn-app .pgn-container .pgn-moves {
             column-count: 1;
+        }
+        /* Diagrams (createBoard()'s .cp-board-wrapper — both the
+           full-size opening diagram and the 75%-sized [D]/[#] ones
+           inside comments/variations) default to flush-left: width:100%
+           capped by max-width, with only top/bottom margins. Centering
+           needs explicit auto left/right margins. */
+        pgn-app .pgn-container .cp-board-wrapper {
+            margin-left: auto;
+            margin-right: auto;
         }
     </style>
 </head>
@@ -268,50 +284,79 @@
             pickerEl.className = 'sadler-move-picker';
             playerEl.querySelector('.player-wrapper').appendChild(pickerEl);
 
+            // Reuse the site's actual "play" icon (same lucide glyph as
+            // the board's own play button / variation play-icons)
+            // instead of a plain "▶" character — read straight off the
+            // board's own (hidden) play button so this stays in sync
+            // with whatever icon the rest of the site uses, rather than
+            // hardcoding a duplicate icon URL here. .sadler-picker-icon
+            // below is `.lucide-icon` (shared mask-image technique) and
+            // inherits this custom property from its ancestor.
+            const playIconUrl = playerEl.querySelector('.play .lucide-icon')?.style.getPropertyValue('--icon');
+            if (playIconUrl) pickerEl.style.setProperty('--icon', playIconUrl);
+
             const toFigurine = window.ChessPublica.toFigurine;
             const formatLabel = (san, fullNum, isBlack) =>
                 `${fullNum}${isBlack ? '…' : '.'} ${toFigurine(san)}`;
 
-            // Rebuilding on every "cp-move" is correct when the player
-            // actually lands on a new move, but engine.pause() *also*
-            // fires "cp-move" (it calls goTo() on the current index to
-            // re-render as paused) without changing state.index at all —
-            // e.g. from this very picker's own click handlers below. Without
-            // this guard, that self-triggered event would wipe and rebuild
-            // the picker (resetting which row is marked .active) a moment
-            // after a click handler had already set it correctly.
-            let lastPickerMoveIdx;
+            // A move's color/number, read straight from the FEN *before*
+            // it was played (side-to-move + fullmove-number fields) —
+            // works identically for a mainline move (engine.state.cache
+            // entries) and a variation move (a _variation.fens entry),
+            // so both picker modes below can share it instead of each
+            // needing their own branch-tracking arithmetic.
+            function fenMoveContext(fen) {
+                const parts = fen.split(' ');
+                return { isBlack: parts[1] === 'b', fullMoveNum: parseInt(parts[5], 10) || 1 };
+            }
 
-            function renderPicker() {
-                const moveIdx = engine.state.index - 1;
-                if (moveIdx === lastPickerMoveIdx) return;
-                lastPickerMoveIdx = moveIdx;
+            const setActiveRow = (row) => {
+                pickerEl.querySelectorAll('.sadler-picker-row').forEach(r => r.classList.remove('active'));
+                row.classList.add('active');
+            };
 
-                pickerEl.replaceChildren();
+            const makeRow = (label, isMainline, onClick) => {
+                const row = document.createElement('div');
+                row.className = 'sadler-picker-row' + (isMainline ? ' mainline' : '');
+                row.innerHTML = '<span class="sadler-picker-icon lucide-icon"></span><span></span>';
+                row.lastElementChild.textContent = label;
+                row.onclick = () => { setActiveRow(row); onClick(); };
+                pickerEl.appendChild(row);
+                return row;
+            };
 
+            /* Replays a move list from a branch FEN into a fens/verbose
+               sequence — the shape engine.enterVariation() needs — same
+               idea as pgn.js's collectVariationSequence() but starting
+               from a SAN list (a parsed variation/child object) rather
+               than an already-built node chain. Shared by both picker
+               modes below (a top-level alternative and a nested child
+               are the same shape: { moves, moveAnnotations, … }). */
+            function replayMoves(branchFEN, sans) {
+                const chess = new Chess(branchFEN);
+                const fens = [branchFEN];
+                const verbose = [];
+                for (const san of sans) {
+                    const move = chess.move(san, { sloppy: true });
+                    if (!move) break; // stop at the first unparseable move, keep what came before it
+                    fens.push(chess.fen());
+                    verbose.push({ from: move.from, to: move.to });
+                }
+                return { fens, verbose };
+            }
+
+            // Mainline branch point: state.moves[moveIdx] was just played
+            // and has recorded PGN "(...)" alternatives (state.variations
+            // [moveIdx]) — one row per alternative, plus a bold row for
+            // the move actually played ("continue reading" — resumes
+            // normal playback).
+            function renderMainlinePicker(moveIdx) {
                 const alternatives = moveIdx >= 0 ? engine.state.variations[moveIdx] : null;
                 if (!alternatives || !alternatives.length) return;
 
-                const ctx = engine._moveContext(moveIdx);
                 const branchFEN = engine.state.cache[moveIdx];
+                const ctx = fenMoveContext(branchFEN);
 
-                const setActiveRow = (row) => {
-                    pickerEl.querySelectorAll('.sadler-picker-row').forEach(r => r.classList.remove('active'));
-                    row.classList.add('active');
-                };
-
-                const makeRow = (label, isMainline, onClick) => {
-                    const row = document.createElement('div');
-                    row.className = 'sadler-picker-row' + (isMainline ? ' mainline' : '');
-                    row.innerHTML = '<span class="sadler-picker-icon">▶</span><span></span>';
-                    row.lastElementChild.textContent = label;
-                    row.onclick = () => { setActiveRow(row); onClick(); };
-                    pickerEl.appendChild(row);
-                    return row;
-                };
-
-                // Mainline — "continue reading" — resumes normal playback
-                // forward from here, same as pressing play.
                 const mainlineRow = makeRow(
                     formatLabel(engine.state.moves[moveIdx], ctx.fullMoveNum, ctx.isBlack),
                     true,
@@ -319,33 +364,17 @@
                 );
                 setActiveRow(mainlineRow); // board is already showing this move
 
-                // Each alternative — replay its *entire* move list (not
-                // just the first move) into a fens/verbose sequence, the
-                // same shape pgn.js's collectVariationSequence() stashes
-                // on a .pgn-variation in the reading column. Handing that
-                // to enterVariation() (not just the first move's FEN via
-                // showVariationPosition()) is what lets arrow keys/
-                // spacebar step through the rest of the alternative
-                // afterward instead of falling back to mainline nav.
                 alternatives.forEach((variation) => {
                     if (!variation.moves || !variation.moves.length) return;
-
-                    const chess = new Chess(branchFEN);
-                    const fens = [branchFEN];
-                    const verbose = [];
-                    for (const san of variation.moves) {
-                        const move = chess.move(san, { sloppy: true });
-                        if (!move) break; // stop at the first unparseable move, keep what came before it
-                        fens.push(chess.fen());
-                        verbose.push({ from: move.from, to: move.to });
-                    }
+                    const { fens, verbose } = replayMoves(branchFEN, variation.moves);
                     if (verbose.length === 0) return; // even the first move failed
 
                     // No engine.pause() here — the engine is already
                     // paused by the time this picker has any rows (goTo()
-                    // auto-pauses on a move with variations; see the
-                    // guard above for why calling it again would be
-                    // actively harmful here, not just redundant).
+                    // auto-pauses on a move with variations; calling it
+                    // again would fire a redundant "cp-move" for no
+                    // reason, though the guard in updatePicker() below
+                    // would no-op it harmlessly either way).
                     makeRow(formatLabel(variation.moves[0], ctx.fullMoveNum, ctx.isBlack), false, () => {
                         engine.enterVariation(fens, variation.moveAnnotations, 1, null, verbose, variation);
                         engine.showVariationPosition(fens[1], null, verbose[0], null);
@@ -353,8 +382,110 @@
                 });
             }
 
-            renderPicker();
-            playerEl.addEventListener('cp-move', renderPicker);
+            // Sub-variation branch point: variationObj.moves[index - 1]
+            // (a move *inside* the variation currently being viewed) was
+            // just played and itself has recorded nested alternatives
+            // (variationObj.childrenByMove[index - 1]) — same idea as
+            // renderMainlinePicker() above, one nesting level deeper, and
+            // recurses to any depth the same way (each child clicked
+            // becomes the new engine._variation.variationObj, so this
+            // function runs again against *its* childrenByMove next).
+            function renderSubPicker(variationObj, index) {
+                if (index <= 0) return; // the branch point itself, before any move of this variation — nothing played yet to attach a picker to
+                const children = variationObj.childrenByMove && variationObj.childrenByMove[index - 1];
+                if (!children || !children.length) return;
+
+                // A branch point was reached mid-playback — stop right
+                // here instead of continuing past it, mirroring goTo()'s
+                // own pause-on-variation behavior for the mainline. A
+                // no-op when we arrived via single-step (arrow keys)
+                // rather than the spacebar/auto-play tick loop.
+                if (engine._variation && engine._variation.playing) {
+                    engine._pauseVariationPlay();
+                }
+
+                const branchFEN = engine._variation.fens[index - 1];
+                const ctx = fenMoveContext(branchFEN);
+
+                // "Continue" — resume *this* variation's own playback
+                // forward (the same tick loop spacebar drives), not the
+                // mainline. Omitted at the variation's last move — there
+                // is nothing further in it to continue into.
+                if (index < variationObj.moves.length) {
+                    const continueRow = makeRow(
+                        formatLabel(variationObj.moves[index - 1], ctx.fullMoveNum, ctx.isBlack),
+                        true,
+                        () => {
+                            const v = engine._variation;
+                            if (!v) return;
+                            v.maxIndex = v.fens.length - 1;
+                            v.playing = true;
+                            engine._variationPlayTick(v, null);
+                        },
+                    );
+                    setActiveRow(continueRow);
+                }
+
+                children.forEach((child) => {
+                    if (!child.moves || !child.moves.length) return;
+                    const { fens, verbose } = replayMoves(branchFEN, child.moves);
+                    if (verbose.length === 0) return;
+
+                    makeRow(formatLabel(child.moves[0], ctx.fullMoveNum, ctx.isBlack), false, () => {
+                        engine.enterVariation(fens, child.moveAnnotations, 1, null, verbose, child);
+                        engine.showVariationPosition(fens[1], null, verbose[0], null);
+                    });
+                });
+            }
+
+            // Dispatches to whichever picker mode matches where the
+            // player currently is, and — this is what makes the picker
+            // disappear the moment a row is clicked, not just when a
+            // *different* mainline move is reached — always clears and
+            // rebuilds from scratch on a real position change, whether
+            // that's a fresh mainline move ("cp-move") or a fresh
+            // variation move ("cp-variation-move"). Guarded against
+            // rebuilding for a *redundant* event carrying the exact same
+            // position (e.g. engine.pause() re-firing "cp-move" at an
+            // unchanged state.index) — without that, such an event would
+            // wipe the picker and reset which row looks .active a moment
+            // after a click handler had just set it correctly.
+            let lastPicker = null;
+            function picksSame(a, b) {
+                if (!a || !b || a.kind !== b.kind) return false;
+                if (a.kind === 'main') return a.moveIdx === b.moveIdx;
+                if (a.kind === 'sub') return a.variationObj === b.variationObj && a.index === b.index;
+                return true;
+            }
+
+            function updatePicker() {
+                let next;
+                if (!engine._variation) {
+                    next = { kind: 'main', moveIdx: engine.state.index - 1 };
+                } else if (engine._variation.variationObj) {
+                    next = { kind: 'sub', variationObj: engine._variation.variationObj, index: engine._variation.index };
+                } else {
+                    // A variation entered without a variationObj (the
+                    // reading column's own variation-move clicks don't
+                    // have one — pgn.js and pgn-player.js parse the PGN
+                    // independently into incompatible shapes, so there's
+                    // no childrenByMove to look up sub-branches from
+                    // here). Nothing to show, but still a real position
+                    // change, so fall through to clear any stale picker.
+                    next = { kind: 'none' };
+                }
+
+                if (picksSame(lastPicker, next)) return;
+                lastPicker = next;
+
+                pickerEl.replaceChildren();
+                if (next.kind === 'main') renderMainlinePicker(next.moveIdx);
+                else if (next.kind === 'sub') renderSubPicker(next.variationObj, next.index);
+            }
+
+            updatePicker();
+            playerEl.addEventListener('cp-move', updatePicker);
+            playerEl.addEventListener('cp-variation-move', updatePicker);
 
             movesRoot.addEventListener('click', (e) => {
                 // .pgn-move: mainline (data-ply) or variation (data-fen) move text.
