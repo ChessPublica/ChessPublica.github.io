@@ -363,6 +363,37 @@
                 return { fens, verbose };
             }
 
+            /* Enters a freshly-picked variation/child (top-level
+               alternative or nested sub-variation — same shape either
+               way) at its first move, and keeps going: plays through the
+               rest of it automatically, the same tick loop spacebar
+               drives, instead of leaving the reader to press Space again
+               just to get it moving. "Pick an option" and "continue
+               playing it" used to be two separate steps; this collapses
+               them into one, matching the mainline "continue" row, which
+               already auto-plays forward the moment it's picked.
+
+               playing is set *before* showVariationPosition() rather
+               than after, on purpose: that call fires "cp-variation-move"
+               synchronously, which is what updatePicker() uses to detect
+               a sub-variation branch right at this first move and pause
+               there (see renderSubPicker() above) — it can only do that
+               by flipping _variation.playing back off, so playing has to
+               already be on for that to have anything to undo. Checking
+               it again afterward is what tells us whether that happened:
+               still true means no immediate branch, so the tick loop
+               actually starts; false means renderSubPicker() already
+               paused it and is showing its own picker, and starting the
+               loop here would just plow straight through that pause. */
+            function enterAndPlayVariation(fens, moveAnnotations, verbose, variationObj) {
+                engine.enterVariation(fens, moveAnnotations, 1, null, verbose, variationObj);
+                const v = engine._variation;
+                v.maxIndex = v.fens.length - 1;
+                v.playing = true;
+                engine.showVariationPosition(fens[1], null, verbose[0], null);
+                if (v.playing) engine._variationPlayTick(v, null);
+            }
+
             // Mainline branch point: state.moves[moveIdx] was just played
             // and has recorded PGN "(...)" alternatives (state.variations
             // [moveIdx]) — one row per alternative, plus a bold row for
@@ -394,8 +425,7 @@
                     // reason, though the guard in updatePicker() below
                     // would no-op it harmlessly either way).
                     makeRow(formatLabel(variation.moves[0], ctx.fullMoveNum, ctx.isBlack), false, () => {
-                        engine.enterVariation(fens, variation.moveAnnotations, 1, null, verbose, variation);
-                        engine.showVariationPosition(fens[1], null, verbose[0], null);
+                        enterAndPlayVariation(fens, variation.moveAnnotations, verbose, variation);
                     });
                 });
             }
@@ -450,8 +480,7 @@
                     if (verbose.length === 0) return;
 
                     makeRow(formatLabel(child.moves[0], ctx.fullMoveNum, ctx.isBlack), false, () => {
-                        engine.enterVariation(fens, child.moveAnnotations, 1, null, verbose, child);
-                        engine.showVariationPosition(fens[1], null, verbose[0], null);
+                        enterAndPlayVariation(fens, child.moveAnnotations, verbose, child);
                     });
                 });
             }
