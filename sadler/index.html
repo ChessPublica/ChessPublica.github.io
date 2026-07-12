@@ -315,6 +315,24 @@
                 row.classList.add('active');
             };
 
+            // Keyboard picker navigation (see the capture-phase keydown
+            // listener below): ArrowUp/ArrowDown move this cursor between
+            // rows — reusing the same .active highlight setActiveRow()
+            // already uses, so the "candidate" the reader is considering
+            // and the eventual "confirmed" row look identical — without
+            // touching the board; Space commits whichever row it's on
+            // (same as clicking it). Re-synced to match the picker's own
+            // default-active row every time it's (re)built, whatever
+            // triggered that — a fresh branch point, or a plain mouse
+            // click on a row.
+            let pickerFocusIndex = -1;
+            const pickerRows = () => Array.from(pickerEl.querySelectorAll('.sadler-picker-row'));
+            function syncPickerFocus() {
+                const rows = pickerRows();
+                const activeIdx = rows.findIndex(r => r.classList.contains('active'));
+                pickerFocusIndex = activeIdx >= 0 ? activeIdx : (rows.length ? 0 : -1);
+            }
+
             const makeRow = (label, isMainline, onClick) => {
                 const row = document.createElement('div');
                 row.className = 'sadler-picker-row' + (isMainline ? ' mainline' : '');
@@ -481,11 +499,59 @@
                 pickerEl.replaceChildren();
                 if (next.kind === 'main') renderMainlinePicker(next.moveIdx);
                 else if (next.kind === 'sub') renderSubPicker(next.variationObj, next.index);
+                syncPickerFocus();
             }
 
             updatePicker();
             playerEl.addEventListener('cp-move', updatePicker);
             playerEl.addEventListener('cp-variation-move', updatePicker);
+
+            /* ArrowUp/ArrowDown move the picker's keyboard focus; Space
+               commits whichever row it's on (same as clicking it) —
+               *only* while the picker actually has rows to navigate.
+               Registered on the capture phase specifically so it runs
+               BEFORE pgn-player.js's own bubble-phase Space handler
+               (togglePlay(), attached to document same as this): with
+               nothing to pick from, we don't touch the event at all and
+               that handler runs exactly as it always has (mainline
+               play/pause, or "continue playing a variation" once one's
+               been entered — see below); with a picker showing, we
+               consume the keypress ourselves so Space never
+               double-fires both a picker selection AND a play/pause
+               toggle for the same press.
+
+               This is also *why* the second Space in "select an option,
+               then hit spacebar to continue" just works without any
+               special-casing: selecting a row normally leaves the picker
+               empty right after (see updatePicker() above), so that next
+               Space press finds no rows here, isn't touched, and falls
+               straight through to togglePlay() — which finds
+               engine._variation now set and plays through it, same as
+               any other variation entered by hand. */
+            document.addEventListener('keydown', (e) => {
+                if (e.code !== 'ArrowDown' && e.code !== 'ArrowUp' && e.code !== 'Space') return;
+
+                const rows = pickerRows();
+                if (!rows.length) return;
+
+                const activeTag = document.activeElement && document.activeElement.tagName;
+                if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') return;
+
+                const rect = playerEl.getBoundingClientRect();
+                if (!(rect.top < window.innerHeight && rect.bottom > 0)) return;
+
+                e.preventDefault();
+                e.stopPropagation();
+
+                if (e.code === 'Space') {
+                    rows[pickerFocusIndex]?.click();
+                    return;
+                }
+
+                const delta = e.code === 'ArrowDown' ? 1 : -1;
+                pickerFocusIndex = Math.max(0, Math.min(rows.length - 1, pickerFocusIndex + delta));
+                setActiveRow(rows[pickerFocusIndex]);
+            }, { capture: true });
 
             movesRoot.addEventListener('click', (e) => {
                 // .pgn-move: mainline (data-ply) or variation (data-fen) move text.
