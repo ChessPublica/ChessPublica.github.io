@@ -15,6 +15,7 @@ import {
   formatComment,
   nagsToGlyph,
   stripCommentAnnotations,
+  hasDiagramMarker,
   extractPuzzleMarker,
   parseCSL,
   parseCAL,
@@ -138,9 +139,12 @@ export function buildMoveTree(pgnText) {
 
   /* A genuine SetUp/FEN start (as opposed to the standard starting
      position) always gets an opening diagram, regardless of whether a
-     [D]/[P] marker is also present — readers can't otherwise tell the
-     game doesn't start from the normal array. */
-  var root = { next: null, fen: chess.fen(), hasDiagram: !!fenLoaded };
+     [D]/[#]/[P] marker is also present — readers can't otherwise tell the
+     game doesn't start from the normal array. This structural diagram is
+     full-size; hasDiagramFromComment tracks separately whether a comment
+     marker also asked for one, which — being a diagram inside a comment —
+     renders at 75% instead (see startDiagram.fromComment below). */
+  var root = { next: null, fen: chess.fen(), hasDiagram: !!fenLoaded, hasDiagramFromComment: false };
   parseSequence(tokens, chess, root, pgnText);
   if (root.preComments && root.next) {
     root.next.preComments = root.preComments;
@@ -150,6 +154,7 @@ export function buildMoveTree(pgnText) {
       fen: root.fen,
       squareMarks: root.squareMarks || [],
       arrows: root.arrows || [],
+      fromComment: root.hasDiagramFromComment,
     };
   }
   return root.next;
@@ -220,11 +225,11 @@ function parseSequence(tokens, chess, parentNode, originalPgn) {
       if (lastMoveNode) {
         processComment(token.value, lastMoveNode, current, parentNode, chess, originalPgn);
       } else {
-        /* Comment before the very first move — e.g. a [D]/[P]/[Pn]
+        /* Comment before the very first move — e.g. a [D]/[#]/[P]/[Pn]
            marker attached to a FEN-header start, or intro prose before
-           move 1. [D] and [P] both mean "show a diagram here", same as
-           processComment() below does for a comment attached to a move;
-           the diagram here is of the game's starting position. */
+           move 1. [D] and [#] and [P] all mean "show a diagram here",
+           same as processComment() below does for a comment attached to
+           a move; the diagram here is of the game's starting position. */
         var cslM0;
         RE_CSL.lastIndex = 0;
         while ((cslM0 = RE_CSL.exec(token.value))) {
@@ -239,12 +244,13 @@ function parseSequence(tokens, chess, parentNode, originalPgn) {
           parentNode.arrows = parentNode.arrows.concat(parseCAL(calM0[1]));
         }
 
-        var hasDiagramMarker0 = /\[D\]/.test(token.value);
+        var hasDiagramMarker0 = hasDiagramMarker(token.value);
         var puzzleMarker = extractPuzzleMarker(token.value);
         var cleaned = stripCommentAnnotations(puzzleMarker.text);
 
         if (hasDiagramMarker0 || parentNode.arrows || parentNode.squareMarks || puzzleMarker.plies) {
           parentNode.hasDiagram = true;
+          parentNode.hasDiagramFromComment = true;
         }
         if (cleaned.length) {
           if (!parentNode.preComments) parentNode.preComments = [];
@@ -314,7 +320,7 @@ export function renderInlinePgnReferences(commentText, current, parentNode, orig
        than Nf3) for readability; the tokenizer only knows ASCII piece
        letters, so normalize back before parsing or the figurine glyphs
        desync the move sequence entirely. */
-    var inner = fromFigurine(match.slice(1, -1).trim()).replace(/\[D\]/g, "");
+    var inner = fromFigurine(match.slice(1, -1).trim()).replace(/\[D\]|\[#\]/g, "");
 
     try {
       var fakePGN = '[Event "?"]\n\n' + inner;
@@ -354,22 +360,22 @@ function processComment(commentText, lastMoveNode, current, parentNode, chess, o
     hadArrows = true;
   }
 
-  var hasDiagramMarker = /\[D\]/.test(commentText);
+  var hasDiagramMarkerFlag = hasDiagramMarker(commentText);
 
   /* [P] / [Pn] puzzle marker — an interactive puzzle in <pgn-player>, but
-     in this static renderer it's just a diagram, same as [D]. Extracted
-     before stripCommentAnnotations() since it's not part of the [%…]
-     family that helper already strips. */
+     in this static renderer it's just a diagram, same as [D]/[#].
+     Extracted before stripCommentAnnotations() since it's not part of the
+     [%…] family that helper already strips. */
   var puzzleMarker = extractPuzzleMarker(commentText);
 
   /* ── Clean comment text (shared with pgn-player.js) ──
-     stripCommentAnnotations() removes [%…] tags, [D] markers, and
+     stripCommentAnnotations() removes [%…] tags, [D]/[#] markers, and
      move-number-led parentheticals.  Plain prose parentheticals like
      "(Grob's Attack)" are preserved. */
   var cleaned = stripCommentAnnotations(puzzleMarker.text);
 
   /* Push parts in PGN order: diagram first, then text. */
-  if (hasDiagramMarker || hadArrows || hadSquareMarks || puzzleMarker.plies) {
+  if (hasDiagramMarkerFlag || hadArrows || hadSquareMarks || puzzleMarker.plies) {
     lastMoveNode.parts.push({ type: "diagram" });
   }
   if (cleaned.length) {
@@ -537,11 +543,14 @@ export function renderMoveTree(rootNode, container, headers) {
   var movesDiv = document.createElement("div");
   movesDiv.className = "pgn-moves";
 
-  /* [D]/[P] before the first move — diagram of the starting position,
+  /* [D]/[#]/[P] before the first move — diagram of the starting position,
      rendered first (diagram-then-text, same order as a mid-game
-     comment's parts). */
+     comment's parts). Full-size unless a comment marker is what asked
+     for it (fromComment) — a diagram inside a comment renders at 75%,
+     same as any other comment diagram; a bare FEN/SetUp start's diagram
+     stays full-size since it isn't "inside a comment" at all. */
   if (rootNode.startDiagram) {
-    createBoard(movesDiv, rootNode.startDiagram.fen, rootNode.startDiagram);
+    createBoard(movesDiv, rootNode.startDiagram.fen, rootNode.startDiagram, { small: rootNode.startDiagram.fromComment });
   }
 
   if (rootNode.preComments && rootNode.preComments.length) {
@@ -634,7 +643,7 @@ function renderLine(node, parent, isVariation) {
         } else if (part.type === "diagram") {
           flushBuffer(parent, buffer, isVariation);
           buffer = "";
-          createBoard(parent, current.fen, current);
+          createBoard(parent, current.fen, current, { small: true });
           needsMoveNumber = true;
         }
       }
