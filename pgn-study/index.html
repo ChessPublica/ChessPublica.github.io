@@ -47,6 +47,15 @@
             overflow-y: auto;
             overflow-x: hidden;
         }
+        pgn-study > .pgn-container {
+            /* assets/ChessPublica.css's shared .pgn-container rule adds
+               margin-bottom: 1rem for breathing room before whatever
+               comes after it on a normal page — here it IS the scrollable
+               column, with nothing after it to separate from, so it was
+               just adding dead space between the last line of text and
+               the frame's own bottom padding. */
+            margin-bottom: 0;
+        }
         /* The board's actual pixel size is normally driven by --board-size
            against the *viewport* (see styles.css's root default), which
            made sense on a full-width page but not here: pgn-player only
@@ -954,10 +963,39 @@
                 scheduleScroll(target);
             });
 
+            // The reading column's own diagrams (createBoard() calls
+            // inside pgn.js's renderFullPGN — one per [D]/[#] marker,
+            // NAG-glyph position, etc.) each build their own <img> piece
+            // elements. Most point at the same ~12 shared theme URLs, so
+            // the browser only fetches each once, but that first fetch
+            // can still take a visible moment — without waiting for it,
+            // the loading placeholder disappears (see cp-ready below)
+            // before those images have actually arrived, so the reading
+            // column pops its diagrams in piece-by-piece right in front
+            // of the reader instead of appearing whole.
+            //
+            // createBoard() defers each diagram's actual construction
+            // (and thus its <img> tags) by one requestAnimationFrame —
+            // since every diagram here was scheduled during the same
+            // synchronous render pass, they all land in the very next
+            // frame; awaiting two rAFs is a small safety margin before
+            // collecting <img> elements below, so none still pending get
+            // missed.
+            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+            const readingColumnEl = movesRoot.closest('.pgn-container');
+            const diagramImages = readingColumnEl ? Array.from(readingColumnEl.querySelectorAll('img')) : [];
+            const diagramImagesReady = Promise.all(diagramImages.map(img => img.complete ? Promise.resolve() : new Promise(resolve => {
+                img.addEventListener('load', resolve, { once: true });
+                img.addEventListener('error', resolve, { once: true }); // a broken image shouldn't hang the loading screen forever
+            })));
+
             // Player isn't ready to accept goTo()/showVariationPosition()
             // calls until its PGN has been parsed and the board built —
             // see helpers.js's createReadyGate.
-            const engine = await playerEl.ready.catch(() => null);
+            const [engine] = await Promise.all([
+                playerEl.ready.catch(() => null),
+                diagramImagesReady,
+            ]);
 
             // Swap the loading placeholder (empty board + spinner) for the
             // real thing now that <pgn-player> has finished loading — on
