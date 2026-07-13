@@ -115,22 +115,24 @@
             margin-left: 1.25rem;
             padding-left: 0.75rem;
             border-left: 2px solid rgba(128, 128, 128, 0.3);
-            /* font-size compounds on its own through plain inheritance —
-               em is relative to the parent's own computed font-size, so a
-               sub-variation-of-a-sub-variation naturally starts from its
-               parent's already-shrunk size, no per-depth selectors
-               needed. --board-size can't use the same trick: a custom
-               property that references var(--board-size) inside its own
-               --board-size declaration is a cycle by spec (computes to
-               invalid) even though the reference is meant to mean "the
-               inherited value from further up" — there's no way to name
-               "the parent's value" separately from "this element's own
-               value" for a custom property the way em does for
-               font-size. So diagram size is instead read from
-               --base-board-size (captured once, see .pgn-container below,
-               untouched at every depth) and scaled by an explicit factor
-               per nesting level. */
-            font-size: 0.9em;
+            /* Depth ladder: main line is bold (.pgn-mainline, set in
+               ChessPublica.css) at 1x size. A variation (this level) is
+               regular weight but stays at that same 1x size — no
+               font-size here. A sub-variation (one level deeper) adds
+               italic, still at 1x. Only from the sub-sub-variation level
+               down does the text actually start shrinking — see the
+               dedicated font-size rule below, which (like the old
+               single-rule version this replaced) only needs to be
+               declared once: em compounds through plain inheritance, so
+               each further nesting level naturally starts from its
+               parent's already-shrunk size. */
+            font-weight: normal;
+        }
+        pgn-app .pgn-container .pgn-variation .pgn-variation {
+            font-style: italic;
+        }
+        pgn-app .pgn-container .pgn-variation .pgn-variation .pgn-variation {
+            font-size: 0.92em;
         }
         pgn-app .pgn-container .pgn-variation { --board-size: calc(var(--base-board-size) * 0.88); }
         pgn-app .pgn-container .pgn-variation .pgn-variation { --board-size: calc(var(--base-board-size) * 0.774); }
