@@ -79,19 +79,54 @@
         @media (min-width: 900px) {
             pgn-study {
                 --frame-pad: 2.5rem;
+                /* Defaults reproduce the old fixed 1fr:2fr split exactly —
+                   the resizer below only ever overrides --left-col-width
+                   (switching it from a fr share to a hard px value once
+                   the reader actually drags), --right-col-width stays untouched at 2fr since
+                   the right column just keeps filling whatever's left. */
+                --left-col-width: 1fr;
+                --right-col-width: 2fr;
                 display: grid;
-                grid-template-columns: 1fr 2fr;
+                grid-template-columns: var(--left-col-width) 6px var(--right-col-width);
                 grid-template-rows: auto 1fr;
                 align-items: stretch;
                 padding: var(--frame-pad);
             }
             pgn-study pgn-player { --board-size: min(calc(400px * 1.25), 94cqw); }
-            /* Row 1, spanning both columns — pgn-player/.pgn-container
-               have no placement rules of their own, so grid auto-flow
-               puts them in row 2 (row 1's cells are already taken) col 1
-               and col 2 respectively, same as before this rule existed. */
+            /* Row 1, spanning every column (including the resizer track)
+               — pgn-player/.pgn-study-resizer/.pgn-container have no
+               placement rules of their own, so grid auto-flow puts them
+               in row 2 (row 1's only cell is already taken) in DOM order:
+               pgn-player, then the resizer, then .pgn-container. */
             pgn-study > .pgn-study-ribbon {
                 grid-column: 1 / -1;
+            }
+            .pgn-study-resizer {
+                position: relative;
+                cursor: col-resize;
+                touch-action: none;
+            }
+            .pgn-study-resizer::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                left: 50%;
+                width: 2px;
+                transform: translateX(-50%);
+                background: #e4e4e7;
+                transition: background 0.15s;
+            }
+            .pgn-study-resizer:hover::after,
+            .pgn-study-resizer.dragging::after {
+                background: #a1a1aa;
+            }
+        }
+        @media (max-width: 899px) {
+            /* No side-by-side columns to resize in the stacked mobile
+               layout — the resizer only exists for the desktop grid. */
+            .pgn-study-resizer {
+                display: none;
             }
         }
 
@@ -169,20 +204,29 @@
         /* RIBBON — minimal top bar, standing in for the board's own
            gear-icon settings panel (hidden below, same as .video-title/
            .board-toolbar/.play — see the "pgn-study pgn-player" rules
-           just below): same three actions (download/flip/speed), always
-           visible instead of tucked behind a toggle. Sits above the
-           loading placeholder too, not just the real <pgn-study> grid,
-           so it reads as persistent page chrome rather than part of
-           whichever of the two is currently showing. Buttons start
-           disabled — see the DOMContentLoaded listener below — since
-           they forward clicks to <pgn-player>'s own (hidden) settings
-           buttons, which aren't wired up until the engine itself is
-           ready. Icon-only: the speed button's current multiplier
-           (1x/2x/…) — the one piece of state an icon alone can't show —
-           lives in its title/aria-label tooltip instead of on-screen
-           text, kept in sync after every click (see
-           the DOMContentLoaded listener below). */
+           just below): download/flip/speed forward to it, plus
+           play/pause and a TOC dropdown of its own. Deliberately hidden
+           for as long as the loading placeholder is showing — not "page
+           chrome" independent of it — via the same not(.cp-ready) gate
+           as pgn-study itself: it's moved inside pgn-study as its first
+           child (see the DOMContentLoaded listener below), but starts
+           display:none here, unconditionally, since it's still a
+           page-level sibling in the raw HTML for a brief window before
+           that synchronous move runs — this rule (rather than relying on
+           pgn-study:not(.cp-ready) alone) is what keeps it from flashing
+           on screen during that window. Buttons start disabled — see the
+           DOMContentLoaded listener below — since they forward clicks to
+           <pgn-player>'s own (hidden) settings buttons, which aren't
+           wired up until the engine itself is ready. Icon-only: the
+           speed button's current multiplier (1x/2x/…) — the one piece of
+           state an icon alone can't show — lives in its title/aria-label
+           tooltip instead of on-screen text, kept in sync after every
+           click (see the DOMContentLoaded listener below). */
         .pgn-study-ribbon {
+            display: none;
+        }
+        pgn-study.cp-ready > .pgn-study-ribbon {
+            position: relative; /* anchors .pgn-study-toc-dropdown below */
             display: flex;
             align-items: center;
             gap: 0.25rem;
@@ -213,8 +257,8 @@
             cursor: default;
         }
         .pgn-study-ribbon-btn .lucide-icon {
-            width: 1.1rem;
-            height: 1.1rem;
+            width: 1.4rem;
+            height: 1.4rem;
         }
 
         /* CLOSE BUTTON — fixed at the frame's own top-right corner (the
@@ -245,8 +289,8 @@
             background: #f4f4f5;
         }
         .pgn-study-close .lucide-icon {
-            width: 1.1rem;
-            height: 1.1rem;
+            width: 1.4rem;
+            height: 1.4rem;
         }
 
         /* REOPEN BUTTON — sits wherever the closed frame used to be (top
@@ -325,6 +369,20 @@
             width: 1.4rem;
             height: 1.4rem;
             color: #555;
+        }
+
+        /* Match the move picker's play icon size (1.4rem) above for every
+           other icon on this page too — the comment icon (pgn-player's
+           own comment box, left column) and the article/annotator icon
+           (the "A≡" byline mark, right column) both come from
+           assets/ChessPublica.css's shared .comment-icon/.video-title-emoji
+           rules (2rem, sized for use across the whole site), so they're
+           overridden here rather than changed globally. */
+        pgn-study .comment-icon,
+        pgn-study .variation-icon,
+        pgn-study .video-title-emoji {
+            width: 1.4rem;
+            height: 1.4rem;
         }
         /* Mainline "continue" row always comes first (see makeRow() call
            order in renderMainlinePicker()/renderSubPicker()) — no special
@@ -461,19 +519,49 @@
             color: #777;
             flex-shrink: 0;
         }
+
+        /* TOC DROPDOWN — the ribbon's TOC button toggles this open rather
+           than scrolling to the .pgn-study-toc built at the bottom of the
+           reading column: same entries (renderTocEntries() below renders
+           the same `toc` array into both places, each row wired to the
+           same entry.enter callback), just reachable without paging
+           through the whole game first. Anchored to .pgn-study-ribbon
+           (position: relative, above) rather than the button itself, so
+           its left edge doesn't have to be recomputed if button order
+           ever changes. */
+        .pgn-study-toc-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: var(--frame-pad);
+            margin-top: 0.5rem;
+            width: 320px;
+            max-width: calc(100vw - 2 * var(--frame-pad));
+            max-height: min(60vh, 500px);
+            overflow-y: auto;
+            background: #fff;
+            border: 1px solid #e4e4e7;
+            border-radius: 0.5rem;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            padding: 0.75rem 1rem;
+            z-index: 30;
+        }
+        .pgn-study-toc-dropdown.open {
+            display: block;
+        }
+        .pgn-study-toc-dropdown .pgn-study-toc-heading {
+            font-size: 1rem;
+        }
     </style>
 </head>
 <body>
 
     <header class="pgn-study-ribbon">
-        <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="play" title="Play" aria-label="Play" disabled>
-            <span class="lucide-icon" id="pgnStudyPlayIcon"></span>
+        <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="toggle-play" title="Play" aria-label="Play" disabled>
+            <span class="lucide-icon" id="pgnStudyPlayPauseIcon"></span>
         </button>
-        <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="pause" title="Pause" aria-label="Pause" disabled>
-            <span class="lucide-icon" id="pgnStudyPauseIcon"></span>
-        </button>
-        <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="download" title="Download PGN" aria-label="Download PGN" disabled>
-            <span class="lucide-icon" id="pgnStudyDownloadIcon"></span>
+        <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="toc" title="Table of contents" aria-label="Table of contents" disabled>
+            <span class="lucide-icon" id="pgnStudyTocIcon"></span>
         </button>
         <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="flip" title="Flip board" aria-label="Flip board" disabled>
             <span class="lucide-icon" id="pgnStudyFlipIcon"></span>
@@ -481,9 +569,11 @@
         <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="speed" title="Playback speed (1x)" aria-label="Playback speed" disabled>
             <span class="lucide-icon" id="pgnStudySpeedIcon"></span>
         </button>
-        <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="toc" title="Jump to table of contents" aria-label="Jump to table of contents" disabled>
-            <span class="lucide-icon" id="pgnStudyTocIcon"></span>
+        <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="download" title="Download PGN" aria-label="Download PGN" disabled>
+            <span class="lucide-icon" id="pgnStudyDownloadIcon"></span>
         </button>
+
+        <div class="pgn-study-toc-dropdown" id="pgnStudyTocDropdown"></div>
     </header>
 
     <button class="pgn-study-close" type="button" id="pgnStudyClose" title="Close" aria-label="Close">
@@ -564,8 +654,64 @@
         pgnEl.setAttribute('clickable-moves', '');
         pgnEl.innerHTML = pgnHTML;
 
-        studyEl.replaceChildren(playerEl, pgnEl);
+        const resizerEl = document.createElement('div');
+        resizerEl.className = 'pgn-study-resizer';
+        resizerEl.setAttribute('role', 'separator');
+        resizerEl.setAttribute('aria-orientation', 'vertical');
+        resizerEl.setAttribute('aria-label', 'Resize columns');
+
+        studyEl.replaceChildren(playerEl, resizerEl, pgnEl);
         studyEl.prepend(document.querySelector('.pgn-study-ribbon'));
+
+        /* Drag-to-resize the board/reading-list columns (desktop grid
+           layout only — the resizer is display:none in the stacked
+           mobile layout, and pointerdown never fires on a hidden
+           element). Only --left-col-width is ever written: the right
+           column's own --right-col-width stays at its 2fr default the
+           whole time, so it keeps automatically filling whatever the
+           left column (and the fixed 6px resizer track) don't use —
+           see the "min-width: 900px" rule above. The board inside
+           pgn-player picks up the new column width on its own via the
+           container-query --board-size rule just above (which is why
+           it visibly resizes live as the reader drags, not just once
+           they let go), and the reading column's text reflows for
+           free — neither needs any resize-specific code here. */
+        (function setupColumnResizer() {
+            let dragStartX = null;
+            let dragStartWidth = null;
+
+            const clampLeftWidth = (px) => {
+                const totalWidth = studyEl.getBoundingClientRect().width
+                    - (parseFloat(getComputedStyle(studyEl).paddingLeft) || 0)
+                    - (parseFloat(getComputedStyle(studyEl).paddingRight) || 0)
+                    - 6; // the resizer track itself
+                const min = totalWidth * 0.2;
+                const max = totalWidth * 0.75;
+                return Math.min(Math.max(px, min), max);
+            };
+
+            resizerEl.addEventListener('pointerdown', (e) => {
+                dragStartX = e.clientX;
+                dragStartWidth = playerEl.getBoundingClientRect().width;
+                resizerEl.classList.add('dragging');
+                resizerEl.setPointerCapture(e.pointerId);
+                e.preventDefault();
+            });
+            resizerEl.addEventListener('pointermove', (e) => {
+                if (dragStartX === null) return;
+                const newWidth = clampLeftWidth(dragStartWidth + (e.clientX - dragStartX));
+                studyEl.style.setProperty('--left-col-width', newWidth + 'px');
+                studyEl.style.setProperty('--right-col-width', '1fr');
+            });
+            const endDrag = (e) => {
+                if (dragStartX === null) return;
+                dragStartX = null;
+                resizerEl.classList.remove('dragging');
+                if (e && resizerEl.hasPointerCapture(e.pointerId)) resizerEl.releasePointerCapture(e.pointerId);
+            };
+            resizerEl.addEventListener('pointerup', endDrag);
+            resizerEl.addEventListener('pointercancel', endDrag);
+        })();
 
         /* Ribbon icons, read straight off <pgn-player>'s own (hidden)
            lucide icons rather than hardcoding a duplicate icon URL here
@@ -577,7 +723,6 @@
            its actual engine — which the buttons need — finishes
            constructing. */
         const ribbonIconMap = {
-            pgnStudyPlayIcon:     '.play .lucide-icon',
             pgnStudyDownloadIcon: '.settings-btn[data-action="download"] .lucide-icon',
             pgnStudyFlipIcon:     '.settings-btn[data-action="flip"] .lucide-icon',
             pgnStudySpeedIcon:    '.settings-btn[data-action="speed"] .lucide-icon',
@@ -587,14 +732,17 @@
             if (iconUrl) document.getElementById(id).style.setProperty('--icon', iconUrl);
         });
 
-        // The close button, pause button, and TOC button have no equivalent
-        // already-rendered icon anywhere in <pgn-player> to borrow from
-        // (unlike the four above — the on-board overlay button only ever
-        // shows the "play" glyph, never "pause"), so these go straight
-        // through ChessPublica's own public lucideIconUrl() instead — see
-        // assets/icons.js / assets/ChessPublica.js.
+        // The close button, play/pause button, and TOC button have no
+        // single already-rendered icon anywhere in <pgn-player> to borrow
+        // from (unlike the three above — the on-board overlay button only
+        // ever shows the "play" glyph, never "pause", and the ribbon's
+        // play/pause button needs to swap between both), so these go
+        // straight through ChessPublica's own public lucideIconUrl()
+        // instead — see assets/icons.js / assets/ChessPublica.js. The
+        // play/pause icon starts as "play"; syncPlayPauseButton() below
+        // swaps it to "pause" (and back) as playback state changes.
         document.getElementById('pgnStudyCloseIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('x'));
-        document.getElementById('pgnStudyPauseIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('pause'));
+        document.getElementById('pgnStudyPlayPauseIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('play'));
         document.getElementById('pgnStudyTocIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('list'));
 
         // Closing doesn't depend on the engine, or even on loading having
@@ -782,38 +930,49 @@
                 });
             });
 
-            /* Play / Pause ribbon buttons drive the engine directly —
+            /* Play/Pause ribbon button drives the engine directly —
                unlike download/flip/speed above, there's no hidden
                .settings-btn counterpart to forward to (the on-board
                overlay button only ever shows/hides itself, it doesn't
-               expose a separate "pause" control). Each button only acts
-               when it's the valid transition (play while paused, pause
-               while playing) and the pair's disabled state is kept in
-               sync with engine.state.playing via the same "cp-move"
-               event goTo() already fires on every play tick, pause, and
-               manual navigation — see the move-picker/TOC listeners
-               below for the same pattern. */
-            const playBtn  = document.querySelector('.pgn-study-ribbon-btn[data-ribbon-action="play"]');
-            const pauseBtn = document.querySelector('.pgn-study-ribbon-btn[data-ribbon-action="pause"]');
-            const syncPlayPauseButtons = () => {
-                pauseBtn.disabled = !engine.state.playing;
-                playBtn.disabled  = engine.state.playing;
+               expose a separate "pause" control). One button toggles
+               both the action and its own icon/title, kept in sync with
+               engine.state.playing via the same "cp-move" event goTo()
+               already fires on every play tick, pause, and manual
+               navigation — see the move-picker/TOC listeners below for
+               the same pattern. */
+            const playPauseBtn = document.querySelector('.pgn-study-ribbon-btn[data-ribbon-action="toggle-play"]');
+            const playPauseIcon = document.getElementById('pgnStudyPlayPauseIcon');
+            const syncPlayPauseButton = () => {
+                const playing = engine.state.playing;
+                playPauseIcon.style.setProperty('--icon', window.ChessPublica.lucideIconUrl(playing ? 'pause' : 'play'));
+                playPauseBtn.title = playing ? 'Pause' : 'Play';
+                playPauseBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
             };
-            playBtn.addEventListener('click', () => { if (!engine.state.playing) engine.play(); });
-            pauseBtn.addEventListener('click', () => { if (engine.state.playing) engine.pause(); });
-            syncPlayPauseButtons();
-            playerEl.addEventListener('cp-move', syncPlayPauseButtons);
+            playPauseBtn.disabled = false;
+            playPauseBtn.addEventListener('click', () => engine.togglePlay());
+            syncPlayPauseButton();
+            playerEl.addEventListener('cp-move', syncPlayPauseButton);
 
             /* TOC ribbon button — page-level navigation (scrolls the
                reading column to the table of contents built further
                down), not a board/playback action, so there's nothing to
                forward to. Looked up at click time rather than cached
                here since buildOpeningToc() below still needs to fetch
-               and render it first. */
+               and render it first — the dropdown just toggles open on an
+               empty shell either way. */
             const tocBtn = document.querySelector('.pgn-study-ribbon-btn[data-ribbon-action="toc"]');
+            const tocDropdown = document.getElementById('pgnStudyTocDropdown');
             tocBtn.disabled = false;
-            tocBtn.addEventListener('click', () => {
-                document.querySelector('.pgn-study-toc')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            tocBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                tocDropdown.classList.toggle('open');
+            });
+            // Click anywhere outside the dropdown (or its own toggle
+            // button, already handled above via stopPropagation) closes it.
+            document.addEventListener('click', (e) => {
+                if (tocDropdown.classList.contains('open') && !tocDropdown.contains(e.target)) {
+                    tocDropdown.classList.remove('open');
+                }
             });
 
             /* Move picker — replaces <pgn-player>'s own comment/variation
@@ -1363,6 +1522,35 @@
 
                 if (!toc.length) return; // nothing in this PGN matched a named opening
 
+                /* Renders the same `toc` array into any container — used
+                   for both the always-in-the-page copy at the bottom of
+                   the reading column and the ribbon's dropdown, so the two
+                   never drift out of sync with each other. Each row's
+                   click both navigates (entry.enter) and, if it's inside
+                   the dropdown, closes it — a click on the reading-column
+                   copy has no dropdown open to close, so onCloseDropdown
+                   is optional. */
+                function renderTocEntries(listEl, onCloseDropdown) {
+                    toc.forEach(entry => {
+                        const row = document.createElement('div');
+                        row.className = 'pgn-study-toc-entry';
+                        row.style.marginLeft = (entry.depth * 1.25) + 'rem';
+                        const name = document.createElement('span');
+                        name.className = 'pgn-study-toc-name';
+                        name.textContent = entry.name;
+                        const move = document.createElement('span');
+                        move.className = 'pgn-study-toc-move';
+                        move.textContent = entry.label;
+                        row.appendChild(name);
+                        row.appendChild(move);
+                        row.addEventListener('click', () => {
+                            entry.enter();
+                            if (onCloseDropdown) onCloseDropdown();
+                        });
+                        listEl.appendChild(row);
+                    });
+                }
+
                 const tocEl = document.createElement('div');
                 tocEl.className = 'pgn-study-toc';
                 const heading = document.createElement('h3');
@@ -1372,24 +1560,18 @@
                 const listEl = document.createElement('div');
                 listEl.className = 'pgn-study-toc-list';
                 tocEl.appendChild(listEl);
-
-                toc.forEach(entry => {
-                    const row = document.createElement('div');
-                    row.className = 'pgn-study-toc-entry';
-                    row.style.marginLeft = (entry.depth * 1.25) + 'rem';
-                    const name = document.createElement('span');
-                    name.className = 'pgn-study-toc-name';
-                    name.textContent = entry.name;
-                    const move = document.createElement('span');
-                    move.className = 'pgn-study-toc-move';
-                    move.textContent = entry.label;
-                    row.appendChild(name);
-                    row.appendChild(move);
-                    row.onclick = entry.enter;
-                    listEl.appendChild(row);
-                });
-
+                renderTocEntries(listEl);
                 container.appendChild(tocEl);
+
+                const dropdown = document.getElementById('pgnStudyTocDropdown');
+                const dropdownHeading = document.createElement('h3');
+                dropdownHeading.className = 'pgn-study-toc-heading';
+                dropdownHeading.textContent = 'Table of Contents';
+                dropdown.appendChild(dropdownHeading);
+                const dropdownListEl = document.createElement('div');
+                dropdownListEl.className = 'pgn-study-toc-list';
+                dropdown.appendChild(dropdownListEl);
+                renderTocEntries(dropdownListEl, () => dropdown.classList.remove('open'));
             }
 
             /* Replays a TOC entry's own ancestor chain through
