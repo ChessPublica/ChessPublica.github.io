@@ -8,6 +8,24 @@
     <link rel="stylesheet" href="../dist/ChessPublica.all.min.css">
     <link rel="stylesheet" href="../styles.css">
     <style>
+        /* This page is exactly one 90vw x 90vh frame (or its loading-
+           placeholder stand-in), each centered with a flat 5vh top/bottom
+           margin — 5vh + 90vh + 5vh should sum to exactly 100vh, but
+           margin collapsing/vh rounding can leave body a hair taller
+           than the viewport, letting it scroll by a few px. That's more
+           than just an unwanted scrollbar: the close (X) button below is
+           position:fixed (viewport-relative, so its offset lines up with
+           the frame without needing to be its DOM descendant), while the
+           frame itself scrolls with the page like normal content — the
+           two visibly drift apart the moment that scroll is possible.
+           Killing body/html scroll entirely removes the drift along with
+           the scrollbar, and costs nothing: nothing on this page is
+           meant to need it (the frame's own columns already scroll
+           independently — see the overflow-y rules below). */
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
         pgn-study {
             --frame-pad: 1.5rem;
             font-size: 110%;
