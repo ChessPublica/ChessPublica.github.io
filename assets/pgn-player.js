@@ -22,6 +22,7 @@ import {
   createGridOverlaySVG,
   getSquareCenter,
   createBoard,
+  makeBoardResizable,
 } from "./board.js";
 
 /* Skip global keyboard shortcuts while the user is editing a form field,
@@ -1799,6 +1800,20 @@ class VideoEngine {
       ro.observe(this.boardEl);
       this._observers.push(ro);
     }
+
+    /* chessboard.js sizes .board-b72b1 and its squares in fixed pixels
+       once, at creation — a host page whose --board-size responds to its
+       own container (e.g. pgn-study's cqw-based sizing) rather than just
+       the viewport will resize .boardEl via CSS, but the squares stay at
+       their original fixed size until something calls widget.resize()
+       again, leaving the board overflowing (or too small for) its own
+       container. Square positions are otherwise a uniform 8x8 grid — a
+       proportional resize doesn't shift any square's fractional position
+       — so previously-drawn SVG arrows/marks (in 0..100 user-space,
+       independent of the board's absolute pixel size) stay aligned
+       without needing their own redraw here. */
+    const resizeObserver = makeBoardResizable(this.boardEl, this.board, () => {});
+    if (resizeObserver) this._observers.push(resizeObserver);
 
     /* Speed steps in moves-per-second */
     this._speedSteps = [0.5, 1.0, 2.0];
