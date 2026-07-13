@@ -337,15 +337,29 @@
             display: none;
         }
         pgn-study.cp-ready > .pgn-study-ribbon {
-            position: relative; /* anchors .pgn-study-toc-dropdown below */
             display: flex;
-            align-items: center;
-            gap: 0.25rem;
+            flex-direction: column;
             flex: 0 0 auto;
             padding: 0.5rem var(--frame-pad);
             margin: calc(-1 * var(--frame-pad)) calc(-1 * var(--frame-pad)) 1rem calc(-1 * var(--frame-pad));
             background: #fff;
             border-bottom: 1px solid #e4e4e7;
+        }
+        /* Button row: left = play/pause + TOC, right = settings (cog,
+           toggles the flip/speed/download group inline — see
+           .pgn-study-settings-inline below) + close. */
+        .pgn-study-ribbon-toprow {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        /* Each side is its own tight group so the gap between the two
+           groups can stretch (space-between, above) independently of the
+           gap within either one. */
+        .pgn-study-ribbon-group {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
         }
         .pgn-study-ribbon-btn {
             position: relative; /* anchors .pgn-study-speed-badge below */
@@ -395,45 +409,20 @@
             pointer-events: none;
         }
 
-        /* CLOSE BUTTON — fixed at the frame's own top-right corner (the
-           frame is centered with a flat 5vw/5vh margin — see pgn-study/
-           .pgn-study-loading above — so a fixed offset lines up with it
-           exactly without needing to be a positioned descendant of
-           either one). Hidden for as long as the loading placeholder is
-           showing — same reasoning as the ribbon above (see its own
-           comment) — via :has(), since (unlike the ribbon) this button
-           is never moved inside <pgn-study>, so a plain
-           "pgn-study.cp-ready > .pgn-study-close" selector can't reach
-           it. Once revealed, closing no longer depends on the engine
-           being ready (its own click handler doesn't check cp-ready or
-           anything else) — only *becoming visible in the first place*
-           does. */
+        /* CLOSE BUTTON — a real ribbon child now (right group, alongside
+           settings — see the DOMContentLoaded listener below for where
+           it actually gets moved there), styled as a plain
+           .pgn-study-ribbon-btn from that point on. Until that move
+           happens it's still sitting at its original spot, a page-level
+           sibling before <pgn-study> — hidden by default here (same
+           reasoning the ribbon's own default display:none has) so it
+           doesn't flash there first; the override only re-shows it once
+           it's an actual descendant of the (by then visible) ribbon. */
         .pgn-study-close {
             display: none;
         }
-        body:has(pgn-study.cp-ready) .pgn-study-close {
-            position: fixed;
-            top: calc(5vh + 0.5rem);
-            right: calc(5vw + 0.5rem);
-            z-index: 20;
+        pgn-study.cp-ready > .pgn-study-ribbon .pgn-study-close {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 2.75rem;
-            height: 2.75rem;
-            background: transparent;
-            border: none;
-            border-radius: 0.4rem;
-            color: #71717a;
-            cursor: pointer;
-            transition: background 0.15s;
-        }
-        .pgn-study-close:hover {
-            background: #f4f4f5;
-        }
-        .pgn-study-close .lucide-icon {
-            width: 2rem;
-            height: 2rem;
         }
 
         /* REOPEN BUTTON — sits wherever the closed frame used to be (top
@@ -532,7 +521,6 @@
            instead of leaving desktop's size untouched. */
         @media (max-width: 899px) {
             .pgn-study-ribbon-btn .lucide-icon,
-            .pgn-study-close .lucide-icon,
             .pgn-study-picker-icon,
             pgn-study .comment-icon,
             pgn-study .variation-icon,
@@ -671,64 +659,87 @@
             flex-shrink: 0;
         }
 
-        /* TOC DROPDOWN — the ribbon's TOC button toggles this open rather
-           than scrolling to the .pgn-study-toc built at the bottom of the
-           reading column: same entries (renderTocEntries() below renders
-           the same `toc` array into both places, each row wired to the
-           same entry.enter callback), just reachable without paging
-           through the whole game first. Anchored to .pgn-study-ribbon
-           (position: relative, above) rather than the button itself, so
-           its left edge doesn't have to be recomputed if button order
-           ever changes. */
-        .pgn-study-toc-dropdown {
-            display: none;
-            position: absolute;
-            top: 100%;
-            left: var(--frame-pad);
-            margin-top: 0.5rem;
-            width: 320px;
-            max-width: calc(100vw - 2 * var(--frame-pad));
-            max-height: min(60vh, 500px);
+        /* TOC ACCORDION — the ribbon's TOC button expands/collapses this
+           in place (part of the ribbon's own flow, below the button row —
+           see .pgn-study-ribbon's flex-direction: column above — rather
+           than a floating overlay) instead of scrolling to the
+           .pgn-study-toc built at the bottom of the reading column: same
+           entries (renderTocEntries() below renders the same `toc` array
+           into both places, each row wired to the same entry.enter
+           callback), just reachable without paging through the whole
+           game first. max-height (not height) is what's animated, since
+           the real height depends on how many entries this particular
+           game's TOC ends up with. */
+        .pgn-study-toc-accordion {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.25s ease;
+        }
+        .pgn-study-toc-accordion.open {
+            max-height: min(50vh, 500px);
             overflow-y: auto;
-            background: #fff;
-            border: 1px solid #e4e4e7;
-            border-radius: 0.5rem;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-            padding: 0.75rem 1rem;
-            z-index: 30;
+            margin-top: 0.75rem;
         }
-        .pgn-study-toc-dropdown.open {
-            display: block;
-        }
-        .pgn-study-toc-dropdown .pgn-study-toc-heading {
+        .pgn-study-toc-accordion .pgn-study-toc-heading {
             font-size: 1rem;
+        }
+
+        /* SETTINGS INLINE GROUP — the cog button's flip/speed/download,
+           moved off their own dropdown into the ribbon's right-hand
+           group directly (between the cog and the close button — see
+           the markup below), toggled with display: contents so its
+           buttons become plain flex items of .pgn-study-ribbon-right
+           (inheriting its gap/alignment) the instant they're shown,
+           rather than needing a nested flex context of their own. */
+        .pgn-study-settings-inline {
+            display: none;
+        }
+        .pgn-study-settings-inline.open {
+            display: contents;
         }
     </style>
 </head>
 <body>
 
     <header class="pgn-study-ribbon">
-        <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="toggle-play" title="Play" aria-label="Play" disabled>
-            <span class="lucide-icon" id="pgnStudyPlayPauseIcon"></span>
-        </button>
-        <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="toc" title="Table of contents" aria-label="Table of contents" disabled>
-            <span class="lucide-icon" id="pgnStudyTocIcon"></span>
-        </button>
-        <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="flip" title="Flip board" aria-label="Flip board" disabled>
-            <span class="lucide-icon" id="pgnStudyFlipIcon"></span>
-        </button>
-        <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="speed" title="Playback speed (1x)" aria-label="Playback speed" disabled>
-            <span class="lucide-icon" id="pgnStudySpeedIcon"></span>
-            <span class="pgn-study-speed-badge" id="pgnStudySpeedBadge">1x</span>
-        </button>
-        <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="download" title="Download PGN" aria-label="Download PGN" disabled>
-            <span class="lucide-icon" id="pgnStudyDownloadIcon"></span>
-        </button>
+        <div class="pgn-study-ribbon-toprow">
+            <div class="pgn-study-ribbon-group pgn-study-ribbon-left">
+                <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="toggle-play" title="Play" aria-label="Play" disabled>
+                    <span class="lucide-icon" id="pgnStudyPlayPauseIcon"></span>
+                </button>
+                <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="toc" title="Table of contents" aria-label="Table of contents" disabled>
+                    <span class="lucide-icon" id="pgnStudyTocIcon"></span>
+                </button>
+            </div>
+            <div class="pgn-study-ribbon-group pgn-study-ribbon-right">
+                <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="settings" title="Settings" aria-label="Settings" disabled>
+                    <span class="lucide-icon" id="pgnStudySettingsIcon"></span>
+                </button>
+                <span class="pgn-study-settings-inline" id="pgnStudySettingsInline">
+                    <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="flip" title="Flip board" aria-label="Flip board" disabled>
+                        <span class="lucide-icon" id="pgnStudyFlipIcon"></span>
+                    </button>
+                    <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="speed" title="Playback speed (1x)" aria-label="Playback speed" disabled>
+                        <span class="lucide-icon" id="pgnStudySpeedIcon"></span>
+                        <span class="pgn-study-speed-badge" id="pgnStudySpeedBadge">1x</span>
+                    </button>
+                    <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="download" title="Download PGN" aria-label="Download PGN" disabled>
+                        <span class="lucide-icon" id="pgnStudyDownloadIcon"></span>
+                    </button>
+                </span>
+                <!-- The close button (#pgnStudyClose) is moved in here at
+                     runtime — see the DOMContentLoaded listener below — from
+                     its original spot as a page-level sibling before
+                     <pgn-study> — after pgn-study-settings-inline, so it
+                     stays the rightmost button whether or not that group
+                     is showing. -->
+            </div>
+        </div>
 
-        <div class="pgn-study-toc-dropdown" id="pgnStudyTocDropdown"></div>
+        <div class="pgn-study-toc-accordion" id="pgnStudyTocAccordion"></div>
     </header>
 
-    <button class="pgn-study-close" type="button" id="pgnStudyClose" title="Close" aria-label="Close">
+    <button class="pgn-study-ribbon-btn pgn-study-close" type="button" id="pgnStudyClose" title="Close" aria-label="Close">
         <span class="lucide-icon" id="pgnStudyCloseIcon"></span>
     </button>
 
@@ -821,6 +832,11 @@
 
         studyEl.replaceChildren(playerEl, resizerEl, pgnEl);
         studyEl.prepend(document.querySelector('.pgn-study-ribbon'));
+        // The close button starts as a page-level sibling before
+        // <pgn-study> (see its own CSS comment) — move it into the
+        // ribbon's right-hand group now that the ribbon itself exists
+        // inside pgn-study, alongside the settings (cog) button.
+        document.querySelector('.pgn-study-ribbon-right').appendChild(document.getElementById('pgnStudyClose'));
 
         /* Drag-to-resize the board/reading-list columns (desktop grid
            layout only — the resizer is display:none in the stacked
@@ -917,17 +933,20 @@
         document.getElementById('pgnStudyCloseIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('x'));
         document.getElementById('pgnStudyPlayPauseIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('play'));
         document.getElementById('pgnStudyTocIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('list'));
+        document.getElementById('pgnStudySettingsIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('settings'));
 
         // Closing doesn't depend on the engine, or even on loading having
         // finished — hide whichever of the loading placeholder or the real
         // <pgn-study> is currently showing (?.remove()/[none] no-op safely
         // either way) and reveal the bare body behind them, but leave a way
-        // back in via the reopen button.
+        // back in via the reopen button. The close button itself is now a
+        // <pgn-study> descendant (moved into the ribbon above), so hiding
+        // pgn-study already hides it too — no separate style.display
+        // needed for it here anymore.
         const reopenBtn = document.getElementById('pgnStudyReopen');
         document.getElementById('pgnStudyClose').addEventListener('click', () => {
             document.getElementById('pgnStudyLoading')?.remove();
             studyEl.style.display = 'none';
-            document.getElementById('pgnStudyClose').style.display = 'none';
             reopenBtn.classList.add('visible');
         });
 
@@ -969,11 +988,11 @@
         reopenBtn.addEventListener('click', () => {
             // Already been open at least once (cp-ready is permanent —
             // see markStudyReady()/revealStudy() below) and is just
-            // currently hidden by the close button's inline style —
+            // currently hidden by pgn-study's own inline display:none
+            // (which the close button, now inside it, inherits) —
             // restore that directly instead of re-running first-open.
             if (studyEl.classList.contains('cp-ready')) {
                 studyEl.style.display = '';
-                document.getElementById('pgnStudyClose').style.display = '';
                 reopenBtn.classList.remove('visible');
                 return;
             }
@@ -1252,26 +1271,28 @@
             playerEl.addEventListener('cp-move', syncPlayPauseButton);
             playerEl.addEventListener('cp-variation-move', syncPlayPauseButton);
 
-            /* TOC ribbon button — page-level navigation (scrolls the
-               reading column to the table of contents built further
-               down), not a board/playback action, so there's nothing to
-               forward to. Looked up at click time rather than cached
+            /* TOC ribbon button — expands/collapses the accordion built
+               into the ribbon itself (see the markup above) rather than
+               scrolling to the .pgn-study-toc at the bottom of the
+               reading column. Looked up at click time rather than cached
                here since buildOpeningToc() below still needs to fetch
-               and render it first — the dropdown just toggles open on an
-               empty shell either way. */
+               and render it first — toggling just expands/collapses an
+               empty shell either way until then. */
             const tocBtn = document.querySelector('.pgn-study-ribbon-btn[data-ribbon-action="toc"]');
-            const tocDropdown = document.getElementById('pgnStudyTocDropdown');
+            const tocAccordion = document.getElementById('pgnStudyTocAccordion');
             tocBtn.disabled = false;
-            tocBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                tocDropdown.classList.toggle('open');
+            tocBtn.addEventListener('click', () => {
+                tocAccordion.classList.toggle('open');
             });
-            // Click anywhere outside the dropdown (or its own toggle
-            // button, already handled above via stopPropagation) closes it.
-            document.addEventListener('click', (e) => {
-                if (tocDropdown.classList.contains('open') && !tocDropdown.contains(e.target)) {
-                    tocDropdown.classList.remove('open');
-                }
+
+            /* Settings ribbon button — shows/hides the flip/speed/download
+               group inline in the ribbon's right-hand side (see the
+               markup above and .pgn-study-settings-inline's CSS). */
+            const settingsBtn = document.querySelector('.pgn-study-ribbon-btn[data-ribbon-action="settings"]');
+            const settingsInline = document.getElementById('pgnStudySettingsInline');
+            settingsBtn.disabled = false;
+            settingsBtn.addEventListener('click', () => {
+                settingsInline.classList.toggle('open');
             });
 
             /* Move picker — replaces <pgn-player>'s own comment/variation
@@ -1822,14 +1843,14 @@
                 if (!toc.length) return; // nothing in this PGN matched a named opening
 
                 /* Renders the same `toc` array into any container — only
-                   the ribbon's dropdown uses this now, but kept as its
+                   the ribbon's accordion uses this now, but kept as its
                    own function (rather than inlined below) since it used
                    to also render an always-in-the-page copy at the
                    bottom of the reading column, and splitting the "walk
                    the game and build the `toc` array" step above from
                    "render `toc` somewhere" made that a one-line change to
                    remove instead of a rewrite. */
-                function renderTocEntries(listEl, onCloseDropdown) {
+                function renderTocEntries(listEl, onCollapse) {
                     toc.forEach(entry => {
                         const row = document.createElement('div');
                         row.className = 'pgn-study-toc-entry';
@@ -1844,21 +1865,21 @@
                         row.appendChild(move);
                         row.addEventListener('click', () => {
                             entry.enter();
-                            if (onCloseDropdown) onCloseDropdown();
+                            if (onCollapse) onCollapse();
                         });
                         listEl.appendChild(row);
                     });
                 }
 
-                const dropdown = document.getElementById('pgnStudyTocDropdown');
-                const dropdownHeading = document.createElement('h3');
-                dropdownHeading.className = 'pgn-study-toc-heading';
-                dropdownHeading.textContent = 'Table of Contents';
-                dropdown.appendChild(dropdownHeading);
-                const dropdownListEl = document.createElement('div');
-                dropdownListEl.className = 'pgn-study-toc-list';
-                dropdown.appendChild(dropdownListEl);
-                renderTocEntries(dropdownListEl, () => dropdown.classList.remove('open'));
+                const accordion = document.getElementById('pgnStudyTocAccordion');
+                const accordionHeading = document.createElement('h3');
+                accordionHeading.className = 'pgn-study-toc-heading';
+                accordionHeading.textContent = 'Table of Contents';
+                accordion.appendChild(accordionHeading);
+                const accordionListEl = document.createElement('div');
+                accordionListEl.className = 'pgn-study-toc-list';
+                accordion.appendChild(accordionListEl);
+                renderTocEntries(accordionListEl, () => accordion.classList.remove('open'));
             }
 
             /* Replays a TOC entry's own ancestor chain through
