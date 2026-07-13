@@ -619,6 +619,7 @@ function loadPGN(pgn) {
       engine._enterKeyboardMode();
       if (engine._variation) {
         engine.state.playing = false;
+        if (engine._variation.playing) engine._pauseVariationPlay();
         if (engine._variation.index < engine._variation.fens.length - 1) {
           engine.variationGoTo(engine._variation.index + 1);
         } else if (!engine.exitToParentVariation()) {
@@ -640,6 +641,7 @@ function loadPGN(pgn) {
       engine._enterKeyboardMode();
       if (engine._variation) {
         engine.state.playing = false;
+        if (engine._variation.playing) engine._pauseVariationPlay();
         if (engine._variation.index > 1) {
           engine.variationGoTo(engine._variation.index - 1);
         } else if (!engine.exitToParentVariation()) {
