@@ -80,15 +80,12 @@
                column exactly as tall as the reading column next to it —
                almost always taller than the board + its (often near-
                empty) comment box actually need, since .player-wrapper's
-               own site-wide min-height is only 500px. Rather than
-               leaving 100+px of dead space below the board, split it
-               evenly above and below by centering — "safe" so a comment
-               long enough to actually need the extra room falls back to
-               top-alignment instead of scrolling in from a clipped top
-               edge. */
+               own site-wide min-height is only 500px. Pinned to the top
+               (flex's own default) so the board lines up with the
+               reading column's first line of text instead of floating
+               mid-column — any leftover space just falls below it. */
             display: flex;
             flex-direction: column;
-            justify-content: safe center;
         }
         pgn-study > pgn-player > .player-wrapper {
             /* Flex items default to flex-shrink: 1 — without this, a
@@ -184,7 +181,14 @@
 
         /* Same 90vw x 90vh framed footprint as the real <pgn-study> (see
            above) so swapping one for the other doesn't visibly resize
-           the page. */
+           the page. Hidden until the reader actually clicks "Open PGN
+           Study" (see the reopen button's own click handler below) —
+           the page loads with the study closed, not mid-load; this only
+           actually appears if loading is still in flight at that click,
+           to stand in until it finishes (see openStudy() below). */
+        .pgn-study-loading:not(.visible) {
+            display: none !important;
+        }
         .pgn-study-loading {
             display: flex;
             flex-direction: column;
@@ -291,6 +295,9 @@
         }
         .pgn-study-ribbon-btn:hover:not(:disabled) {
             background: #f4f4f5;
+        }
+        .pgn-study-ribbon-btn:focus {
+            outline: none;
         }
         .pgn-study-ribbon-btn:disabled {
             opacity: 0.35;
@@ -642,7 +649,7 @@
         <span class="lucide-icon" id="pgnStudyCloseIcon"></span>
     </button>
 
-    <button class="pgn-study-reopen" type="button" id="pgnStudyReopen">
+    <button class="pgn-study-reopen visible" type="button" id="pgnStudyReopen">
         Open PGN Study
     </button>
 
@@ -833,10 +840,65 @@
             document.getElementById('pgnStudyClose').style.display = 'none';
             reopenBtn.classList.add('visible');
         });
-        reopenBtn.addEventListener('click', () => {
-            studyEl.style.display = '';
-            document.getElementById('pgnStudyClose').style.display = '';
+
+        /* The page loads with the study closed — nothing is fetched or
+           parsed any differently in the background (see the
+           DOMContentLoaded listener below), only the *reveal* is gated
+           behind this button instead of happening the instant loading
+           finishes. studyReady/readyEngine capture that background
+           work's result whenever it lands; openRequested records that
+           the reader already asked to see it before that happened, so
+           revealStudy() (called from wherever loading actually finishes)
+           knows to show it immediately instead of leaving them stuck
+           looking at a button that does nothing. */
+        let studyReady = false;
+        let openRequested = false;
+        let readyEngine = null;
+
+        function revealStudy() {
+            document.getElementById('pgnStudyLoading')?.classList.remove('visible');
+            document.getElementById('pgnStudyLoading')?.remove();
+            studyEl.classList.add('cp-ready');
             reopenBtn.classList.remove('visible');
+            // Same reasoning as before: force the board's layout to
+            // compute now, synchronously, the instant it actually has one
+            // (this reveal) — not back when the engine first became
+            // ready, quite possibly while still hidden behind this very
+            // button.
+            if (readyEngine && readyEngine.board && typeof readyEngine.board.resize === "function") {
+                readyEngine.board.resize();
+            }
+        }
+
+        function markStudyReady(engine) {
+            studyReady = true;
+            readyEngine = engine || null;
+            if (openRequested) revealStudy();
+        }
+
+        reopenBtn.addEventListener('click', () => {
+            // Already been open at least once (cp-ready is permanent —
+            // see markStudyReady()/revealStudy() below) and is just
+            // currently hidden by the close button's inline style —
+            // restore that directly instead of re-running first-open.
+            if (studyEl.classList.contains('cp-ready')) {
+                studyEl.style.display = '';
+                document.getElementById('pgnStudyClose').style.display = '';
+                reopenBtn.classList.remove('visible');
+                return;
+            }
+            if (studyReady) {
+                revealStudy();
+            } else {
+                // First open, but loading (still running in the
+                // background regardless of this button) hasn't finished
+                // yet — show the same loading placeholder markStudyReady()
+                // would otherwise have skipped straight past, and let it
+                // reveal the real thing the moment it does.
+                openRequested = true;
+                document.getElementById('pgnStudyLoading')?.classList.add('visible');
+                reopenBtn.classList.remove('visible');
+            }
         });
 
         /* Chessbase-style reading sync between the <pgn-player> on the left
@@ -862,11 +924,11 @@
             // the time this fires.
             const movesRoot = studyEl.querySelector('.pgn-container .pgn-moves');
             if (!movesRoot) {
-                // Nothing to sync, but still a reason to stop showing the
-                // loading placeholder forever — reveal whatever <pgn-study>
-                // did render instead of leaving the spinner stuck.
-                document.getElementById('pgnStudyLoading')?.remove();
-                studyEl.classList.add('cp-ready');
+                // Nothing to sync, but still a reason not to leave the
+                // reader stuck on a loading placeholder forever if they've
+                // already asked to open it — reveal whatever <pgn-study>
+                // did render.
+                markStudyReady(null);
                 return;
             }
 
@@ -997,28 +1059,19 @@
                 diagramImagesReady,
             ]);
 
-            // Swap the loading placeholder (empty board + spinner) for the
-            // real thing now that <pgn-player> has finished loading — on
-            // success or failure alike, so a load error can't leave the
-            // spinner stuck forever instead of showing whatever did render.
-            document.getElementById('pgnStudyLoading')?.remove();
-            studyEl.classList.add('cp-ready');
-
-            /* chessboard.js measured its own container back when the
-               engine first constructed it — while pgn-study (and
-               everything inside it, including the board) was still
-               display:none, so that measurement was never meaningful and
-               --board-size's cqw resolved against no real container size
-               at all. cp-ready above is what actually gives the board a
-               layout for the first time; engine.board.resize() reads
-               offsetWidth, which forces the browser to compute that
-               layout synchronously right now — before the next paint —
-               closing the one-frame gap where the board would otherwise
-               flash at the wrong (larger) size right as it first becomes
-               visible. */
-            if (engine && engine.board && typeof engine.board.resize === "function") {
-                engine.board.resize();
-            }
+            // <pgn-player> has now finished loading, on success or
+            // failure alike (a load error shouldn't leave the reader
+            // stuck looking at a loading placeholder forever once they've
+            // asked to see it) — mark it ready. If the reader already
+            // clicked "Open PGN Study" while this was still in flight,
+            // this reveals it immediately; otherwise it just remembers
+            // the result (see markStudyReady()/revealStudy() above) until
+            // they do. Either way, engine.board.resize() (inside
+            // revealStudy()) is what forces the board's layout to
+            // actually compute for the first time, right as it becomes
+            // visible — not here, since it's likely still display:none
+            // behind that button at this exact point.
+            markStudyReady(engine);
 
             if (!engine) return;
 
