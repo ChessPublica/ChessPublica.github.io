@@ -18,6 +18,7 @@ import { createBoard } from "./board.js";
 import { buildMoveTree, parseHeaders, renderFullPGN } from "./pgn.js";
 import { renderLocalPuzzle } from "./puzzle.js";
 import { initAll, initFigurineProse } from "./init.js";
+import { lucideIconUrl } from "./icons.js";
 
 /* ================================================================
    AUTO-INIT ON DOM READY
@@ -43,4 +44,5 @@ window.ChessPublica = {
   renderLocalPuzzle: renderLocalPuzzle,
   initAll: initAll,
   initFigurineProse: initFigurineProse,
+  lucideIconUrl: lucideIconUrl,
 };
