@@ -2269,7 +2269,7 @@ class VideoEngine {
      the current variation move's comment/diagram/child-variations off
      this._variation.variationObj (the parsed { moves, commentsByMove, … }
      enterVariation() was handed) at this._variation.index, exactly like
-     renderSubPicker()'s own lookup in sadler/index.html. Always runs (not
+     renderSubPicker()'s own lookup in pgn-study/index.html. Always runs (not
      just while paused), so a comment shows the instant its move is
      reached — during autoplay or single-step alike — and clears the
      moment the board moves past it. variationObj is null for a variation

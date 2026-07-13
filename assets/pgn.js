@@ -877,7 +877,7 @@ function flushBuffer(parent, text, isVariation) {
  *       `data-to` when it's attached to a move) — see
  *       markDiagramClickable() below;
  *   for a host page to wire up click-to-navigate itself. Introduced for
- *   chesspublica.github.io/sadler/; scoped to a per-element opt-in (via
+ *   chesspublica.github.io/pgn-study/; scoped to a per-element opt-in (via
  *   <pgn clickable-moves>, read in init.js) rather than turned on
  *   globally, so no other <pgn> on the site is affected.
  */
