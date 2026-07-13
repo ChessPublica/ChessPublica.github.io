@@ -1897,7 +1897,7 @@ class VideoEngine {
                 const ann = this._variation.moveAnnotations?.[vi - 1];
                 const move = vi > 0 ? this._variation.verbose[vi - 1] : null;
                 const glyph = vi > 0 && this._variation.variationObj
-                  ? nagsToGlyph(this._variation.variationObj.nagsByMove[vi - 1])
+                  ? nagsToGlyph(this._variation.variationObj.nagsByMove?.[vi - 1])
                   : null;
                 this.showVariationPosition(this._variation.fens[vi], ann, move, glyph);
               } else {
@@ -2087,7 +2087,7 @@ class VideoEngine {
     const ann   = this._variation.moveAnnotations?.[index - 1];
     const move  = index > 0 ? this._variation.verbose[index - 1] : null;
     const glyph = index > 0 && this._variation.variationObj
-      ? nagsToGlyph(this._variation.variationObj.nagsByMove[index - 1])
+      ? nagsToGlyph(this._variation.variationObj.nagsByMove?.[index - 1])
       : null;
     this.showVariationPosition(fen, ann, move, glyph);
 
