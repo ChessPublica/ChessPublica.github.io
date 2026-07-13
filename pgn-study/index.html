@@ -28,6 +28,14 @@
         }
         pgn-study {
             --frame-pad: 1.5rem;
+            /* Bottom gets less than the other three sides — with the
+               columns/divider already stretched (align-items: stretch,
+               desktop rule below) to fill the row exactly, the padding
+               here is the *only* gap left between them and the border,
+               and a full --frame-pad of it read as noticeably more
+               breathing room than the top/left/right, which each also
+               have real content sitting flush against them. */
+            --frame-pad-bottom: 0.75rem;
             font-size: 110%;
             display: flex;
             flex-direction: column;
@@ -35,7 +43,7 @@
             height: 90vh;
             max-width: 1600px;
             margin: 5vh auto;
-            padding: var(--frame-pad);
+            padding: var(--frame-pad) var(--frame-pad) var(--frame-pad-bottom) var(--frame-pad);
             border: 1px solid #d4d4d8;
             border-radius: 0.75rem;
             box-sizing: border-box;
@@ -115,6 +123,7 @@
         @media (min-width: 900px) {
             pgn-study {
                 --frame-pad: 2.5rem;
+                --frame-pad-bottom: 1.25rem;
                 /* Defaults reproduce the old fixed 1fr:2fr split exactly —
                    the resizer below only ever overrides --left-col-width
                    (switching it from a fr share to a hard px value once
@@ -126,7 +135,7 @@
                 grid-template-columns: var(--left-col-width) 6px var(--right-col-width);
                 grid-template-rows: auto 1fr;
                 align-items: stretch;
-                padding: var(--frame-pad);
+                padding: var(--frame-pad) var(--frame-pad) var(--frame-pad-bottom) var(--frame-pad);
             }
             pgn-study pgn-player { --board-size: min(calc(400px * 1.25), 94cqw); }
             /* Row 1, spanning every column (including the resizer track)
@@ -167,6 +176,12 @@
                 position: absolute;
                 top: 50%;
                 left: 50%;
+                /* ::after (the line) is painted after the handle's own
+                   DOM children by default regardless of source order —
+                   this keeps the handle on top instead of getting
+                   visually sliced by the line underneath it, most
+                   noticeably once ::after darkens/thickens on hover. */
+                z-index: 1;
                 transform: translate(-50%, -50%);
                 display: flex;
                 align-items: center;
@@ -229,7 +244,7 @@
             height: 90vh;
             max-width: 1600px;
             margin: 5vh auto;
-            padding: 1.5rem;
+            padding: 1.5rem 1.5rem 0.75rem 1.5rem;
             border: 1px solid #d4d4d8;
             border-radius: 0.75rem;
             box-sizing: border-box;
@@ -240,7 +255,7 @@
                 display: grid;
                 grid-template-columns: 1fr 2fr;
                 align-items: start;
-                padding: 2.5rem;
+                padding: 2.5rem 2.5rem 1.25rem 2.5rem;
             }
         }
         .pgn-study-loading-board {
