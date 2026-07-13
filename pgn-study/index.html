@@ -227,6 +227,7 @@
             border-bottom: 1px solid #e4e4e7;
         }
         .pgn-study-ribbon-btn {
+            position: relative; /* anchors .pgn-study-speed-badge below */
             display: flex;
             align-items: center;
             justify-content: center;
@@ -249,6 +250,25 @@
         .pgn-study-ribbon-btn .lucide-icon {
             width: 2rem;
             height: 2rem;
+        }
+
+        /* SPEED BADGE — sits on the play/pause button (icon-only, so the
+           tooltip trick the old text-based speed label used isn't
+           visible at a glance) showing the current playback multiplier
+           at all times, not just on hover. Kept in sync by
+           syncPlayPauseButton() below, same as the icon/title swap. */
+        .pgn-study-speed-badge {
+            position: absolute;
+            bottom: 0.15rem;
+            right: 0.15rem;
+            font-size: 0.6rem;
+            font-weight: 700;
+            line-height: 1;
+            padding: 0.1rem 0.25rem;
+            border-radius: 0.5rem;
+            background: #52525b;
+            color: #fff;
+            pointer-events: none;
         }
 
         /* CLOSE BUTTON — fixed at the frame's own top-right corner (the
@@ -551,6 +571,7 @@
     <header class="pgn-study-ribbon">
         <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="toggle-play" title="Play" aria-label="Play" disabled>
             <span class="lucide-icon" id="pgnStudyPlayPauseIcon"></span>
+            <span class="pgn-study-speed-badge" id="pgnStudySpeedBadge">1x</span>
         </button>
         <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="toc" title="Table of contents" aria-label="Table of contents" disabled>
             <span class="lucide-icon" id="pgnStudyTocIcon"></span>
@@ -924,6 +945,15 @@
                engine itself has finished constructing (see
                VideoEngine's constructor in pgn-player.js), same
                reason the buttons start out disabled in the markup. */
+            // Speed badge lives on the play/pause button (see below) since
+            // that button is icon-only and would otherwise show its
+            // current multiplier nowhere but a hover tooltip — kept in
+            // sync from here (the speed action's own click handler) and
+            // from syncPlayPauseButton() below, so it's always correct
+            // regardless of which of those last updated it.
+            const speedBadge = document.getElementById('pgnStudySpeedBadge');
+            const syncSpeedBadge = () => { speedBadge.textContent = engine.state.speed + 'x'; };
+
             document.querySelectorAll('.pgn-study-ribbon-btn').forEach(btn => {
                 const action = btn.dataset.ribbonAction;
                 const target = playerEl.querySelector(`.settings-btn[data-action="${action}"]`);
@@ -940,6 +970,11 @@
                         const label = `Playback speed (${engine.state.speed}x)`;
                         btn.title = label;
                         btn.setAttribute('aria-label', label);
+                        // Also resyncs the play/pause button's own speed
+                        // badge/title (see below) — declared later in this
+                        // same function, but already initialized by the
+                        // time a user can actually click this button.
+                        syncPlayPauseButton();
                     }
                 });
             });
@@ -953,14 +988,21 @@
                engine.state.playing via the same "cp-move" event goTo()
                already fires on every play tick, pause, and manual
                navigation — see the move-picker/TOC listeners below for
-               the same pattern. */
+               the same pattern. Its speed badge is synced here too,
+               since a page-load default (1x) can't drift, but this
+               keeps it correct defensively regardless. */
             const playPauseBtn = document.querySelector('.pgn-study-ribbon-btn[data-ribbon-action="toggle-play"]');
             const playPauseIcon = document.getElementById('pgnStudyPlayPauseIcon');
             const syncPlayPauseButton = () => {
                 const playing = engine.state.playing;
                 playPauseIcon.style.setProperty('--icon', window.ChessPublica.lucideIconUrl(playing ? 'pause' : 'play'));
-                playPauseBtn.title = playing ? 'Pause' : 'Play';
-                playPauseBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
+                // Speed is also spelled out here (not just the visual
+                // badge) so it reaches anyone not seeing that badge —
+                // screen readers, or just a mouse hover.
+                const label = `${playing ? 'Pause' : 'Play'} (${engine.state.speed}x)`;
+                playPauseBtn.title = label;
+                playPauseBtn.setAttribute('aria-label', label);
+                syncSpeedBadge();
             };
             playPauseBtn.disabled = false;
             playPauseBtn.addEventListener('click', () => engine.togglePlay());
