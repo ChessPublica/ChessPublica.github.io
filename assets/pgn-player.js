@@ -2186,6 +2186,19 @@ class VideoEngine {
     if (!this._variation) return;
     this._variation.playing = false;
     if (this._variation.iconEl) this._setVariationIcon(this._variation.iconEl, "play");
+
+    /* Every other transition that changes what's on the board dispatches
+       "cp-variation-move" (see showVariationPosition()) — pausing here
+       doesn't move the board, so nothing was dispatching anything, and
+       a host page (e.g. a play/pause button elsewhere in its own UI)
+       had no event to notice a variation's autoplay had actually
+       stopped. Re-dispatching it with the unchanged current FEN is a
+       no-op for position/highlight listeners but gives state listeners
+       the same hook every other state change already gets. */
+    this.container.dispatchEvent(new CustomEvent("cp-variation-move", {
+      bubbles: true,
+      detail: { fen: this._variation.fens[this._variation.index], headers: this.state.headers },
+    }));
   }
 
   _setVariationIcon(iconEl, mode) {

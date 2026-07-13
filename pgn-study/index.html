@@ -1065,15 +1065,21 @@
                .settings-btn counterpart to forward to (the on-board
                overlay button only ever shows/hides itself, it doesn't
                expose a separate "pause" control). One button toggles
-               both the action and its own icon/title, kept in sync with
-               engine.state.playing via the same "cp-move" event goTo()
-               already fires on every play tick, pause, and manual
-               navigation — see the move-picker/TOC listeners below for
-               the same pattern. */
+               both the action and its own icon/title, kept in sync via
+               both "cp-move" (goTo() — mainline play ticks, pauses, and
+               manual navigation) and "cp-variation-move"
+               (showVariationPosition() — the same for a variation's own
+               autoplay/spacebar loop). Both are needed: togglePlay()
+               tracks variation playback in engine._variation.playing
+               instead of engine.state.playing (which it forces false
+               whenever a variation is active), so checking only the
+               latter left this button stuck on "Play" — silently wrong,
+               not just unsynced — the entire time a variation was
+               actually auto-playing. */
             const playPauseBtn = document.querySelector('.pgn-study-ribbon-btn[data-ribbon-action="toggle-play"]');
             const playPauseIcon = document.getElementById('pgnStudyPlayPauseIcon');
             const syncPlayPauseButton = () => {
-                const playing = engine.state.playing;
+                const playing = engine.state.playing || !!(engine._variation && engine._variation.playing);
                 playPauseIcon.style.setProperty('--icon', window.ChessPublica.lucideIconUrl(playing ? 'pause' : 'play'));
                 playPauseBtn.title = playing ? 'Pause' : 'Play';
                 playPauseBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
@@ -1082,6 +1088,7 @@
             playPauseBtn.addEventListener('click', () => engine.togglePlay());
             syncPlayPauseButton();
             playerEl.addEventListener('cp-move', syncPlayPauseButton);
+            playerEl.addEventListener('cp-variation-move', syncPlayPauseButton);
 
             /* TOC ribbon button — page-level navigation (scrolls the
                reading column to the table of contents built further
