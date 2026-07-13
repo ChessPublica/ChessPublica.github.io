@@ -1772,6 +1772,19 @@ class VideoEngine {
       onDrop:      (from, to) => this.puzzle.handleDrop(from, to),
       onSnapEnd:   () => {
         if (this.puzzle.active) this.board.position(this.puzzle.chess.fen(), false);
+      },
+      /* Fires once chessboard.js's own piece-slide animation for a
+         board.position() call has fully settled (it computes each
+         piece's start/end pixel offsets once, up front — a host page
+         that also moves the board on screen mid-animation, e.g. by
+         scrolling the page, will see pieces visibly detach from their
+         squares until it catches up). Dispatched as a DOM event, not
+         just an internal callback, so a host page can defer any of its
+         own board-adjacent animation (like scrolling something into
+         view) until this one is actually done, instead of guessing at
+         a delay that has to be kept in sync with moveSpeed by hand. */
+      onMoveEnd: () => {
+        this.container.dispatchEvent(new CustomEvent("cp-animation-end", { bubbles: true }));
       }
     });
 
