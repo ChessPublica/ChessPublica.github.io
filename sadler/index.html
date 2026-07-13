@@ -405,6 +405,44 @@
                 window.scrollBy({ top: delta, behavior: 'smooth' });
             }
 
+            // Scrolling the page WHILE chessboard.js is mid-slide for the
+            // move that triggered it visibly breaks the animation: its
+            // piece-drag overlay is positioned in *document* coordinates,
+            // computed once at the start of the slide, but the board
+            // itself sits in a `position: sticky` column — once stuck, its
+            // on-screen position no longer moves with the page the way an
+            // ordinary document-flow element would, so as the page keeps
+            // scrolling underneath it, the sliding piece drifts away from
+            // the (visually stationary) squares instead of tracking them,
+            // and appears to "jump" once the real piece reappears at the
+            // end. Deferring the scroll to the board's own "cp-animation-end"
+            // event (see pgn-player.js's onMoveEnd hook) instead of firing
+            // it immediately lets the slide finish first, so the two
+            // animations never overlap. pendingScrollTarget always holds
+            // the *latest* target — during autoplay, several cp-move
+            // events can land before the first slide even finishes, and
+            // only the current position's row is ever worth scrolling to.
+            // The timer is a fallback for the rare case chessboard.js
+            // doesn't actually animate anything (e.g. re-rendering an
+            // unchanged position), which never fires "cp-animation-end" at
+            // all — 250ms comfortably clears pgn-player.js's own 200ms
+            // moveSpeed on the normal path without adding a perceptible
+            // delay of its own.
+            let pendingScrollTarget = null;
+            let pendingScrollTimer = null;
+            function scheduleScroll(el) {
+                pendingScrollTarget = el;
+                clearTimeout(pendingScrollTimer);
+                pendingScrollTimer = setTimeout(runPendingScroll, 250);
+            }
+            function runPendingScroll() {
+                clearTimeout(pendingScrollTimer);
+                if (!pendingScrollTarget) return;
+                scrollMoveToBoardTop(pendingScrollTarget);
+                pendingScrollTarget = null;
+            }
+            playerEl.addEventListener('cp-animation-end', runPendingScroll);
+
             playerEl.addEventListener('cp-move', (e) => {
                 const moveIndex = e.detail.moveIndex;
                 if (moveIndex == null || moveIndex < 0) { setActiveMove(null); return; }
@@ -413,7 +451,7 @@
                 if (!target) { setActiveMove(null); return; }
 
                 setActiveMove(target);
-                scrollMoveToBoardTop(target);
+                scheduleScroll(target);
             });
 
             // Counterpart to "cp-move" above, but for a variation position
@@ -429,7 +467,7 @@
                 if (!target) { setActiveMove(null); return; }
 
                 setActiveMove(target);
-                scrollMoveToBoardTop(target);
+                scheduleScroll(target);
             });
 
             // Player isn't ready to accept goTo()/showVariationPosition()
