@@ -230,8 +230,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 2.25rem;
-            height: 2.25rem;
+            width: 3rem;
+            height: 3rem;
             background: transparent;
             border: none;
             border-radius: 0.4rem;
@@ -247,18 +247,27 @@
             cursor: default;
         }
         .pgn-study-ribbon-btn .lucide-icon {
-            width: 1.4rem;
-            height: 1.4rem;
+            width: 2rem;
+            height: 2rem;
         }
 
         /* CLOSE BUTTON — fixed at the frame's own top-right corner (the
            frame is centered with a flat 5vw/5vh margin — see pgn-study/
            .pgn-study-loading above — so a fixed offset lines up with it
            exactly without needing to be a positioned descendant of
-           either one, and keeps working across the loading -> ready
-           swap unchanged). Always enabled/visible: closing doesn't
-           depend on the engine being ready. */
+           either one). Hidden for as long as the loading placeholder is
+           showing — same reasoning as the ribbon above (see its own
+           comment) — via :has(), since (unlike the ribbon) this button
+           is never moved inside <pgn-study>, so a plain
+           "pgn-study.cp-ready > .pgn-study-close" selector can't reach
+           it. Once revealed, closing no longer depends on the engine
+           being ready (its own click handler doesn't check cp-ready or
+           anything else) — only *becoming visible in the first place*
+           does. */
         .pgn-study-close {
+            display: none;
+        }
+        body:has(pgn-study.cp-ready) .pgn-study-close {
             position: fixed;
             top: calc(5vh + 0.5rem);
             right: calc(5vw + 0.5rem);
@@ -266,8 +275,8 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 2rem;
-            height: 2rem;
+            width: 2.75rem;
+            height: 2.75rem;
             background: transparent;
             border: none;
             border-radius: 0.4rem;
@@ -279,8 +288,8 @@
             background: #f4f4f5;
         }
         .pgn-study-close .lucide-icon {
-            width: 1.4rem;
-            height: 1.4rem;
+            width: 2rem;
+            height: 2rem;
         }
 
         /* REOPEN BUTTON — sits wherever the closed frame used to be (top
@@ -354,25 +363,18 @@
             background: #c8e6c9;
         }
 
+        /* Matches the comment icon's own size (pgn-player's comment box,
+           left column) — that one needs no override here since it (and
+           .variation-icon/.video-title-emoji, the article/annotator "A≡"
+           byline mark on the right) already default to 2rem via
+           assets/ChessPublica.css's shared, site-wide rules. Every other
+           icon on this page (ribbon, close, move picker) is sized to
+           match that 2rem instead of the other way around. */
         .pgn-study-picker-icon {
             flex-shrink: 0;
-            width: 1.4rem;
-            height: 1.4rem;
+            width: 2rem;
+            height: 2rem;
             color: #555;
-        }
-
-        /* Match the move picker's play icon size (1.4rem) above for every
-           other icon on this page too — the comment icon (pgn-player's
-           own comment box, left column) and the article/annotator icon
-           (the "A≡" byline mark, right column) both come from
-           assets/ChessPublica.css's shared .comment-icon/.video-title-emoji
-           rules (2rem, sized for use across the whole site), so they're
-           overridden here rather than changed globally. */
-        pgn-study .comment-icon,
-        pgn-study .variation-icon,
-        pgn-study .video-title-emoji {
-            width: 1.4rem;
-            height: 1.4rem;
         }
         /* Mainline "continue" row always comes first (see makeRow() call
            order in renderMainlinePicker()/renderSubPicker()) — no special
@@ -670,13 +672,19 @@
             let dragStartX = null;
             let dragStartWidth = null;
 
+            /* One-way resize: dragging left (shrinking the board) is
+               allowed down to a 20% floor, but dragging right is capped
+               at the column's own starting width — the original
+               1fr-of-(1fr+2fr) default split, i.e. a third of the
+               available width — rather than being able to grow the
+               board past whatever size it opened at. */
             const clampLeftWidth = (px) => {
                 const totalWidth = studyEl.getBoundingClientRect().width
                     - (parseFloat(getComputedStyle(studyEl).paddingLeft) || 0)
                     - (parseFloat(getComputedStyle(studyEl).paddingRight) || 0)
                     - 6; // the resizer track itself
                 const min = totalWidth * 0.2;
-                const max = totalWidth * 0.75;
+                const max = totalWidth / 3;
                 return Math.min(Math.max(px, min), max);
             };
 
@@ -888,6 +896,22 @@
             // spinner stuck forever instead of showing whatever did render.
             document.getElementById('pgnStudyLoading')?.remove();
             studyEl.classList.add('cp-ready');
+
+            /* chessboard.js measured its own container back when the
+               engine first constructed it — while pgn-study (and
+               everything inside it, including the board) was still
+               display:none, so that measurement was never meaningful and
+               --board-size's cqw resolved against no real container size
+               at all. cp-ready above is what actually gives the board a
+               layout for the first time; engine.board.resize() reads
+               offsetWidth, which forces the browser to compute that
+               layout synchronously right now — before the next paint —
+               closing the one-frame gap where the board would otherwise
+               flash at the wrong (larger) size right as it first becomes
+               visible. */
+            if (engine && engine.board && typeof engine.board.resize === "function") {
+                engine.board.resize();
+            }
 
             if (!engine) return;
 
@@ -1512,14 +1536,14 @@
 
                 if (!toc.length) return; // nothing in this PGN matched a named opening
 
-                /* Renders the same `toc` array into any container — used
-                   for both the always-in-the-page copy at the bottom of
-                   the reading column and the ribbon's dropdown, so the two
-                   never drift out of sync with each other. Each row's
-                   click both navigates (entry.enter) and, if it's inside
-                   the dropdown, closes it — a click on the reading-column
-                   copy has no dropdown open to close, so onCloseDropdown
-                   is optional. */
+                /* Renders the same `toc` array into any container — only
+                   the ribbon's dropdown uses this now, but kept as its
+                   own function (rather than inlined below) since it used
+                   to also render an always-in-the-page copy at the
+                   bottom of the reading column, and splitting the "walk
+                   the game and build the `toc` array" step above from
+                   "render `toc` somewhere" made that a one-line change to
+                   remove instead of a rewrite. */
                 function renderTocEntries(listEl, onCloseDropdown) {
                     toc.forEach(entry => {
                         const row = document.createElement('div');
@@ -1540,18 +1564,6 @@
                         listEl.appendChild(row);
                     });
                 }
-
-                const tocEl = document.createElement('div');
-                tocEl.className = 'pgn-study-toc';
-                const heading = document.createElement('h3');
-                heading.className = 'pgn-study-toc-heading';
-                heading.textContent = 'Table of Contents';
-                tocEl.appendChild(heading);
-                const listEl = document.createElement('div');
-                listEl.className = 'pgn-study-toc-list';
-                tocEl.appendChild(listEl);
-                renderTocEntries(listEl);
-                container.appendChild(tocEl);
 
                 const dropdown = document.getElementById('pgnStudyTocDropdown');
                 const dropdownHeading = document.createElement('h3');
