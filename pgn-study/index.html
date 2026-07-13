@@ -527,6 +527,22 @@
             font-weight: bold;
         }
 
+        /* All icons 80% smaller (down to a fifth of their normal 2rem)
+           on mobile only — same five groups unified to 2rem above,
+           just scaled down together instead of leaving desktop's size
+           untouched. */
+        @media (max-width: 899px) {
+            .pgn-study-ribbon-btn .lucide-icon,
+            .pgn-study-close .lucide-icon,
+            .pgn-study-picker-icon,
+            pgn-study .comment-icon,
+            pgn-study .variation-icon,
+            pgn-study .video-title-emoji {
+                width: 0.4rem;
+                height: 0.4rem;
+            }
+        }
+
         pgn-study .pgn-container {
             /* Captured once under its own name so nested .pgn-variation
                levels can each scale from the real ambient board size
