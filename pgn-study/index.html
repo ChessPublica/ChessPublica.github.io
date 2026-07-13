@@ -8,16 +8,6 @@
     <link rel="stylesheet" href="../dist/ChessPublica.all.min.css">
     <link rel="stylesheet" href="../styles.css">
     <style>
-        /* Fixed 90vw x 90vh frame, centered (5vw/5vh margin on every
-           side) — the box itself never scrolls; each column inside it
-           does independently instead (see the min-height/overflow rule
-           below), since there's no longer a page-level scroll for a
-           sticky board to pin itself against. --frame-pad is the frame's
-           own inner padding, named so the ribbon (moved inside it — see
-           the DOMContentLoaded listener below) can cancel it back out
-           with a matching negative margin and bleed to the frame's true
-           edges instead of sitting inset like the board/reading columns
-           below it. */
         pgn-study {
             --frame-pad: 1.5rem;
             font-size: 110%;
