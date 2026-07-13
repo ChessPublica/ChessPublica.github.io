@@ -67,6 +67,28 @@
                collapses the column to 0 instead. */
             width: 100%;
             container-type: inline-size;
+            /* The desktop grid's align-items: stretch (below) makes this
+               column exactly as tall as the reading column next to it —
+               almost always taller than the board + its (often near-
+               empty) comment box actually need, since .player-wrapper's
+               own site-wide min-height is only 500px. Rather than
+               leaving 100+px of dead space below the board, split it
+               evenly above and below by centering — "safe" so a comment
+               long enough to actually need the extra room falls back to
+               top-alignment instead of scrolling in from a clipped top
+               edge. */
+            display: flex;
+            flex-direction: column;
+            justify-content: safe center;
+        }
+        pgn-study > pgn-player > .player-wrapper {
+            /* Flex items default to flex-shrink: 1 — without this, a
+               comment long enough to overflow this fixed-height column
+               would get silently squashed short of its natural size
+               instead of actually overflowing, which is what's supposed
+               to make the column's own overflow-y: auto (above) kick in
+               and let it scroll. */
+            flex-shrink: 0;
         }
         pgn-study pgn-player {
             --board-size: min(400px, 94cqw);
