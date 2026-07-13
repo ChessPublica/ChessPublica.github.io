@@ -227,6 +227,57 @@
             margin-left: auto;
             margin-right: auto;
         }
+
+        /* GAME RECAP — horizontal move tree, appended at the bottom of
+           the reading column (see buildGameRecap() below). One grid row
+           per line: the main line, then one row per variation-nesting
+           depth. Every move is placed in its own grid *column*, shared
+           down every row — column N is always ply N of the main line —
+           so a variation's moves fall directly under the main-line move
+           (and, at deeper rows, the shallower variation's own move) they
+           replace, and reading straight down any column shows every
+           choice offered at that exact point in the game. Neither
+           grid-template-columns nor -rows is declared: cells are placed
+           by explicit line number (see addRecapCell()) with nothing
+           else establishing the grid's size, so the browser creates
+           exactly as many implicit (auto-sized) tracks as the highest
+           line number used — no need to compute or update a column/row
+           count in JS as the game tree grows. */
+        .sadler-recap {
+            margin-top: 2rem;
+            padding-top: 1.25rem;
+            border-top: 2px solid rgba(128, 128, 128, 0.3);
+        }
+        .sadler-recap-heading {
+            margin: 0 0 0.75rem 0;
+            font-size: 1.15rem;
+        }
+        .sadler-recap-grid {
+            display: grid;
+            column-gap: 6px;
+            row-gap: 5px;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+        }
+        .sadler-recap-cell {
+            white-space: nowrap;
+            padding: 1px 4px;
+            border-radius: 3px;
+        }
+        .sadler-recap-cell.mainline {
+            font-weight: bold;
+        }
+        .sadler-recap-cell.clickable {
+            cursor: pointer;
+        }
+        .sadler-recap-cell.clickable:hover {
+            background: #eee;
+        }
+        .sadler-recap-cell.ellipsis {
+            color: #999;
+            padding: 1px 2px;
+            cursor: default;
+        }
     </style>
 </head>
 <body>
@@ -850,6 +901,167 @@
                 engine.showVariationPosition(fen, null, move, null);
                 setActiveMove(moveEl);
             });
+
+            buildGameRecap();
+
+            /* ===========================================================
+               GAME RECAP
+               ===========================================================
+               A horizontal move tree appended at the bottom of the
+               reading column: the main line on its own row, then one row
+               per variation-nesting depth. Every variation is placed
+               starting directly under the move it replaces (same column
+               = same ply as the main-line move at that point, or the
+               shallower variation's own move one row up) and extends
+               rightward from there — reading straight down any column
+               shows every alternative offered at that exact point.
+
+               Sourced straight from engine.state's own parsed variation
+               tree (variations[]/childrenByMove[], the same data the
+               move picker above already reads) rather than the DOM the
+               rest of this file's click handler works from — there's no
+               per-click resolution to do here, this walks the whole tree
+               once up front. */
+            function buildGameRecap() {
+                const container = movesRoot.closest('.pgn-container');
+                const mainlineCount = engine.state.moves.length;
+                if (!container || !mainlineCount) return;
+
+                /* One entry per variation, collected depth-first;
+                   rowsByDepth[d-1] holds every depth-d variation found
+                   anywhere in the game, in no particular order until the
+                   sort below. Each entry's own fens/verbose (replayed
+                   from its branch position via the same replayMoves()
+                   the picker above uses) double as what enterVariation()
+                   needs to jump straight there on a click — see
+                   enterRecapChain(). `chain` is that entry's own full
+                   ancestor list, outermost first, itself included. */
+                const rowsByDepth = [];
+
+                function collect(variationObj, startColumn, branchFEN, depth, parentChain) {
+                    const { fens, verbose } = replayMoves(branchFEN, variationObj.moves || []);
+                    const entry = { startColumn, variationObj, fens, verbose };
+                    entry.chain = parentChain.concat([entry]);
+
+                    if (!rowsByDepth[depth - 1]) rowsByDepth[depth - 1] = [];
+                    rowsByDepth[depth - 1].push(entry);
+
+                    (variationObj.moves || []).forEach((_, mi) => {
+                        const kids = variationObj.childrenByMove && variationObj.childrenByMove[mi];
+                        if (kids && kids.length) {
+                            kids.forEach(kid => collect(kid, startColumn + mi, fens[mi], depth + 1, entry.chain));
+                        }
+                    });
+                }
+
+                for (let p = 0; p < mainlineCount; p++) {
+                    const alts = engine.state.variations[p];
+                    if (alts) alts.forEach(alt => collect(alt, p, engine.state.cache[p], 1, []));
+                }
+
+                if (!rowsByDepth.length) return; // no variations at all — nothing to recap beyond the main line itself
+
+                /* Truncation pass — one row (one nesting depth) at a
+                   time, left to right. Each entry starts exactly under
+                   its branch move UNLESS an earlier entry on this same
+                   row is still running through that column (cursor),
+                   in which case it's pushed to start right after —
+                   covers both a long variation reaching into where a
+                   later, unrelated one begins, and several sibling
+                   alternatives all branching from the very same move (in
+                   which case only the first keeps its true column; the
+                   rest fan out one at a time immediately to its right).
+                   Every entry always shows at least its own first move,
+                   however tight the space — the whole point is showing
+                   WHICH move was played here, not hiding it — even if
+                   that means slightly overrunning a neighbor in the
+                   worst case rather than vanishing outright. */
+                rowsByDepth.forEach(rowEntries => {
+                    rowEntries.sort((a, b) => a.startColumn - b.startColumn);
+                    let cursor = 0;
+                    rowEntries.forEach((entry, i) => {
+                        const total = entry.variationObj.moves.length;
+                        const renderStart = Math.max(entry.startColumn, cursor);
+                        const nextStart = i + 1 < rowEntries.length ? rowEntries[i + 1].startColumn : Infinity;
+                        const budget = nextStart - renderStart;
+                        const truncated = budget !== Infinity && total > budget;
+                        const shown = truncated ? Math.max(1, budget - 1) : total; // -1 reserves a column for "…"
+                        entry.renderStart = renderStart;
+                        entry.shown = shown;
+                        entry.truncated = truncated;
+                        cursor = renderStart + shown + (truncated ? 1 : 0);
+                    });
+                });
+
+                const recapEl = document.createElement('div');
+                recapEl.className = 'sadler-recap';
+                const heading = document.createElement('h3');
+                heading.className = 'sadler-recap-heading';
+                heading.textContent = 'Game Recap';
+                recapEl.appendChild(heading);
+                const gridEl = document.createElement('div');
+                gridEl.className = 'sadler-recap-grid';
+                recapEl.appendChild(gridEl);
+
+                function addCell(row, col, label, className, onClick) {
+                    const cell = document.createElement('span');
+                    cell.className = 'sadler-recap-cell' + (className ? ' ' + className : '');
+                    cell.style.gridRow = String(row);
+                    cell.style.gridColumn = String(col + 1); // grid lines are 1-based
+                    cell.textContent = label;
+                    if (onClick) {
+                        cell.classList.add('clickable');
+                        cell.onclick = onClick;
+                    }
+                    gridEl.appendChild(cell);
+                }
+
+                for (let p = 0; p < mainlineCount; p++) {
+                    const ctx = engine._moveContext(p);
+                    const label = formatLabel(engine.state.moves[p], ctx.fullMoveNum, ctx.isBlack);
+                    addCell(1, p, label, 'mainline', () => { engine.pause(); engine.goTo(p + 1); });
+                }
+
+                rowsByDepth.forEach((rowEntries, depthIdx) => {
+                    const row = depthIdx + 2; // row 1 is the main line
+                    rowEntries.forEach(entry => {
+                        for (let k = 0; k < entry.shown; k++) {
+                            const ctx = fenMoveContext(entry.fens[k]);
+                            const label = formatLabel(entry.variationObj.moves[k], ctx.fullMoveNum, ctx.isBlack);
+                            addCell(row, entry.renderStart + k, label, null, () => enterRecapChain(entry.chain, k + 1));
+                        }
+                        if (entry.truncated) {
+                            addCell(row, entry.renderStart + entry.shown, '…', 'ellipsis', null);
+                        }
+                    });
+                });
+
+                container.appendChild(recapEl);
+            }
+
+            /* Replays a recap entry's own ancestor chain through
+               enterVariation() one level at a time — same idea as the
+               reading column's own click handler above (see its "A click
+               can land inside a sub-...-sub-variation" comment), except
+               every chain link here already carries its real, fully-
+               parsed variationObj (collect() above sourced it directly
+               from engine.state, no DOM round-trip needed) and its own
+               precomputed fens/verbose. */
+            function enterRecapChain(chain, clickedIndex) {
+                engine.pause();
+                engine.exitVariation();
+                engine.state.index = chain[0].startColumn + 1;
+
+                chain.forEach((entry, i) => {
+                    const isInnermost = i === chain.length - 1;
+                    const index = isInnermost ? clickedIndex : (chain[i + 1].startColumn - entry.startColumn + 1);
+                    engine.enterVariation(entry.fens, entry.variationObj.moveAnnotations, index, null, entry.verbose, entry.variationObj);
+                });
+
+                const innermost = chain[chain.length - 1];
+                const move = clickedIndex > 0 ? innermost.verbose[clickedIndex - 1] : null;
+                engine.showVariationPosition(innermost.fens[clickedIndex], null, move, null);
+            }
         });
     </script>
 </body>
