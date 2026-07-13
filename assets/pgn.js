@@ -801,6 +801,20 @@ function renderLine(node, parent, isVariation, plyCounter, options) {
       flushBuffer(parent, buffer, isVariation);
       buffer = "";
 
+      /* 0-based index of `current` (the move this batch of variations
+         branches from) within *its own* parent sequence — the mainline's
+         data-ply numbering if `current` is a mainline move, this level's
+         own vIndex numbering (see above) if `current` is itself inside a
+         variation. vIndex/plyCounter.n were already advanced past
+         `current` above, hence the -1. Stashed on every child wrapper
+         below as cpBranchIndex so a click handler can walk back UP a
+         chain of nested .pgn-variation wrappers (own parent found via
+         .closest()) and re-enter each ancestor level at the exact move
+         it branches from — the position <pgn-player>'s
+         exitToParentVariation() needs to resume at correctly, rather
+         than always falling back to the very start of the game. */
+      var branchIndex = isVariation ? (vIndex - 1) : (plyCounter.n - 1);
+
       current.variations.forEach(function (variationRoot) {
         var variationWrapper = document.createElement("div");
         variationWrapper.className = "pgn-variation";
@@ -817,6 +831,7 @@ function renderLine(node, parent, isVariation, plyCounter, options) {
           variationWrapper.cpVerbose = seq.verbose;
           variationWrapper.cpComments = seq.comments;
           variationWrapper.cpDiagrams = seq.diagrams;
+          variationWrapper.cpBranchIndex = branchIndex;
         }
         renderLine(variationRoot, variationWrapper, true, plyCounter, options);
       });
@@ -855,10 +870,12 @@ function flushBuffer(parent, text, isVariation) {
  *       also carries the whole variation's `fens`/`verbose`/`comments`/
  *       `diagrams` sequence (as `.cpFens`/`.cpVerbose`/`.cpComments`/
  *       `.cpDiagrams` element properties, not attributes — see
- *       collectVariationSequence()) so a host page can hand it all to
- *       <pgn-player>'s enterVariation() and get real keyboard
- *       (arrow-key/spacebar) stepping through the variation, with its
- *       own comments showing under the board,
+ *       collectVariationSequence()) plus `.cpBranchIndex`, the index
+ *       within its *own parent's* sequence (mainline ply, or the parent
+ *       variation's own vIndex) that this variation branches from — so a
+ *       host page can hand it all to <pgn-player>'s enterVariation() and
+ *       get real keyboard (arrow-key/spacebar) stepping through the
+ *       variation, with its own comments showing under the board,
  *       not just a single-position preview;
  *     - every diagram's `.cp-board-wrapper` is tagged
  *       `.pgn-clickable-diagram` with `data-fen` (and `data-from`/

@@ -92,7 +92,8 @@
         }
 
         pgn-app pgn-player .video-comment .variation-block,
-        pgn-app pgn-player .video-comment .comment-play-btn {
+        pgn-app pgn-player .video-comment .comment-play-btn,
+        pgn-app pgn-player .video-comment .comment-diagram {
             display: none;
         }
 
@@ -737,6 +738,25 @@
                 // alone gives you — a static preview with no position of
                 // its own to resume from).
                 //
+                // A click can land inside a sub-...-sub-variation, nested
+                // arbitrarily deep — walk outward from it collecting every
+                // enclosing .pgn-variation, outermost first, then replay
+                // that whole chain through enterVariation() one level at a
+                // time (mirrors how entering a variation from *inside*
+                // another one already works — see enterVariation()'s own
+                // doc comment in pgn-player.js). Each call but the last
+                // enters its level at exactly the move the *next* level
+                // down branches from (cpBranchIndex, stashed per wrapper
+                // by pgn.js) — the position <pgn-player>'s own
+                // exitToParentVariation() needs waiting on its stack to
+                // correctly resume there later, once ArrowRight/ArrowLeft
+                // walks back out past this variation's own last move,
+                // instead of always dropping straight back to the very
+                // start of the game (state.index defaults to 0 when the
+                // main line was never actually played through to get
+                // here). The final call in the chain enters at the
+                // move actually clicked.
+                //
                 // cpComments/cpDiagrams (parallel to cpVerbose, same
                 // collectVariationSequence() source) are wrapped in a
                 // minimal variationObj-like shim so showVariationPosition()
@@ -745,18 +765,42 @@
                 // (variationObj.commentsByMove/diagramByMove) — without
                 // this, the comment box would just go blank for every
                 // variation move clicked here.
-                const varWrapper = moveEl.closest('.pgn-variation');
-                if (varWrapper && varWrapper.cpFens) {
-                    const vIndex = moveEl.dataset.vindex;
-                    const index = vIndex !== undefined
-                        ? parseInt(vIndex, 10) + 1
-                        : varWrapper.cpFens.indexOf(fen);
-                    if (index >= 0) {
-                        const variationObj = varWrapper.cpComments
-                            ? { commentsByMove: varWrapper.cpComments, diagramByMove: varWrapper.cpDiagrams }
-                            : null;
-                        engine.enterVariation(varWrapper.cpFens, null, index, null, varWrapper.cpVerbose, variationObj);
+                const chain = [];
+                for (let w = moveEl.closest('.pgn-variation'); w; w = w.parentElement.closest('.pgn-variation')) {
+                    chain.unshift(w);
+                }
+
+                if (chain.length) {
+                    engine.exitVariation(); // clean slate, don't stack onto whatever was active before this click
+
+                    // Positions the main line's own pointer at the exact
+                    // move this outermost variation branches from, so
+                    // enterVariation()'s mainStateIndex capture (just
+                    // `state.index` at call time) is correct even though
+                    // the main line itself was never actually played
+                    // through to get here.
+                    if (Number.isFinite(chain[0].cpBranchIndex)) {
+                        engine.state.index = chain[0].cpBranchIndex + 1;
                     }
+
+                    chain.forEach((w, i) => {
+                        const isInnermost = i === chain.length - 1;
+                        let index;
+                        if (isInnermost) {
+                            const vIndex = moveEl.dataset.vindex;
+                            index = vIndex !== undefined
+                                ? parseInt(vIndex, 10) + 1
+                                : w.cpFens.indexOf(fen);
+                        } else {
+                            index = chain[i + 1].cpBranchIndex + 1;
+                        }
+                        if (index < 0) return; // shouldn't happen, but don't enter at a bogus position
+
+                        const variationObj = w.cpComments
+                            ? { commentsByMove: w.cpComments, diagramByMove: w.cpDiagrams }
+                            : null;
+                        engine.enterVariation(w.cpFens, null, index, null, w.cpVerbose, variationObj);
+                    });
                 }
 
                 engine.showVariationPosition(fen, null, move, null);
