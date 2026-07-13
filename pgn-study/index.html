@@ -337,15 +337,25 @@
             display: none;
         }
         pgn-study.cp-ready > .pgn-study-ribbon {
-            position: relative; /* anchors .pgn-study-toc-dropdown below */
+            position: relative; /* anchors .pgn-study-toc-dropdown/.pgn-study-settings-dropdown below */
             display: flex;
             align-items: center;
-            gap: 0.25rem;
+            justify-content: space-between;
             flex: 0 0 auto;
             padding: 0.5rem var(--frame-pad);
             margin: calc(-1 * var(--frame-pad)) calc(-1 * var(--frame-pad)) 1rem calc(-1 * var(--frame-pad));
             background: #fff;
             border-bottom: 1px solid #e4e4e7;
+        }
+        /* Left: play/pause + TOC. Right: settings (cog, opens the
+           flip/speed/download dropdown) + close. Each side is its own
+           tight group so the gap between the two groups can stretch
+           (space-between, above) independently of the gap within
+           either one. */
+        .pgn-study-ribbon-group {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
         }
         .pgn-study-ribbon-btn {
             position: relative; /* anchors .pgn-study-speed-badge below */
@@ -395,45 +405,20 @@
             pointer-events: none;
         }
 
-        /* CLOSE BUTTON — fixed at the frame's own top-right corner (the
-           frame is centered with a flat 5vw/5vh margin — see pgn-study/
-           .pgn-study-loading above — so a fixed offset lines up with it
-           exactly without needing to be a positioned descendant of
-           either one). Hidden for as long as the loading placeholder is
-           showing — same reasoning as the ribbon above (see its own
-           comment) — via :has(), since (unlike the ribbon) this button
-           is never moved inside <pgn-study>, so a plain
-           "pgn-study.cp-ready > .pgn-study-close" selector can't reach
-           it. Once revealed, closing no longer depends on the engine
-           being ready (its own click handler doesn't check cp-ready or
-           anything else) — only *becoming visible in the first place*
-           does. */
+        /* CLOSE BUTTON — a real ribbon child now (right group, alongside
+           settings — see the DOMContentLoaded listener below for where
+           it actually gets moved there), styled as a plain
+           .pgn-study-ribbon-btn from that point on. Until that move
+           happens it's still sitting at its original spot, a page-level
+           sibling before <pgn-study> — hidden by default here (same
+           reasoning the ribbon's own default display:none has) so it
+           doesn't flash there first; the override only re-shows it once
+           it's an actual descendant of the (by then visible) ribbon. */
         .pgn-study-close {
             display: none;
         }
-        body:has(pgn-study.cp-ready) .pgn-study-close {
-            position: fixed;
-            top: calc(5vh + 0.5rem);
-            right: calc(5vw + 0.5rem);
-            z-index: 20;
+        pgn-study.cp-ready > .pgn-study-ribbon .pgn-study-close {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 2.75rem;
-            height: 2.75rem;
-            background: transparent;
-            border: none;
-            border-radius: 0.4rem;
-            color: #71717a;
-            cursor: pointer;
-            transition: background 0.15s;
-        }
-        .pgn-study-close:hover {
-            background: #f4f4f5;
-        }
-        .pgn-study-close .lucide-icon {
-            width: 2rem;
-            height: 2rem;
         }
 
         /* REOPEN BUTTON — sits wherever the closed frame used to be (top
@@ -532,7 +517,6 @@
            instead of leaving desktop's size untouched. */
         @media (max-width: 899px) {
             .pgn-study-ribbon-btn .lucide-icon,
-            .pgn-study-close .lucide-icon,
             .pgn-study-picker-icon,
             pgn-study .comment-icon,
             pgn-study .variation-icon,
@@ -703,32 +687,72 @@
         .pgn-study-toc-dropdown .pgn-study-toc-heading {
             font-size: 1rem;
         }
+
+        /* SETTINGS DROPDOWN — the cog button's flip/speed/download, moved
+           off the main ribbon row into here. Anchored to the right edge
+           (the cog sits in the right-hand group) rather than the left
+           edge the TOC dropdown above uses, since it opens from the
+           opposite side of the ribbon — otherwise the same
+           position:absolute-off-.pgn-study-ribbon pattern. Just a row of
+           ordinary .pgn-study-ribbon-btn icon buttons, not a list, so no
+           heading/list styling to borrow from the TOC dropdown. */
+        .pgn-study-settings-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: var(--frame-pad);
+            margin-top: 0.5rem;
+            background: #fff;
+            border: 1px solid #e4e4e7;
+            border-radius: 0.5rem;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            padding: 0.25rem;
+            z-index: 30;
+        }
+        .pgn-study-settings-dropdown.open {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
     </style>
 </head>
 <body>
 
     <header class="pgn-study-ribbon">
-        <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="toggle-play" title="Play" aria-label="Play" disabled>
-            <span class="lucide-icon" id="pgnStudyPlayPauseIcon"></span>
-        </button>
-        <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="toc" title="Table of contents" aria-label="Table of contents" disabled>
-            <span class="lucide-icon" id="pgnStudyTocIcon"></span>
-        </button>
-        <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="flip" title="Flip board" aria-label="Flip board" disabled>
-            <span class="lucide-icon" id="pgnStudyFlipIcon"></span>
-        </button>
-        <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="speed" title="Playback speed (1x)" aria-label="Playback speed" disabled>
-            <span class="lucide-icon" id="pgnStudySpeedIcon"></span>
-            <span class="pgn-study-speed-badge" id="pgnStudySpeedBadge">1x</span>
-        </button>
-        <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="download" title="Download PGN" aria-label="Download PGN" disabled>
-            <span class="lucide-icon" id="pgnStudyDownloadIcon"></span>
-        </button>
+        <div class="pgn-study-ribbon-group pgn-study-ribbon-left">
+            <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="toggle-play" title="Play" aria-label="Play" disabled>
+                <span class="lucide-icon" id="pgnStudyPlayPauseIcon"></span>
+            </button>
+            <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="toc" title="Table of contents" aria-label="Table of contents" disabled>
+                <span class="lucide-icon" id="pgnStudyTocIcon"></span>
+            </button>
+        </div>
+        <div class="pgn-study-ribbon-group pgn-study-ribbon-right">
+            <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="settings" title="Settings" aria-label="Settings" disabled>
+                <span class="lucide-icon" id="pgnStudySettingsIcon"></span>
+            </button>
+            <!-- The close button (#pgnStudyClose) is moved in here at
+                 runtime — see the DOMContentLoaded listener below — from
+                 its original spot as a page-level sibling before
+                 <pgn-study>. -->
+        </div>
 
         <div class="pgn-study-toc-dropdown" id="pgnStudyTocDropdown"></div>
+        <div class="pgn-study-settings-dropdown" id="pgnStudySettingsDropdown">
+            <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="flip" title="Flip board" aria-label="Flip board" disabled>
+                <span class="lucide-icon" id="pgnStudyFlipIcon"></span>
+            </button>
+            <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="speed" title="Playback speed (1x)" aria-label="Playback speed" disabled>
+                <span class="lucide-icon" id="pgnStudySpeedIcon"></span>
+                <span class="pgn-study-speed-badge" id="pgnStudySpeedBadge">1x</span>
+            </button>
+            <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="download" title="Download PGN" aria-label="Download PGN" disabled>
+                <span class="lucide-icon" id="pgnStudyDownloadIcon"></span>
+            </button>
+        </div>
     </header>
 
-    <button class="pgn-study-close" type="button" id="pgnStudyClose" title="Close" aria-label="Close">
+    <button class="pgn-study-ribbon-btn pgn-study-close" type="button" id="pgnStudyClose" title="Close" aria-label="Close">
         <span class="lucide-icon" id="pgnStudyCloseIcon"></span>
     </button>
 
@@ -821,6 +845,11 @@
 
         studyEl.replaceChildren(playerEl, resizerEl, pgnEl);
         studyEl.prepend(document.querySelector('.pgn-study-ribbon'));
+        // The close button starts as a page-level sibling before
+        // <pgn-study> (see its own CSS comment) — move it into the
+        // ribbon's right-hand group now that the ribbon itself exists
+        // inside pgn-study, alongside the settings (cog) button.
+        document.querySelector('.pgn-study-ribbon-right').appendChild(document.getElementById('pgnStudyClose'));
 
         /* Drag-to-resize the board/reading-list columns (desktop grid
            layout only — the resizer is display:none in the stacked
@@ -917,17 +946,20 @@
         document.getElementById('pgnStudyCloseIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('x'));
         document.getElementById('pgnStudyPlayPauseIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('play'));
         document.getElementById('pgnStudyTocIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('list'));
+        document.getElementById('pgnStudySettingsIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('settings'));
 
         // Closing doesn't depend on the engine, or even on loading having
         // finished — hide whichever of the loading placeholder or the real
         // <pgn-study> is currently showing (?.remove()/[none] no-op safely
         // either way) and reveal the bare body behind them, but leave a way
-        // back in via the reopen button.
+        // back in via the reopen button. The close button itself is now a
+        // <pgn-study> descendant (moved into the ribbon above), so hiding
+        // pgn-study already hides it too — no separate style.display
+        // needed for it here anymore.
         const reopenBtn = document.getElementById('pgnStudyReopen');
         document.getElementById('pgnStudyClose').addEventListener('click', () => {
             document.getElementById('pgnStudyLoading')?.remove();
             studyEl.style.display = 'none';
-            document.getElementById('pgnStudyClose').style.display = 'none';
             reopenBtn.classList.add('visible');
         });
 
@@ -969,11 +1001,11 @@
         reopenBtn.addEventListener('click', () => {
             // Already been open at least once (cp-ready is permanent —
             // see markStudyReady()/revealStudy() below) and is just
-            // currently hidden by the close button's inline style —
+            // currently hidden by pgn-study's own inline display:none
+            // (which the close button, now inside it, inherits) —
             // restore that directly instead of re-running first-open.
             if (studyEl.classList.contains('cp-ready')) {
                 studyEl.style.display = '';
-                document.getElementById('pgnStudyClose').style.display = '';
                 reopenBtn.classList.remove('visible');
                 return;
             }
@@ -1264,13 +1296,36 @@
             tocBtn.disabled = false;
             tocBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
+                settingsDropdown.classList.remove('open'); // only one dropdown open at a time
                 tocDropdown.classList.toggle('open');
             });
-            // Click anywhere outside the dropdown (or its own toggle
-            // button, already handled above via stopPropagation) closes it.
+
+            /* Settings ribbon button — opens the flip/speed/download
+               dropdown moved off the main ribbon row (see the markup
+               above). Unlike the TOC dropdown's rows, clicking one of
+               these doesn't close it: adjusting speed a few times in a
+               row shouldn't require reopening the menu after every
+               click, and flip/download are one-offs a reader is just as
+               likely to want to repeat. Only the cog itself (toggling)
+               or a click outside closes it. */
+            const settingsBtn = document.querySelector('.pgn-study-ribbon-btn[data-ribbon-action="settings"]');
+            const settingsDropdown = document.getElementById('pgnStudySettingsDropdown');
+            settingsBtn.disabled = false;
+            settingsBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                tocDropdown.classList.remove('open'); // only one dropdown open at a time
+                settingsDropdown.classList.toggle('open');
+            });
+
+            // Click anywhere outside either dropdown (or their own toggle
+            // buttons, already handled above via stopPropagation) closes
+            // whichever is open.
             document.addEventListener('click', (e) => {
                 if (tocDropdown.classList.contains('open') && !tocDropdown.contains(e.target)) {
                     tocDropdown.classList.remove('open');
+                }
+                if (settingsDropdown.classList.contains('open') && !settingsDropdown.contains(e.target)) {
+                    settingsDropdown.classList.remove('open');
                 }
             });
 
