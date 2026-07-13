@@ -173,6 +173,18 @@
             background: transparent;
         }
 
+        /* .pgn-comment carries its own padding-top (ChessPublica.css) on
+           top of the margin-top/margin-bottom it shares with .pgn-mainline
+           and .pgn-variation — margins collapse between adjacent blocks,
+           padding never does, so a mainline move followed by its comment
+           ends up with a visibly bigger gap than, say, a variation
+           followed by a nested sub-variation (margin only). Zero it out
+           here so a move-to-comment gap matches every other paragraph
+           gap in this column. */
+        pgn-app .pgn-container .pgn-comment {
+            padding-top: 0;
+        }
+
         pgn-app .pgn-container .pgn-variation {
             margin-left: 1.25rem;
             padding-left: 0.75rem;
