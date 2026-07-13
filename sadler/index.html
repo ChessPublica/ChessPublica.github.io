@@ -703,6 +703,34 @@
                 setActiveRow(rows[pickerFocusIndex]);
             }, { capture: true });
 
+            // Matches a chain of .pgn-variation wrappers (outermost first,
+            // see the click handler below) to their real counterparts in
+            // engine.state's own parsed variation tree — pgn.js and
+            // pgn-player.js parse the same PGN independently into
+            // incompatible shapes, but both walk it in the same source
+            // order, so the same (branch move, position among siblings
+            // branching from it) address — cpBranchIndex/cpAltIndex, set
+            // by pgn.js on each wrapper — identifies the same variation in
+            // either tree. Returns one entry per chain level, null for any
+            // level that couldn't be matched (shouldn't normally happen
+            // for a real PGN variation move, but callers should treat a
+            // null as "no extra data available", not throw).
+            function resolveRealVariationChain(chain) {
+                const real = [];
+                let candidates = engine.state.variations[chain[0].cpBranchIndex];
+                let obj = candidates ? candidates[chain[0].cpAltIndex] : null;
+                real.push(obj || null);
+                for (let i = 1; i < chain.length; i++) {
+                    const parentObj = real[i - 1];
+                    const kids = parentObj && parentObj.childrenByMove
+                        ? parentObj.childrenByMove[chain[i].cpBranchIndex]
+                        : null;
+                    obj = kids ? kids[chain[i].cpAltIndex] : null;
+                    real.push(obj || null);
+                }
+                return real;
+            }
+
             movesRoot.addEventListener('click', (e) => {
                 // .pgn-move: mainline (data-ply) or variation (data-fen) move text.
                 // .pgn-clickable-diagram: an inline [D]/[#] board — always data-fen.
@@ -757,14 +785,18 @@
                 // here). The final call in the chain enters at the
                 // move actually clicked.
                 //
-                // cpComments/cpDiagrams (parallel to cpVerbose, same
-                // collectVariationSequence() source) are wrapped in a
-                // minimal variationObj-like shim so showVariationPosition()
-                // can find this variation's own prose comments the same
-                // way it reads <pgn-player>'s own parsed variation objects
-                // (variationObj.commentsByMove/diagramByMove) — without
-                // this, the comment box would just go blank for every
-                // variation move clicked here.
+                // Each level is also matched, via cpBranchIndex/cpAltIndex,
+                // to the corresponding REAL variation object in
+                // <pgn-player>'s own (separately parsed) tree — see
+                // resolveRealVariationChain() — rather than handing
+                // enterVariation() a bare shim: only the real object has
+                // commentsByMove/diagramByMove (so the comment box shows
+                // this variation's own prose, not nothing) *and*
+                // childrenByMove (so the move picker can find this
+                // variation's own sub-branches and offer them, exactly
+                // like clicking through the picker itself already does —
+                // without it, updatePicker() has no way to know a branch
+                // point reached this way has any alternatives at all).
                 const chain = [];
                 for (let w = moveEl.closest('.pgn-variation'); w; w = w.parentElement.closest('.pgn-variation')) {
                     chain.unshift(w);
@@ -783,6 +815,8 @@
                         engine.state.index = chain[0].cpBranchIndex + 1;
                     }
 
+                    const realChain = resolveRealVariationChain(chain);
+
                     chain.forEach((w, i) => {
                         const isInnermost = i === chain.length - 1;
                         let index;
@@ -796,10 +830,8 @@
                         }
                         if (index < 0) return; // shouldn't happen, but don't enter at a bogus position
 
-                        const variationObj = w.cpComments
-                            ? { commentsByMove: w.cpComments, diagramByMove: w.cpDiagrams }
-                            : null;
-                        engine.enterVariation(w.cpFens, null, index, null, w.cpVerbose, variationObj);
+                        const real = realChain[i];
+                        engine.enterVariation(w.cpFens, real ? real.moveAnnotations : null, index, null, w.cpVerbose, real);
                     });
                 }
 

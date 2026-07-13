@@ -646,39 +646,19 @@ function markDiagramClickable(wrapper, fen, node, options) {
    VARIATION branch above) — never a real move — so `.parent.fen` is
    exactly the FEN this variation branches from, giving fens[0].
 
-   Returns { fens, verbose, comments, diagrams } shaped for
-   VideoEngine.enterVariation()/showVariationPosition(): fens[0] is the
-   branch position, fens[k] is the position after the k-th move;
-   verbose[k-1] is that move's { from, to }; comments[k-1]/diagrams[k-1]
-   are that same move's prose comment (already stripped of [%…]/[D]/[#]
-   markers, same as processComment() above) and whether it carried a
-   diagram marker — the shape <pgn-player>'s own variation objects use
-   for commentsByMove/diagramByMove, so a host page can hand this
-   straight to VideoComment.update() via a variationObj-like object. */
+   Returns { fens, verbose } shaped for VideoEngine.enterVariation():
+   fens[0] is the branch position, fens[k] is the position after the
+   k-th move; verbose[k-1] is that move's { from, to }. */
 function collectVariationSequence(firstMoveNode) {
   var fens = [firstMoveNode.parent ? firstMoveNode.parent.fen : firstMoveNode.fen];
   var verbose = [];
-  var comments = [];
-  var diagrams = [];
   var n = firstMoveNode;
   while (n) {
     fens.push(n.fen);
     verbose.push(n.from && n.to ? { from: n.from, to: n.to } : null);
-
-    var comment = null;
-    var hasDiagram = false;
-    if (n.parts && n.parts.length) {
-      n.parts.forEach(function (part) {
-        if (part.type === "text") comment = comment ? comment + " " + part.value : part.value;
-        else if (part.type === "diagram") hasDiagram = true;
-      });
-    }
-    comments.push(comment);
-    diagrams.push(hasDiagram);
-
     n = n.next;
   }
-  return { fens: fens, verbose: verbose, comments: comments, diagrams: diagrams };
+  return { fens: fens, verbose: verbose };
 }
 
 function renderLine(node, parent, isVariation, plyCounter, options) {
@@ -815,7 +795,7 @@ function renderLine(node, parent, isVariation, plyCounter, options) {
          than always falling back to the very start of the game. */
       var branchIndex = isVariation ? (vIndex - 1) : (plyCounter.n - 1);
 
-      current.variations.forEach(function (variationRoot) {
+      current.variations.forEach(function (variationRoot, altIndex) {
         var variationWrapper = document.createElement("div");
         variationWrapper.className = "pgn-variation";
         parent.appendChild(variationWrapper);
@@ -824,14 +804,25 @@ function renderLine(node, parent, isVariation, plyCounter, options) {
            so a click on any move inside — via data-vindex, its 0-based
            index into this exact sequence — can hand the whole thing to
            enterVariation() for real keyboard stepping. Only computed
-           under the same clickableMoves opt-in as everything else here. */
+           under the same clickableMoves opt-in as everything else here.
+
+           cpBranchIndex/cpAltIndex together are this wrapper's address in
+           the SAME PGN structure <pgn-player>'s own (separate) parser
+           builds — cpBranchIndex identifies the move it branches from
+           (see above), cpAltIndex its 0-based position among any other
+           variations branching from that exact same move (current.
+           variations can hold more than one). A host page walks both
+           trees in lockstep — same PGN, same source order, same indices
+           — to find the real, fully-populated variation object
+           (moves/commentsByMove/childrenByMove/…) a DOM click here
+           corresponds to, rather than reconstructing a partial one from
+           scratch. */
         if (options && options.clickableMoves) {
           var seq = collectVariationSequence(variationRoot);
           variationWrapper.cpFens = seq.fens;
           variationWrapper.cpVerbose = seq.verbose;
-          variationWrapper.cpComments = seq.comments;
-          variationWrapper.cpDiagrams = seq.diagrams;
           variationWrapper.cpBranchIndex = branchIndex;
+          variationWrapper.cpAltIndex = altIndex;
         }
         renderLine(variationRoot, variationWrapper, true, plyCounter, options);
       });
@@ -867,16 +858,20 @@ function flushBuffer(parent, text, isVariation) {
  *       span carrying either `data-ply` (mainline) or
  *       `data-fen`/`data-from`/`data-to`/`data-vindex` (variation) — see
  *       renderLine() below. A variation move's `.pgn-variation` wrapper
- *       also carries the whole variation's `fens`/`verbose`/`comments`/
- *       `diagrams` sequence (as `.cpFens`/`.cpVerbose`/`.cpComments`/
- *       `.cpDiagrams` element properties, not attributes — see
- *       collectVariationSequence()) plus `.cpBranchIndex`, the index
- *       within its *own parent's* sequence (mainline ply, or the parent
- *       variation's own vIndex) that this variation branches from — so a
- *       host page can hand it all to <pgn-player>'s enterVariation() and
- *       get real keyboard (arrow-key/spacebar) stepping through the
- *       variation, with its own comments showing under the board,
- *       not just a single-position preview;
+ *       also carries the whole variation's `fens`/`verbose` sequence (as
+ *       `.cpFens`/`.cpVerbose` element properties, not attributes — see
+ *       collectVariationSequence()) plus `.cpBranchIndex`/`.cpAltIndex`,
+ *       its address — the move it branches from, within its own parent's
+ *       sequence (mainline ply, or the parent variation's own vIndex),
+ *       and its position among any siblings also branching from that
+ *       same move — in the *other*, separate variation tree
+ *       <pgn-player>'s own parser builds. A host page can hand `.cpFens`/
+ *       `.cpVerbose` straight to <pgn-player>'s enterVariation() for real
+ *       keyboard (arrow-key/spacebar) stepping through the variation, not
+ *       just a single-position preview, and walk `.cpBranchIndex`/
+ *       `.cpAltIndex` against that other tree to find the real,
+ *       fully-populated variation object (comments, diagrams, nested
+ *       variations, …) this wrapper corresponds to there;
  *     - every diagram's `.cp-board-wrapper` is tagged
  *       `.pgn-clickable-diagram` with `data-fen` (and `data-from`/
  *       `data-to` when it's attached to a move) — see
