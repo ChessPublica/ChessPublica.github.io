@@ -22,6 +22,68 @@
             pgn-app pgn-player { --board-size: calc(400px * 1.25); }
         }
 
+        /* <pgn-app> starts out holding its PGN as raw, unstyled text (see
+           the module script below) — hidden here so it never flashes on
+           screen before that script swaps it for the real <pgn-player>/
+           <pgn> elements, and before those finish their own async load
+           (parsing the PGN, building the board). #sadlerLoading below
+           stands in for it — same two-column footprint, empty board on
+           the left, spinner on the right — until the script reveals the
+           real thing by adding .cp-ready (see the DOMContentLoaded
+           listener at the bottom of this file). */
+        pgn-app:not(.cp-ready) {
+            display: none;
+        }
+
+        .sadler-loading {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            padding: 1.5rem;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        @media (min-width: 900px) {
+            .sadler-loading {
+                display: grid;
+                grid-template-columns: 1fr 2fr;
+                align-items: start;
+                padding: 2.5rem;
+            }
+        }
+        .sadler-loading-board {
+            width: 400px;
+            max-width: 100%;
+            aspect-ratio: 1 / 1;
+            border-radius: 4px;
+            background-image:
+                conic-gradient(#b58863 90deg, #f0d9b5 90deg 180deg, #b58863 180deg 270deg, #f0d9b5 270deg);
+            background-size: 25% 25%;
+        }
+        @media (min-width: 900px) {
+            .sadler-loading-board { width: 500px; }
+        }
+        .sadler-loading-side {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            min-height: 200px;
+            color: #777;
+        }
+        .sadler-loading-spinner {
+            width: 2.5rem;
+            height: 2.5rem;
+            border: 4px solid rgba(0, 0, 0, 0.15);
+            border-top-color: #777;
+            border-radius: 50%;
+            animation: sadler-loading-spin 0.8s linear infinite;
+        }
+        @keyframes sadler-loading-spin {
+            to { transform: rotate(360deg); }
+        }
+
         pgn-app pgn-player .video-title,
         pgn-app pgn-player .board-toolbar,
         pgn-app pgn-player .video-moves,
@@ -43,9 +105,10 @@
 
         .sadler-move-picker {
             margin: 0.5rem 0;
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 2px 8px;
+            justify-items: center;
         }
         .sadler-picker-row {
             display: flex;
@@ -69,7 +132,12 @@
             height: 2rem;
             color: #555;
         }
+        /* Mainline "continue" row always comes first (see makeRow() call
+           order in renderMainlinePicker()/renderSubPicker()) and spans
+           both columns so it reads as its own centered line above the
+           2-column grid of alternatives. */
         .sadler-picker-row.mainline {
+            grid-column: 1 / -1;
             font-weight: bold;
         }
 
@@ -109,22 +177,24 @@
             margin-left: 1.25rem;
             padding-left: 0.75rem;
             border-left: 2px solid rgba(128, 128, 128, 0.3);
-            /* font-size compounds on its own through plain inheritance —
-               em is relative to the parent's own computed font-size, so a
-               sub-variation-of-a-sub-variation naturally starts from its
-               parent's already-shrunk size, no per-depth selectors
-               needed. --board-size can't use the same trick: a custom
-               property that references var(--board-size) inside its own
-               --board-size declaration is a cycle by spec (computes to
-               invalid) even though the reference is meant to mean "the
-               inherited value from further up" — there's no way to name
-               "the parent's value" separately from "this element's own
-               value" for a custom property the way em does for
-               font-size. So diagram size is instead read from
-               --base-board-size (captured once, see .pgn-container below,
-               untouched at every depth) and scaled by an explicit factor
-               per nesting level. */
-            font-size: 0.9em;
+            /* Depth ladder: main line is bold (.pgn-mainline, set in
+               ChessPublica.css) at 1x size. A variation (this level) is
+               regular weight but stays at that same 1x size — no
+               font-size here. A sub-variation (one level deeper) adds
+               italic, still at 1x. Only from the sub-sub-variation level
+               down does the text actually start shrinking — see the
+               dedicated font-size rule below, which (like the old
+               single-rule version this replaced) only needs to be
+               declared once: em compounds through plain inheritance, so
+               each further nesting level naturally starts from its
+               parent's already-shrunk size. */
+            font-weight: normal;
+        }
+        pgn-app .pgn-container .pgn-variation .pgn-variation {
+            font-style: italic;
+        }
+        pgn-app .pgn-container .pgn-variation .pgn-variation .pgn-variation {
+            font-size: 0.92em;
         }
         pgn-app .pgn-container .pgn-variation { --board-size: calc(var(--base-board-size) * 0.88); }
         pgn-app .pgn-container .pgn-variation .pgn-variation { --board-size: calc(var(--base-board-size) * 0.774); }
@@ -148,7 +218,15 @@
     </style>
 </head>
 <body>
-     
+
+    <div class="sadler-loading" id="sadlerLoading">
+        <div class="sadler-loading-board"></div>
+        <div class="sadler-loading-side">
+            <div class="sadler-loading-spinner"></div>
+            <p>Loading game…</p>
+        </div>
+    </div>
+
     <pgn-app>
     [Event "GM Matthew Sadler - Silicon Road YouTube Channel additional material: Torch 1.d4 openings with theory review"]
     [Date "2024.03.25"]
@@ -235,7 +313,14 @@
             // was registered before this one, so that's already true by
             // the time this fires.
             const movesRoot = appEl.querySelector('.pgn-container .pgn-moves');
-            if (!movesRoot) return;
+            if (!movesRoot) {
+                // Nothing to sync, but still a reason to stop showing the
+                // loading placeholder forever — reveal whatever <pgn-app>
+                // did render instead of leaving the spinner stuck.
+                document.getElementById('sadlerLoading')?.remove();
+                appEl.classList.add('cp-ready');
+                return;
+            }
 
             let activeEl = null;
             function setActiveMove(el) {
@@ -275,6 +360,14 @@
             // calls until its PGN has been parsed and the board built —
             // see helpers.js's createReadyGate.
             const engine = await playerEl.ready.catch(() => null);
+
+            // Swap the loading placeholder (empty board + spinner) for the
+            // real thing now that <pgn-player> has finished loading — on
+            // success or failure alike, so a load error can't leave the
+            // spinner stuck forever instead of showing whatever did render.
+            document.getElementById('sadlerLoading')?.remove();
+            appEl.classList.add('cp-ready');
+
             if (!engine) return;
 
             /* Move picker — replaces <pgn-player>'s own comment/variation
@@ -623,6 +716,15 @@
                 // to mainline playback (which is all showVariationPosition()
                 // alone gives you — a static preview with no position of
                 // its own to resume from).
+                //
+                // cpComments/cpDiagrams (parallel to cpVerbose, same
+                // collectVariationSequence() source) are wrapped in a
+                // minimal variationObj-like shim so showVariationPosition()
+                // can find this variation's own prose comments the same
+                // way it reads <pgn-player>'s own parsed variation objects
+                // (variationObj.commentsByMove/diagramByMove) — without
+                // this, the comment box would just go blank for every
+                // variation move clicked here.
                 const varWrapper = moveEl.closest('.pgn-variation');
                 if (varWrapper && varWrapper.cpFens) {
                     const vIndex = moveEl.dataset.vindex;
@@ -630,7 +732,10 @@
                         ? parseInt(vIndex, 10) + 1
                         : varWrapper.cpFens.indexOf(fen);
                     if (index >= 0) {
-                        engine.enterVariation(varWrapper.cpFens, null, index, null, varWrapper.cpVerbose, null);
+                        const variationObj = varWrapper.cpComments
+                            ? { commentsByMove: varWrapper.cpComments, diagramByMove: varWrapper.cpDiagrams }
+                            : null;
+                        engine.enterVariation(varWrapper.cpFens, null, index, null, varWrapper.cpVerbose, variationObj);
                     }
                 }
 
