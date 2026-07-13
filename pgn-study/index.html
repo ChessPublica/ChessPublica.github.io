@@ -12,8 +12,14 @@
            side) — the box itself never scrolls; each column inside it
            does independently instead (see the min-height/overflow rule
            below), since there's no longer a page-level scroll for a
-           sticky board to pin itself against. */
+           sticky board to pin itself against. --frame-pad is the frame's
+           own inner padding, named so the ribbon (moved inside it — see
+           the DOMContentLoaded listener below) can cancel it back out
+           with a matching negative margin and bleed to the frame's true
+           edges instead of sitting inset like the board/reading columns
+           below it. */
         pgn-study {
+            --frame-pad: 1.5rem;
             font-size: 110%;
             display: flex;
             flex-direction: column;
@@ -21,7 +27,7 @@
             height: 90vh;
             max-width: 1600px;
             margin: 5vh auto;
-            padding: 1.5rem;
+            padding: var(--frame-pad);
             border: 1px solid #d4d4d8;
             border-radius: 0.75rem;
             box-sizing: border-box;
@@ -37,15 +43,32 @@
             /* Stacked single column — give the board and the reading
                list an equal share of the frame's height to scroll
                within, rather than one growing to fit its content and
-               squeezing the other down to nothing. */
+               squeezing the other down to nothing. The ribbon (also a
+               pgn-study child now, first in DOM order) isn't part of
+               this selector, so it keeps flex's default 0 0 auto —
+               sized to its own content, not stretched. */
             pgn-study > pgn-player,
             pgn-study > .pgn-container {
                 flex: 1 1 0;
             }
         }
         @media (min-width: 900px) {
-            pgn-study { display: grid; grid-template-columns: 1fr 2fr; align-items: stretch; padding: 2.5rem; }
+            pgn-study {
+                --frame-pad: 2.5rem;
+                display: grid;
+                grid-template-columns: 1fr 2fr;
+                grid-template-rows: auto 1fr;
+                align-items: stretch;
+                padding: var(--frame-pad);
+            }
             pgn-study pgn-player { --board-size: calc(400px * 1.25); }
+            /* Row 1, spanning both columns — pgn-player/.pgn-container
+               have no placement rules of their own, so grid auto-flow
+               puts them in row 2 (row 1's cells are already taken) col 1
+               and col 2 respectively, same as before this rule existed. */
+            pgn-study > .pgn-study-ribbon {
+                grid-column: 1 / -1;
+            }
         }
 
         /* <pgn-study> starts out holding its PGN as raw, unstyled text (see
@@ -139,12 +162,11 @@
             display: flex;
             align-items: center;
             gap: 0.25rem;
-            padding: 0.5rem 1.5rem;
+            flex: 0 0 auto;
+            padding: 0.5rem var(--frame-pad);
+            margin: calc(-1 * var(--frame-pad)) calc(-1 * var(--frame-pad)) 1rem calc(-1 * var(--frame-pad));
             background: #fff;
             border-bottom: 1px solid #e4e4e7;
-        }
-        @media (min-width: 900px) {
-            .pgn-study-ribbon { padding: 0.5rem 2.5rem; }
         }
         .pgn-study-ribbon-btn {
             display: flex;
@@ -480,6 +502,7 @@
         pgnEl.innerHTML = pgnHTML;
 
         studyEl.replaceChildren(playerEl, pgnEl);
+        studyEl.prepend(document.querySelector('.pgn-study-ribbon'));
 
         /* Ribbon icons, read straight off <pgn-player>'s own (hidden)
            lucide icons rather than hardcoding a duplicate icon URL here
