@@ -84,7 +84,7 @@
             to { transform: rotate(360deg); }
         }
 
-        /* RIBBON — app-style top bar, standing in for the board's own
+        /* RIBBON — minimal top bar, standing in for the board's own
            gear-icon settings panel (hidden below, same as .video-title/
            .board-toolbar/.play — see the "pgn-study pgn-player" rules
            just below): same three actions (download/flip/speed), always
@@ -100,51 +100,33 @@
             display: flex;
             flex-wrap: wrap;
             align-items: center;
-            justify-content: space-between;
-            gap: 0.75rem;
-            padding: 0.75rem 1.5rem;
-            background: #18181b;
-            color: #fff;
+            gap: 0.4rem;
+            padding: 0.5rem 1.5rem;
+            background: #fff;
+            border-bottom: 1px solid #e4e4e7;
         }
         @media (min-width: 900px) {
-            .pgn-study-ribbon { padding: 0.75rem 2.5rem; }
-        }
-        .pgn-study-ribbon-brand {
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-            font-weight: 700;
-            font-size: 1.1rem;
-            letter-spacing: -0.01em;
-        }
-        .pgn-study-ribbon-icon {
-            width: 1.4rem;
-            height: 1.4rem;
-        }
-        .pgn-study-ribbon-actions {
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
+            .pgn-study-ribbon { padding: 0.5rem 2.5rem; }
         }
         .pgn-study-ribbon-btn {
             display: flex;
             align-items: center;
             gap: 0.4rem;
             background: transparent;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: inherit;
+            border: none;
+            color: #52525b;
             font: inherit;
             font-size: 0.85rem;
-            border-radius: 0.5rem;
-            padding: 0.4rem 0.7rem;
+            border-radius: 0.4rem;
+            padding: 0.4rem 0.6rem;
             cursor: pointer;
             transition: background 0.15s, opacity 0.15s;
         }
         .pgn-study-ribbon-btn:hover:not(:disabled) {
-            background: rgba(255, 255, 255, 0.12);
+            background: #f4f4f5;
         }
         .pgn-study-ribbon-btn:disabled {
-            opacity: 0.4;
+            opacity: 0.35;
             cursor: default;
         }
         .pgn-study-ribbon-btn .lucide-icon {
@@ -351,24 +333,18 @@
 <body>
 
     <header class="pgn-study-ribbon">
-        <div class="pgn-study-ribbon-brand">
-            <span class="pgn-study-ribbon-icon lucide-icon" id="pgnStudyBrandIcon"></span>
-            <span class="pgn-study-ribbon-title">PGN Study</span>
-        </div>
-        <div class="pgn-study-ribbon-actions">
-            <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="download" title="Download PGN" aria-label="Download PGN" disabled>
-                <span class="lucide-icon" id="pgnStudyDownloadIcon"></span>
-                <span class="pgn-study-ribbon-btn-label">Download</span>
-            </button>
-            <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="flip" title="Flip board" aria-label="Flip board" disabled>
-                <span class="lucide-icon" id="pgnStudyFlipIcon"></span>
-                <span class="pgn-study-ribbon-btn-label">Flip</span>
-            </button>
-            <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="speed" title="Playback speed" aria-label="Playback speed" disabled>
-                <span class="lucide-icon" id="pgnStudySpeedIcon"></span>
-                <span class="pgn-study-ribbon-btn-label" id="pgnStudySpeedLabel">1x</span>
-            </button>
-        </div>
+        <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="download" title="Download PGN" aria-label="Download PGN" disabled>
+            <span class="lucide-icon" id="pgnStudyDownloadIcon"></span>
+            <span class="pgn-study-ribbon-btn-label">Download</span>
+        </button>
+        <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="flip" title="Flip board" aria-label="Flip board" disabled>
+            <span class="lucide-icon" id="pgnStudyFlipIcon"></span>
+            <span class="pgn-study-ribbon-btn-label">Flip</span>
+        </button>
+        <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="speed" title="Playback speed" aria-label="Playback speed" disabled>
+            <span class="lucide-icon" id="pgnStudySpeedIcon"></span>
+            <span class="pgn-study-ribbon-btn-label" id="pgnStudySpeedLabel">1x</span>
+        </button>
     </header>
 
     <div class="pgn-study-loading" id="pgnStudyLoading">
@@ -453,7 +429,6 @@
            its actual engine — which the buttons need — finishes
            constructing. */
         const ribbonIconMap = {
-            pgnStudyBrandIcon:    '.video-title-emoji.lucide-icon',
             pgnStudyDownloadIcon: '.settings-btn[data-action="download"] .lucide-icon',
             pgnStudyFlipIcon:     '.settings-btn[data-action="flip"] .lucide-icon',
             pgnStudySpeedIcon:    '.settings-btn[data-action="speed"] .lucide-icon',
