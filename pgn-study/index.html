@@ -167,6 +167,12 @@
                 position: absolute;
                 top: 50%;
                 left: 50%;
+                /* ::after (the line) is painted after the handle's own
+                   DOM children by default regardless of source order —
+                   this keeps the handle on top instead of getting
+                   visually sliced by the line underneath it, most
+                   noticeably once ::after darkens/thickens on hover. */
+                z-index: 1;
                 transform: translate(-50%, -50%);
                 display: flex;
                 align-items: center;
