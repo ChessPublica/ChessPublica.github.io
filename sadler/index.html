@@ -610,18 +610,28 @@
                     ? { from: moveEl.dataset.from, to: moveEl.dataset.to }
                     : null;
 
-                // A variation move (not a diagram) carries data-vindex —
-                // its 0-based index into the fens/verbose sequence pgn.js
-                // stashed on the enclosing .pgn-variation (see
-                // collectVariationSequence() there). Handing that whole
-                // sequence to enterVariation(), not just this one FEN, is
-                // what makes arrow keys/spacebar step through the rest of
-                // the variation afterward instead of falling back to
-                // mainline navigation.
-                const vIndex = moveEl.dataset.vindex;
-                const varWrapper = vIndex !== undefined ? moveEl.closest('.pgn-variation') : null;
+                // A variation move carries data-vindex — its 0-based index
+                // into the fens/verbose sequence pgn.js stashed on the
+                // enclosing .pgn-variation (see collectVariationSequence()
+                // there). A diagram inside a variation carries no such
+                // index (it isn't itself one of the sequence's moves), so
+                // find it by matching its FEN in that same sequence
+                // instead. Either way, handing the whole sequence to
+                // enterVariation(), not just this one FEN, is what makes
+                // arrow keys/spacebar step through the REST of the
+                // variation from here afterward, instead of falling back
+                // to mainline playback (which is all showVariationPosition()
+                // alone gives you — a static preview with no position of
+                // its own to resume from).
+                const varWrapper = moveEl.closest('.pgn-variation');
                 if (varWrapper && varWrapper.cpFens) {
-                    engine.enterVariation(varWrapper.cpFens, null, parseInt(vIndex, 10) + 1, null, varWrapper.cpVerbose, null);
+                    const vIndex = moveEl.dataset.vindex;
+                    const index = vIndex !== undefined
+                        ? parseInt(vIndex, 10) + 1
+                        : varWrapper.cpFens.indexOf(fen);
+                    if (index >= 0) {
+                        engine.enterVariation(varWrapper.cpFens, null, index, null, varWrapper.cpVerbose, null);
+                    }
                 }
 
                 engine.showVariationPosition(fen, null, move, null);
