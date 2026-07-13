@@ -47,6 +47,15 @@
             overflow-y: auto;
             overflow-x: hidden;
         }
+        pgn-study > .pgn-container {
+            /* assets/ChessPublica.css's shared .pgn-container rule adds
+               margin-bottom: 1rem for breathing room before whatever
+               comes after it on a normal page — here it IS the scrollable
+               column, with nothing after it to separate from, so it was
+               just adding dead space between the last line of text and
+               the frame's own bottom padding. */
+            margin-bottom: 0;
+        }
         /* The board's actual pixel size is normally driven by --board-size
            against the *viewport* (see styles.css's root default), which
            made sense on a full-width page but not here: pgn-player only
@@ -292,11 +301,11 @@
             height: 2rem;
         }
 
-        /* SPEED BADGE — sits on the play/pause button (icon-only, so the
-           tooltip trick the old text-based speed label used isn't
+        /* SPEED BADGE — sits on the speed button itself (icon-only, so
+           the tooltip trick the old text-based speed label used isn't
            visible at a glance) showing the current playback multiplier
            at all times, not just on hover. Kept in sync by
-           syncPlayPauseButton() below, same as the icon/title swap. */
+           syncSpeedBadge() below, alongside the tooltip. */
         .pgn-study-speed-badge {
             position: absolute;
             bottom: 0.15rem;
@@ -611,7 +620,6 @@
     <header class="pgn-study-ribbon">
         <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="toggle-play" title="Play" aria-label="Play" disabled>
             <span class="lucide-icon" id="pgnStudyPlayPauseIcon"></span>
-            <span class="pgn-study-speed-badge" id="pgnStudySpeedBadge">1x</span>
         </button>
         <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="toc" title="Table of contents" aria-label="Table of contents" disabled>
             <span class="lucide-icon" id="pgnStudyTocIcon"></span>
@@ -621,6 +629,7 @@
         </button>
         <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="speed" title="Playback speed (1x)" aria-label="Playback speed" disabled>
             <span class="lucide-icon" id="pgnStudySpeedIcon"></span>
+            <span class="pgn-study-speed-badge" id="pgnStudySpeedBadge">1x</span>
         </button>
         <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="download" title="Download PGN" aria-label="Download PGN" disabled>
             <span class="lucide-icon" id="pgnStudyDownloadIcon"></span>
@@ -954,10 +963,39 @@
                 scheduleScroll(target);
             });
 
+            // The reading column's own diagrams (createBoard() calls
+            // inside pgn.js's renderFullPGN — one per [D]/[#] marker,
+            // NAG-glyph position, etc.) each build their own <img> piece
+            // elements. Most point at the same ~12 shared theme URLs, so
+            // the browser only fetches each once, but that first fetch
+            // can still take a visible moment — without waiting for it,
+            // the loading placeholder disappears (see cp-ready below)
+            // before those images have actually arrived, so the reading
+            // column pops its diagrams in piece-by-piece right in front
+            // of the reader instead of appearing whole.
+            //
+            // createBoard() defers each diagram's actual construction
+            // (and thus its <img> tags) by one requestAnimationFrame —
+            // since every diagram here was scheduled during the same
+            // synchronous render pass, they all land in the very next
+            // frame; awaiting two rAFs is a small safety margin before
+            // collecting <img> elements below, so none still pending get
+            // missed.
+            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+            const readingColumnEl = movesRoot.closest('.pgn-container');
+            const diagramImages = readingColumnEl ? Array.from(readingColumnEl.querySelectorAll('img')) : [];
+            const diagramImagesReady = Promise.all(diagramImages.map(img => img.complete ? Promise.resolve() : new Promise(resolve => {
+                img.addEventListener('load', resolve, { once: true });
+                img.addEventListener('error', resolve, { once: true }); // a broken image shouldn't hang the loading screen forever
+            })));
+
             // Player isn't ready to accept goTo()/showVariationPosition()
             // calls until its PGN has been parsed and the board built —
             // see helpers.js's createReadyGate.
-            const engine = await playerEl.ready.catch(() => null);
+            const [engine] = await Promise.all([
+                playerEl.ready.catch(() => null),
+                diagramImagesReady,
+            ]);
 
             // Swap the loading placeholder (empty board + spinner) for the
             // real thing now that <pgn-player> has finished loading — on
@@ -993,14 +1031,13 @@
                engine itself has finished constructing (see
                VideoEngine's constructor in pgn-player.js), same
                reason the buttons start out disabled in the markup. */
-            // Speed badge lives on the play/pause button (see below) since
-            // that button is icon-only and would otherwise show its
-            // current multiplier nowhere but a hover tooltip — kept in
-            // sync from here (the speed action's own click handler) and
-            // from syncPlayPauseButton() below, so it's always correct
-            // regardless of which of those last updated it.
+            // Speed badge lives on the speed button itself now (it used
+            // to sit on the play/pause button, but the speed button is
+            // the one this multiplier is actually about) — resynced
+            // straight from its own click handler below.
             const speedBadge = document.getElementById('pgnStudySpeedBadge');
             const syncSpeedBadge = () => { speedBadge.textContent = engine.state.speed + 'x'; };
+            syncSpeedBadge();
 
             document.querySelectorAll('.pgn-study-ribbon-btn').forEach(btn => {
                 const action = btn.dataset.ribbonAction;
@@ -1018,11 +1055,7 @@
                         const label = `Playback speed (${engine.state.speed}x)`;
                         btn.title = label;
                         btn.setAttribute('aria-label', label);
-                        // Also resyncs the play/pause button's own speed
-                        // badge/title (see below) — declared later in this
-                        // same function, but already initialized by the
-                        // time a user can actually click this button.
-                        syncPlayPauseButton();
+                        syncSpeedBadge();
                     }
                 });
             });
@@ -1036,21 +1069,14 @@
                engine.state.playing via the same "cp-move" event goTo()
                already fires on every play tick, pause, and manual
                navigation — see the move-picker/TOC listeners below for
-               the same pattern. Its speed badge is synced here too,
-               since a page-load default (1x) can't drift, but this
-               keeps it correct defensively regardless. */
+               the same pattern. */
             const playPauseBtn = document.querySelector('.pgn-study-ribbon-btn[data-ribbon-action="toggle-play"]');
             const playPauseIcon = document.getElementById('pgnStudyPlayPauseIcon');
             const syncPlayPauseButton = () => {
                 const playing = engine.state.playing;
                 playPauseIcon.style.setProperty('--icon', window.ChessPublica.lucideIconUrl(playing ? 'pause' : 'play'));
-                // Speed is also spelled out here (not just the visual
-                // badge) so it reaches anyone not seeing that badge —
-                // screen readers, or just a mouse hover.
-                const label = `${playing ? 'Pause' : 'Play'} (${engine.state.speed}x)`;
-                playPauseBtn.title = label;
-                playPauseBtn.setAttribute('aria-label', label);
-                syncSpeedBadge();
+                playPauseBtn.title = playing ? 'Pause' : 'Play';
+                playPauseBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
             };
             playPauseBtn.disabled = false;
             playPauseBtn.addEventListener('click', () => engine.togglePlay());
