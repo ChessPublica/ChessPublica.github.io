@@ -8,17 +8,43 @@
     <link rel="stylesheet" href="../dist/ChessPublica.all.min.css">
     <link rel="stylesheet" href="../styles.css">
     <style>
+        /* Fixed 90vw x 90vh frame, centered (5vw/5vh margin on every
+           side) — the box itself never scrolls; each column inside it
+           does independently instead (see the min-height/overflow rule
+           below), since there's no longer a page-level scroll for a
+           sticky board to pin itself against. */
         pgn-study {
             font-size: 110%;
             display: flex;
             flex-direction: column;
-            padding: 1.5rem;
+            width: 90vw;
+            height: 90vh;
             max-width: 1600px;
-            margin: 0 auto;
+            margin: 5vh auto;
+            padding: 1.5rem;
+            border: 1px solid #d4d4d8;
+            border-radius: 0.75rem;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        pgn-study > pgn-player,
+        pgn-study > .pgn-container {
+            min-height: 0; /* grid/flex items default to min-height:auto, which blocks the overflow below from ever kicking in */
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        @media (max-width: 899px) {
+            /* Stacked single column — give the board and the reading
+               list an equal share of the frame's height to scroll
+               within, rather than one growing to fit its content and
+               squeezing the other down to nothing. */
+            pgn-study > pgn-player,
+            pgn-study > .pgn-container {
+                flex: 1 1 0;
+            }
         }
         @media (min-width: 900px) {
-            pgn-study { display: grid; grid-template-columns: 1fr 2fr; align-items: start; padding: 2.5rem; }
-            pgn-study > pgn-player { position: sticky; top: 1.5rem; }
+            pgn-study { display: grid; grid-template-columns: 1fr 2fr; align-items: stretch; padding: 2.5rem; }
             pgn-study pgn-player { --board-size: calc(400px * 1.25); }
         }
 
@@ -35,13 +61,22 @@
             display: none;
         }
 
+        /* Same 90vw x 90vh framed footprint as the real <pgn-study> (see
+           above) so swapping one for the other doesn't visibly resize
+           the page. */
         .pgn-study-loading {
             display: flex;
             flex-direction: column;
             gap: 1.5rem;
-            padding: 1.5rem;
+            width: 90vw;
+            height: 90vh;
             max-width: 1600px;
-            margin: 0 auto;
+            margin: 5vh auto;
+            padding: 1.5rem;
+            border: 1px solid #d4d4d8;
+            border-radius: 0.75rem;
+            box-sizing: border-box;
+            overflow: hidden;
         }
         @media (min-width: 900px) {
             .pgn-study-loading {
@@ -84,7 +119,7 @@
             to { transform: rotate(360deg); }
         }
 
-        /* RIBBON — app-style top bar, standing in for the board's own
+        /* RIBBON — minimal top bar, standing in for the board's own
            gear-icon settings panel (hidden below, same as .video-title/
            .board-toolbar/.play — see the "pgn-study pgn-player" rules
            just below): same three actions (download/flip/speed), always
@@ -95,69 +130,77 @@
            disabled — see the DOMContentLoaded listener below — since
            they forward clicks to <pgn-player>'s own (hidden) settings
            buttons, which aren't wired up until the engine itself is
-           ready. */
+           ready. Icon-only: the speed button's current multiplier
+           (1x/2x/…) — the one piece of state an icon alone can't show —
+           lives in its title/aria-label tooltip instead of on-screen
+           text, kept in sync after every click (see
+           the DOMContentLoaded listener below). */
         .pgn-study-ribbon {
             display: flex;
-            flex-wrap: wrap;
             align-items: center;
-            justify-content: space-between;
-            gap: 0.75rem;
-            padding: 0.75rem 1.5rem;
-            background: #18181b;
-            color: #fff;
+            gap: 0.25rem;
+            padding: 0.5rem 1.5rem;
+            background: #fff;
+            border-bottom: 1px solid #e4e4e7;
         }
         @media (min-width: 900px) {
-            .pgn-study-ribbon { padding: 0.75rem 2.5rem; }
-        }
-        .pgn-study-ribbon-brand {
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
-            font-weight: 700;
-            font-size: 1.1rem;
-            letter-spacing: -0.01em;
-        }
-        .pgn-study-ribbon-icon {
-            width: 1.4rem;
-            height: 1.4rem;
-        }
-        .pgn-study-ribbon-actions {
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
+            .pgn-study-ribbon { padding: 0.5rem 2.5rem; }
         }
         .pgn-study-ribbon-btn {
             display: flex;
             align-items: center;
-            gap: 0.4rem;
+            justify-content: center;
+            width: 2.25rem;
+            height: 2.25rem;
             background: transparent;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: inherit;
-            font: inherit;
-            font-size: 0.85rem;
-            border-radius: 0.5rem;
-            padding: 0.4rem 0.7rem;
+            border: none;
+            border-radius: 0.4rem;
+            color: #52525b;
             cursor: pointer;
             transition: background 0.15s, opacity 0.15s;
         }
         .pgn-study-ribbon-btn:hover:not(:disabled) {
-            background: rgba(255, 255, 255, 0.12);
+            background: #f4f4f5;
         }
         .pgn-study-ribbon-btn:disabled {
-            opacity: 0.4;
+            opacity: 0.35;
             cursor: default;
         }
         .pgn-study-ribbon-btn .lucide-icon {
             width: 1.1rem;
             height: 1.1rem;
         }
-        @media (max-width: 480px) {
-            /* Icon-only once the bar gets tight, except the speed label
-               ("1x"/"2x"/…) — that's the only one carrying information
-               its icon alone doesn't. */
-            .pgn-study-ribbon-btn:not([data-ribbon-action="speed"]) .pgn-study-ribbon-btn-label {
-                display: none;
-            }
+
+        /* CLOSE BUTTON — fixed at the frame's own top-right corner (the
+           frame is centered with a flat 5vw/5vh margin — see pgn-study/
+           .pgn-study-loading above — so a fixed offset lines up with it
+           exactly without needing to be a positioned descendant of
+           either one, and keeps working across the loading -> ready
+           swap unchanged). Always enabled/visible: closing doesn't
+           depend on the engine being ready. */
+        .pgn-study-close {
+            position: fixed;
+            top: calc(5vh + 0.5rem);
+            right: calc(5vw + 0.5rem);
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 2rem;
+            height: 2rem;
+            background: transparent;
+            border: none;
+            border-radius: 0.4rem;
+            color: #71717a;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .pgn-study-close:hover {
+            background: #f4f4f5;
+        }
+        .pgn-study-close .lucide-icon {
+            width: 1.1rem;
+            height: 1.1rem;
         }
 
         pgn-study pgn-player .video-title,
@@ -351,25 +394,20 @@
 <body>
 
     <header class="pgn-study-ribbon">
-        <div class="pgn-study-ribbon-brand">
-            <span class="pgn-study-ribbon-icon lucide-icon" id="pgnStudyBrandIcon"></span>
-            <span class="pgn-study-ribbon-title">PGN Study</span>
-        </div>
-        <div class="pgn-study-ribbon-actions">
-            <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="download" title="Download PGN" aria-label="Download PGN" disabled>
-                <span class="lucide-icon" id="pgnStudyDownloadIcon"></span>
-                <span class="pgn-study-ribbon-btn-label">Download</span>
-            </button>
-            <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="flip" title="Flip board" aria-label="Flip board" disabled>
-                <span class="lucide-icon" id="pgnStudyFlipIcon"></span>
-                <span class="pgn-study-ribbon-btn-label">Flip</span>
-            </button>
-            <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="speed" title="Playback speed" aria-label="Playback speed" disabled>
-                <span class="lucide-icon" id="pgnStudySpeedIcon"></span>
-                <span class="pgn-study-ribbon-btn-label" id="pgnStudySpeedLabel">1x</span>
-            </button>
-        </div>
+        <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="download" title="Download PGN" aria-label="Download PGN" disabled>
+            <span class="lucide-icon" id="pgnStudyDownloadIcon"></span>
+        </button>
+        <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="flip" title="Flip board" aria-label="Flip board" disabled>
+            <span class="lucide-icon" id="pgnStudyFlipIcon"></span>
+        </button>
+        <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="speed" title="Playback speed (1x)" aria-label="Playback speed" disabled>
+            <span class="lucide-icon" id="pgnStudySpeedIcon"></span>
+        </button>
     </header>
+
+    <button class="pgn-study-close" type="button" id="pgnStudyClose" title="Close" aria-label="Close">
+        <span class="lucide-icon" id="pgnStudyCloseIcon"></span>
+    </button>
 
     <div class="pgn-study-loading" id="pgnStudyLoading">
         <div class="pgn-study-loading-board"></div>
@@ -453,7 +491,6 @@
            its actual engine — which the buttons need — finishes
            constructing. */
         const ribbonIconMap = {
-            pgnStudyBrandIcon:    '.video-title-emoji.lucide-icon',
             pgnStudyDownloadIcon: '.settings-btn[data-action="download"] .lucide-icon',
             pgnStudyFlipIcon:     '.settings-btn[data-action="flip"] .lucide-icon',
             pgnStudySpeedIcon:    '.settings-btn[data-action="speed"] .lucide-icon',
@@ -461,6 +498,22 @@
         Object.entries(ribbonIconMap).forEach(([id, selector]) => {
             const iconUrl = playerEl.querySelector(selector)?.style.getPropertyValue('--icon');
             if (iconUrl) document.getElementById(id).style.setProperty('--icon', iconUrl);
+        });
+
+        // The close button has no equivalent already-rendered icon anywhere
+        // in <pgn-player> to borrow from (unlike the three above), so this
+        // one goes straight through ChessPublica's own public lucideIconUrl()
+        // instead — see assets/icons.js / assets/ChessPublica.js.
+        document.getElementById('pgnStudyCloseIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('x'));
+
+        // Closing doesn't depend on the engine, or even on loading having
+        // finished — hide whichever of the loading placeholder or the real
+        // <pgn-study> is currently showing (?.remove()/[none] no-op safely
+        // either way) and reveal the bare body behind them.
+        document.getElementById('pgnStudyClose').addEventListener('click', () => {
+            document.getElementById('pgnStudyLoading')?.remove();
+            studyEl.style.display = 'none';
+            document.getElementById('pgnStudyClose').style.display = 'none';
         });
 
         /* Chessbase-style reading sync between the <pgn-player> on the left
@@ -618,11 +671,14 @@
                 btn.disabled = false;
                 btn.addEventListener('click', () => {
                     target.click();
-                    // The speed button's own label lives on the hidden
-                    // internal button, not this one — resync ours from
-                    // the engine's actual state after every click.
+                    // Icon-only button, so the current multiplier (the one
+                    // piece of state an icon alone can't show) lives in the
+                    // tooltip instead of on-screen text — resync it from the
+                    // engine's actual state after every click.
                     if (action === 'speed') {
-                        document.getElementById('pgnStudySpeedLabel').textContent = engine.state.speed + 'x';
+                        const label = `Playback speed (${engine.state.speed}x)`;
+                        btn.title = label;
+                        btn.setAttribute('aria-label', label);
                     }
                 });
             });
