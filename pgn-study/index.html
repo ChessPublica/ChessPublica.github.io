@@ -107,17 +107,38 @@
         pgn-study pgn-player {
             --board-size: min(400px, 94cqw);
         }
+        .pgn-study-mobile-title {
+            /* Hidden by default (desktop): excluding it from the grid
+               entirely (rather than just visually hiding it) means it
+               doesn't consume one of the two content-row cells grid
+               auto-placement would otherwise assign it ahead of
+               pgn-player/the resizer/.pgn-container — see the
+               DOMContentLoaded listener below for where this clone
+               actually gets inserted, and why it's a clone and not a
+               move. Declared before the max-width query below so that
+               query's own display: flex — same specificity, later in
+               the cascade — is what actually wins under 900px, not
+               this. */
+            display: none;
+        }
         @media (max-width: 899px) {
-            /* Stacked single column — give the board and the reading
-               list an equal share of the frame's height to scroll
-               within, rather than one growing to fit its content and
-               squeezing the other down to nothing. The ribbon (also a
-               pgn-study child now, first in DOM order) isn't part of
-               this selector, so it keeps flex's default 0 0 auto —
-               sized to its own content, not stretched. */
-            pgn-study > pgn-player,
-            pgn-study > .pgn-container {
+            /* Single column: ribbon, title/byline, board (+ its own move
+               picker and current-move comment, already part of
+               <pgn-player> itself — nothing extra needed for those),
+               nothing else — nowhere near enough room for a second
+               column of move text too. pgn-player is the only piece left
+               with real room to grow into, so it alone gets flex: 1 1 0
+               (fill whatever the ribbon/title don't use, scrolling
+               internally past that); those two keep flex's default
+               0 0 auto — sized to their own content instead. */
+            pgn-study > pgn-player {
                 flex: 1 1 0;
+            }
+            pgn-study > .pgn-container {
+                display: none;
+            }
+            .pgn-study-mobile-title {
+                display: flex;
             }
         }
         @media (min-width: 900px) {
@@ -984,6 +1005,25 @@
                 // did render.
                 markStudyReady(null);
                 return;
+            }
+
+            /* Mobile layout has no room for a full second column, so it
+               drops the reading column's move text entirely (see the
+               "max-width: 899px" rule above) — but the game's title/
+               byline (pgn.js's own ".pgn-title", distinct from
+               <pgn-player>'s identical-looking one, which stays hidden
+               there) is worth keeping, just moved up above the board
+               instead of buried at the top of a now-hidden column. A
+               clone (not a move) keeps the original in place for the
+               desktop reading column, which still wants it right where
+               it's always been — .pgn-study-mobile-title's own CSS is
+               what actually decides which of the two is ever visible at
+               a given width, not this. */
+            const originalTitle = studyEl.querySelector('.pgn-container .pgn-title');
+            if (originalTitle) {
+                const mobileTitle = originalTitle.cloneNode(true);
+                mobileTitle.classList.add('pgn-study-mobile-title');
+                studyEl.insertBefore(mobileTitle, playerEl);
             }
 
             let activeEl = null;
