@@ -328,6 +328,27 @@
                 if (activeEl) activeEl.classList.add('pgn-move-active');
             }
 
+            // Aligns a reading-column move with the *top* of the main
+            // board, not scrollIntoView()'s own block:'center' (which
+            // buries it mid-viewport). scrollIntoView() has no "align
+            // with this other element" option, so this scrolls by the gap
+            // between the move and a target line instead — the board's
+            // own CSS sticky `top` (1.5rem, ≥900px — see the CSS above),
+            // 0 otherwise (mobile stacks the columns, no sticky board to
+            // line up with; scrolling this move flush to the viewport top
+            // is the closest sane equivalent). Deliberately NOT
+            // playerEl.getBoundingClientRect().top: that's only pinned to
+            // this same offset once the page has already scrolled past
+            // it — read at the moment of a click from further up the
+            // page, it's still sitting at its taller unscrolled position,
+            // undershooting the scroll by the difference every time.
+            function scrollMoveToBoardTop(el) {
+                const stickyTop = parseFloat(getComputedStyle(playerEl).top);
+                const targetLine = Number.isFinite(stickyTop) ? stickyTop : 0;
+                const delta = el.getBoundingClientRect().top - targetLine;
+                window.scrollBy({ top: delta, behavior: 'smooth' });
+            }
+
             playerEl.addEventListener('cp-move', (e) => {
                 const moveIndex = e.detail.moveIndex;
                 if (moveIndex == null || moveIndex < 0) { setActiveMove(null); return; }
@@ -336,7 +357,7 @@
                 if (!target) { setActiveMove(null); return; }
 
                 setActiveMove(target);
-                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                scrollMoveToBoardTop(target);
             });
 
             // Counterpart to "cp-move" above, but for a variation position
@@ -352,7 +373,7 @@
                 if (!target) { setActiveMove(null); return; }
 
                 setActiveMove(target);
-                target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                scrollMoveToBoardTop(target);
             });
 
             // Player isn't ready to accept goTo()/showVariationPosition()
