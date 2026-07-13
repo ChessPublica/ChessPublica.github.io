@@ -93,7 +93,7 @@ function initCustomElements(selector, wrapperClass, renderFn, opts) {
 
     /* Per-element opt-in, off by default, so every <pgn> renders exactly
        as it always has — see renderFullPGN()'s doc comment in pgn.js.
-       chesspublica.github.io/sadler/ sets this attribute on its own
+       chesspublica.github.io/pgn-study/ sets this attribute on its own
        <pgn> to get clickable moves; no other page does, so their output
        is unaffected. */
     var renderOptions = { clickableMoves: el.hasAttribute("clickable-moves") };

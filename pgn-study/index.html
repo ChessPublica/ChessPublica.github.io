@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="../dist/ChessPublica.all.min.css">
     <link rel="stylesheet" href="../styles.css">
     <style>
-        pgn-app {
+        pgn-study {
             font-size: 110%;
             display: flex;
             flex-direction: column;
@@ -17,25 +17,25 @@
             margin: 0 auto;
         }
         @media (min-width: 900px) {
-            pgn-app { display: grid; grid-template-columns: 1fr 2fr; align-items: start; padding: 2.5rem; }
-            pgn-app > pgn-player { position: sticky; top: 1.5rem; }
-            pgn-app pgn-player { --board-size: calc(400px * 1.25); }
+            pgn-study { display: grid; grid-template-columns: 1fr 2fr; align-items: start; padding: 2.5rem; }
+            pgn-study > pgn-player { position: sticky; top: 1.5rem; }
+            pgn-study pgn-player { --board-size: calc(400px * 1.25); }
         }
 
-        /* <pgn-app> starts out holding its PGN as raw, unstyled text (see
+        /* <pgn-study> starts out holding its PGN as raw, unstyled text (see
            the module script below) — hidden here so it never flashes on
            screen before that script swaps it for the real <pgn-player>/
            <pgn> elements, and before those finish their own async load
-           (parsing the PGN, building the board). #sadlerLoading below
+           (parsing the PGN, building the board). #pgnStudyLoading below
            stands in for it — same two-column footprint, empty board on
            the left, spinner on the right — until the script reveals the
            real thing by adding .cp-ready (see the DOMContentLoaded
            listener at the bottom of this file). */
-        pgn-app:not(.cp-ready) {
+        pgn-study:not(.cp-ready) {
             display: none;
         }
 
-        .sadler-loading {
+        .pgn-study-loading {
             display: flex;
             flex-direction: column;
             gap: 1.5rem;
@@ -44,14 +44,14 @@
             margin: 0 auto;
         }
         @media (min-width: 900px) {
-            .sadler-loading {
+            .pgn-study-loading {
                 display: grid;
                 grid-template-columns: 1fr 2fr;
                 align-items: start;
                 padding: 2.5rem;
             }
         }
-        .sadler-loading-board {
+        .pgn-study-loading-board {
             width: 400px;
             max-width: 100%;
             aspect-ratio: 1 / 1;
@@ -61,9 +61,9 @@
             background-size: 25% 25%;
         }
         @media (min-width: 900px) {
-            .sadler-loading-board { width: 500px; }
+            .pgn-study-loading-board { width: 500px; }
         }
-        .sadler-loading-side {
+        .pgn-study-loading-side {
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -72,39 +72,115 @@
             min-height: 200px;
             color: #777;
         }
-        .sadler-loading-spinner {
+        .pgn-study-loading-spinner {
             width: 2.5rem;
             height: 2.5rem;
             border: 4px solid rgba(0, 0, 0, 0.15);
             border-top-color: #777;
             border-radius: 50%;
-            animation: sadler-loading-spin 0.8s linear infinite;
+            animation: pgn-study-loading-spin 0.8s linear infinite;
         }
-        @keyframes sadler-loading-spin {
+        @keyframes pgn-study-loading-spin {
             to { transform: rotate(360deg); }
         }
 
-        pgn-app pgn-player .video-title,
-        pgn-app pgn-player .board-toolbar,
-        pgn-app pgn-player .video-moves,
-        pgn-app pgn-player .play {
+        /* RIBBON — app-style top bar, standing in for the board's own
+           gear-icon settings panel (hidden below, same as .video-title/
+           .board-toolbar/.play — see the "pgn-study pgn-player" rules
+           just below): same three actions (download/flip/speed), always
+           visible instead of tucked behind a toggle. Sits above the
+           loading placeholder too, not just the real <pgn-study> grid,
+           so it reads as persistent page chrome rather than part of
+           whichever of the two is currently showing. Buttons start
+           disabled — see the DOMContentLoaded listener below — since
+           they forward clicks to <pgn-player>'s own (hidden) settings
+           buttons, which aren't wired up until the engine itself is
+           ready. */
+        .pgn-study-ribbon {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.75rem 1.5rem;
+            background: #18181b;
+            color: #fff;
+        }
+        @media (min-width: 900px) {
+            .pgn-study-ribbon { padding: 0.75rem 2.5rem; }
+        }
+        .pgn-study-ribbon-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-weight: 700;
+            font-size: 1.1rem;
+            letter-spacing: -0.01em;
+        }
+        .pgn-study-ribbon-icon {
+            width: 1.4rem;
+            height: 1.4rem;
+        }
+        .pgn-study-ribbon-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .pgn-study-ribbon-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: inherit;
+            font: inherit;
+            font-size: 0.85rem;
+            border-radius: 0.5rem;
+            padding: 0.4rem 0.7rem;
+            cursor: pointer;
+            transition: background 0.15s, opacity 0.15s;
+        }
+        .pgn-study-ribbon-btn:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.12);
+        }
+        .pgn-study-ribbon-btn:disabled {
+            opacity: 0.4;
+            cursor: default;
+        }
+        .pgn-study-ribbon-btn .lucide-icon {
+            width: 1.1rem;
+            height: 1.1rem;
+        }
+        @media (max-width: 480px) {
+            /* Icon-only once the bar gets tight, except the speed label
+               ("1x"/"2x"/…) — that's the only one carrying information
+               its icon alone doesn't. */
+            .pgn-study-ribbon-btn:not([data-ribbon-action="speed"]) .pgn-study-ribbon-btn-label {
+                display: none;
+            }
+        }
+
+        pgn-study pgn-player .video-title,
+        pgn-study pgn-player .board-toolbar,
+        pgn-study pgn-player .video-moves,
+        pgn-study pgn-player .play {
             display: none;
         }
 
-        pgn-app pgn-player .video-comment .variation-block,
-        pgn-app pgn-player .video-comment .comment-play-btn,
-        pgn-app pgn-player .video-comment .comment-diagram {
+        pgn-study pgn-player .video-comment .variation-block,
+        pgn-study pgn-player .video-comment .comment-play-btn,
+        pgn-study pgn-player .video-comment .comment-diagram {
             display: none;
         }
 
         /* .pgn-title .video-title-text sizes in rem, not em, so it
-           doesn't pick up pgn-app's 110% scale via inheritance like
+           doesn't pick up pgn-study's 110% scale via inheritance like
            everything else on the page — override it explicitly. */
-        pgn-app .pgn-title .video-title-text {
+        pgn-study .pgn-title .video-title-text {
             font-size: 1.1rem;
         }
 
-        .sadler-move-picker {
+        .pgn-study-move-picker {
             margin: 0.5rem 0;
             display: flex;
             flex-wrap: wrap;
@@ -113,7 +189,7 @@
             row-gap: 2px;
             column-gap: 4px;
         }
-        .sadler-picker-row {
+        .pgn-study-picker-row {
             display: flex;
             align-items: center;
             gap: 4px;
@@ -122,14 +198,14 @@
             cursor: pointer;
             width: fit-content;
         }
-        .sadler-picker-row:hover {
+        .pgn-study-picker-row:hover {
             background: #eee;
         }
-        .sadler-picker-row.active {
+        .pgn-study-picker-row.active {
             background: #c8e6c9;
         }
 
-        .sadler-picker-icon {
+        .pgn-study-picker-icon {
             flex-shrink: 0;
             width: 1.4rem;
             height: 1.4rem;
@@ -138,11 +214,11 @@
         /* Mainline "continue" row always comes first (see makeRow() call
            order in renderMainlinePicker()/renderSubPicker()) — no special
            placement needed now, it just reads first in the inline row. */
-        .sadler-picker-row.mainline {
+        .pgn-study-picker-row.mainline {
             font-weight: bold;
         }
 
-        pgn-app .pgn-container {
+        pgn-study .pgn-container {
             /* Captured once under its own name so nested .pgn-variation
                levels can each scale from the real ambient board size
                (400px by default, smaller on narrow viewports per
@@ -152,25 +228,25 @@
             --base-board-size: var(--board-size);
         }
 
-        pgn-app .pgn-container .pgn-move,
-        pgn-app .pgn-container .pgn-clickable-diagram {
+        pgn-study .pgn-container .pgn-move,
+        pgn-study .pgn-container .pgn-clickable-diagram {
             cursor: pointer;
         }
-        pgn-app .pgn-container .pgn-move:hover {
+        pgn-study .pgn-container .pgn-move:hover {
             background: #eee;
             border-radius: 3px;
         }
-        pgn-app .pgn-container .pgn-clickable-diagram:hover {
+        pgn-study .pgn-container .pgn-clickable-diagram:hover {
             box-shadow: 0 0 0 3px #c8e6c9;
             border-radius: 4px;
         }
-        pgn-app .pgn-container .pgn-move-active {
+        pgn-study .pgn-container .pgn-move-active {
             background: #c8e6c9;
             border-radius: 3px;
             box-shadow: 0 0 0 2px #c8e6c9;
         }
         
-        pgn-app .pgn-container .pgn-clickable-diagram.pgn-move-active {
+        pgn-study .pgn-container .pgn-clickable-diagram.pgn-move-active {
             background: transparent;
         }
 
@@ -182,11 +258,11 @@
            followed by a nested sub-variation (margin only). Zero it out
            here so a move-to-comment gap matches every other paragraph
            gap in this column. */
-        pgn-app .pgn-container .pgn-comment {
+        pgn-study .pgn-container .pgn-comment {
             padding-top: 0;
         }
 
-        pgn-app .pgn-container .pgn-variation {
+        pgn-study .pgn-container .pgn-variation {
             margin-left: 1.25rem;
             padding-left: 0.75rem;
             border-left: 2px solid rgba(128, 128, 128, 0.3);
@@ -203,28 +279,28 @@
                parent's already-shrunk size. */
             font-weight: normal;
         }
-        pgn-app .pgn-container .pgn-variation .pgn-variation {
+        pgn-study .pgn-container .pgn-variation .pgn-variation {
             font-style: italic;
         }
-        pgn-app .pgn-container .pgn-variation .pgn-variation .pgn-variation {
+        pgn-study .pgn-container .pgn-variation .pgn-variation .pgn-variation {
             font-size: 0.92em;
         }
-        pgn-app .pgn-container .pgn-variation { --board-size: calc(var(--base-board-size) * 0.88); }
-        pgn-app .pgn-container .pgn-variation .pgn-variation { --board-size: calc(var(--base-board-size) * 0.774); }
-        pgn-app .pgn-container .pgn-variation .pgn-variation .pgn-variation { --board-size: calc(var(--base-board-size) * 0.681); }
-        pgn-app .pgn-container .pgn-variation .pgn-variation .pgn-variation .pgn-variation { --board-size: calc(var(--base-board-size) * 0.599); }
-        pgn-app .pgn-container .pgn-variation .pgn-variation .pgn-variation .pgn-variation .pgn-variation { --board-size: calc(var(--base-board-size) * 0.527); }
-        pgn-app .pgn-container .pgn-variation .pgn-variation .pgn-variation .pgn-variation .pgn-variation .pgn-variation { --board-size: calc(var(--base-board-size) * 0.464); }
+        pgn-study .pgn-container .pgn-variation { --board-size: calc(var(--base-board-size) * 0.88); }
+        pgn-study .pgn-container .pgn-variation .pgn-variation { --board-size: calc(var(--base-board-size) * 0.774); }
+        pgn-study .pgn-container .pgn-variation .pgn-variation .pgn-variation { --board-size: calc(var(--base-board-size) * 0.681); }
+        pgn-study .pgn-container .pgn-variation .pgn-variation .pgn-variation .pgn-variation { --board-size: calc(var(--base-board-size) * 0.599); }
+        pgn-study .pgn-container .pgn-variation .pgn-variation .pgn-variation .pgn-variation .pgn-variation { --board-size: calc(var(--base-board-size) * 0.527); }
+        pgn-study .pgn-container .pgn-variation .pgn-variation .pgn-variation .pgn-variation .pgn-variation .pgn-variation { --board-size: calc(var(--base-board-size) * 0.464); }
         /* The static reading column defaults to 2 sub-columns
            (ChessPublica.css's .pgn-moves) for narrower single-column
            blog layouts elsewhere on the site; with a dedicated column
            this wide, and variations now indented, a column break mid-line
            reads as broken rather than efficient. */
-        pgn-app .pgn-container .pgn-moves {
+        pgn-study .pgn-container .pgn-moves {
             column-count: 1;
         }
 
-        pgn-app .pgn-container .cp-board-wrapper {
+        pgn-study .pgn-container .cp-board-wrapper {
             margin-left: auto;
             margin-right: auto;
         }
@@ -238,21 +314,21 @@
            "…Ragozin Defense" gets its own right where it first
            diverges, not one entry per move along the way); nesting
            depth shown via indent. */
-        .sadler-toc {
+        .pgn-study-toc {
             margin-top: 2rem;
             padding-top: 1.25rem;
             border-top: 2px solid rgba(128, 128, 128, 0.3);
         }
-        .sadler-toc-heading {
+        .pgn-study-toc-heading {
             margin: 0 0 0.75rem 0;
             font-size: 1.15rem;
         }
-        .sadler-toc-list {
+        .pgn-study-toc-list {
             display: flex;
             flex-direction: column;
             gap: 2px;
         }
-        .sadler-toc-entry {
+        .pgn-study-toc-entry {
             display: flex;
             align-items: baseline;
             gap: 6px;
@@ -260,13 +336,13 @@
             border-radius: 4px;
             cursor: pointer;
         }
-        .sadler-toc-entry:hover {
+        .pgn-study-toc-entry:hover {
             background: #eee;
         }
-        .sadler-toc-name {
+        .pgn-study-toc-name {
             flex: 1 1 auto;
         }
-        .sadler-toc-move {
+        .pgn-study-toc-move {
             color: #777;
             flex-shrink: 0;
         }
@@ -274,15 +350,36 @@
 </head>
 <body>
 
-    <div class="sadler-loading" id="sadlerLoading">
-        <div class="sadler-loading-board"></div>
-        <div class="sadler-loading-side">
-            <div class="sadler-loading-spinner"></div>
+    <header class="pgn-study-ribbon">
+        <div class="pgn-study-ribbon-brand">
+            <span class="pgn-study-ribbon-icon lucide-icon" id="pgnStudyBrandIcon"></span>
+            <span class="pgn-study-ribbon-title">PGN Study</span>
+        </div>
+        <div class="pgn-study-ribbon-actions">
+            <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="download" title="Download PGN" aria-label="Download PGN" disabled>
+                <span class="lucide-icon" id="pgnStudyDownloadIcon"></span>
+                <span class="pgn-study-ribbon-btn-label">Download</span>
+            </button>
+            <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="flip" title="Flip board" aria-label="Flip board" disabled>
+                <span class="lucide-icon" id="pgnStudyFlipIcon"></span>
+                <span class="pgn-study-ribbon-btn-label">Flip</span>
+            </button>
+            <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="speed" title="Playback speed" aria-label="Playback speed" disabled>
+                <span class="lucide-icon" id="pgnStudySpeedIcon"></span>
+                <span class="pgn-study-ribbon-btn-label" id="pgnStudySpeedLabel">1x</span>
+            </button>
+        </div>
+    </header>
+
+    <div class="pgn-study-loading" id="pgnStudyLoading">
+        <div class="pgn-study-loading-board"></div>
+        <div class="pgn-study-loading-side">
+            <div class="pgn-study-loading-spinner"></div>
             <p>Loading game…</p>
         </div>
     </div>
 
-    <pgn-app>
+    <pgn-study>
     [Event "GM Matthew Sadler - Silicon Road YouTube Channel additional material: Torch 1.d4 openings with theory review"]
     [Date "2024.03.25"]
     [White "Torch Openings"]
@@ -297,10 +394,10 @@
     [ChapterURL "https://lichess.org/study/GJ5NRo9a/uB9mzN0G"]
         
     1. d4 (1. c4 e5 { Torch's main choice after 30055Mn } (1... c5 { 61149Mn Torch v2: } 2. Nf3 Nc6 3. Nc3 Nf6 4. g3 d5 5. d4 e6 6. cxd5 Nxd5 7. Bg2 cxd4 8. Nxd4 Nxc3 9. bxc3 Nxd4 10. Qxd4 Qxd4 11. cxd4 Bd6 12. O-O Rb8 13. a4 b6 14. a5 b5 15. a6 Rb6 16. d5 { [#] } 16... b4 $146 (16... O-O 17. dxe6 fxe6 18. Be3 Rxa6 19. Rxa6 Bxa6 20. Ra1 Bc8 21. Rxa7 Rf7 22. Ra5 b4 23. Rb5 { ½-½ Dedina,M (2271)-Paulik,V (2363) Brat Memorial email ICCF email 2014 }) 17. dxe6 fxe6 18. Rd1 Be7 19. Bb2 O-O 20. Rac1 Bf6 21. Bxf6 gxf6 22. Rc7 b3 23. Be4 h5 24. f4 b2 25. Bh7+ Kh8 26. Bb1 Rxa6 27. Rd2 Rb6 28. Rcc2 e5 29. Rxb2 Rxb2 30. Rxb2 h4 31. gxh4 exf4 32. Rb5 Kg7 33. Kf2 Bg4 34. Ra5 a6 35. Rxa6 Rd8 36. Ra7+ Kh8 { 0.19/59 }) 2. g3 c6 3. d4 e4 4. d5 Bb4+ 5. Bd2 Qe7 6. e3 Bxd2+ 7. Qxd2 d6 { [#] } 8. dxc6 $146 (8. Nc3 c5 9. Bg2 f5 10. f4 Nf6 11. Nh3 Na6 12. Nf2 h5 13. h4 Bd7 14. Bf1 Nc7 15. Be2 O-O 16. O-O Rfb8 17. a4 a5 18. b3 b6 19. Kg2 Re8 20. Kg1 Reb8 21. Kg2 Re8 22. Kg1 Reb8 { ½-½ Aronian,L (2742)-Ter Sahakyan,S (2618) FIDE Grand Swiss Douglas 2023 (10) }) 8... Nxc6 9. Nc3 Nf6 10. Bg2 Be6 11. Nxe4 Nxe4 12. Bxe4 Bxc4 13. Bd5 Bxd5 14. Qxd5 Qe5 15. Qb3 Qe4 16. f3 Qe5 17. Rc1 O-O 18. Kf2 Qf6 19. Nh3 Ne5 20. e4 Qe6 21. Qxe6 fxe6 22. Nf4 Rac8 23. Ke2 Kf7 24. Nd3 Nxd3 25. Kxd3 Ke7 26. f4 Rfd8 27. Rhg1 Rf8 28. Ke3 Rc6 29. Rxc6 bxc6 30. Rc1 c5 { 0.14/56 }) (1. g3 { 77087Mn } 1... d5 2. Nf3 Nf6 3. Bg2 c5 4. d4 cxd4 5. O-O e6 6. Nxd4 e5 7. Nb3 Be6 8. e4 dxe4 9. Qxd8+ Kxd8 10. Nc3 Kc7 11. Be3 Nc6 12. Nxe4 Nxe4 13. Bxe4 { [#] } 13... h5 $146 (13... Be7 14. Nc5 Bh3 15. Rfd1 Rhd8 16. c3 g6 17. b4 Rxd1+ 18. Rxd1 Rd8 19. Rxd8 Nxd8 20. Nd3 f6 21. f4 Be6 22. fxe5 f5 23. Bg2 Bxa2 24. Nf4 Nc6 25. e6 Bf6 26. b5 Ne7 27. Nd3 Bxe6 28. Bxa7 b6 29. Nb4 Bc8 30. c4 Bd4+ 31. Kf1 Bc5 32. Nd3 Bd4 33. c5 bxc5 34. Nxc5 Kd6 35. Ne4+ Ke5 36. Bxd4+ Kxd4 37. Nd6 Kc5 38. Nf7 Kxb5 39. Ng5 h6 40. Nf7 h5 41. Kf2 Kc5 42. Ke3 Be6 { ½-½ Daneshvar,B (2428)-Keymer,V (2600) Wch Blitz Almaty 2022 (5) }) 14. a4 h4 15. Nc5 Bxc5 16. Bxc5 b6 17. Be3 Rad8 18. Rfd1 Rxd1+ 19. Rxd1 Ne7 20. f4 Nf5 21. Bxf5 Bxf5 22. fxe5 hxg3 23. hxg3 Rd8 24. Rf1 Be6 25. c3 Rh8 26. Rd1 Rd8 27. Bd4 Kb7 28. Ra1 Rh8 29. a5 Bd5 { 0.12/60 }) (1. b3 { 15105Mn } 1... e5 2. Bb2 Nc6 3. e3 d5 4. Bb5 Bd6 5. Nf3 f6 6. O-O a6 7. Be2 Nce7 8. c4 c6 { [#] } 9. Nc3 $146 (9. d4 e4 10. Nfd2 f5 11. Nc3 Nf6 12. Qc2 f4 13. exf4 Bxf4 14. g3 Bh6 { 0-1 Stoicut,T (1584)-Tatiana,V (1963) FICGS W-ch st1 g02 email FICGS email 2018 (1) }) 9... Nh6 10. a4 Be6 11. Qc1 O-O 12. Ba3 Bc7 13. b4 Re8 14. b5 Kh8 15. Qc2 Bf5 16. d3 d4 17. exd4 exd4 18. Ne4 axb5 19. axb5 cxb5 20. Bxe7 Qxe7 21. Rxa8 Rxa8 22. cxb5 Bg6 23. Rc1 Bb6 24. Nfd2 Nf7 25. Nc4 Rc8 26. Qa4 Ne5 { -0.19/55 }) 1... Nf6 (1... d5 2. c4 c6 { 299793Mn } (2... Nc6 { 166307Mn for the Chigorin fans out there! } 3. cxd5 Qxd5 4. e3 e5 5. Nc3 Bb4 6. Bd2 Bxc3 7. bxc3 Nf6 8. c4 Qd6 9. d5 Ne7 10. Qb3 a5 11. Nf3 { [#] } 11... e4 $146 (11... Ne4 12. Bd3 Nc5 13. Qc2 c6 14. e4 O-O 15. Be3 Bg4 16. Nd2 cxd5 17. cxd5 Nxd3+ 18. Qxd3 f5 19. Nc4 Qf6 20. d6 Ng6 21. O-O f4 22. Bb6 f3 23. g3 Bd7 24. Rfd1 Rf7 25. Ne3 Qg5 26. Kh1 Nf8 27. Nd5 Qh5 28. Rac1 Be6 29. Nc7 Rc8 30. Bxa5 Bxa2 31. Rg1 Be6 32. Nxe6 Rxc1 33. Rxc1 Qh3 34. Nf4 Rxf4 35. Rg1 Rf7 36. g4 Qh4 37. Bb6 Qf6 38. h3 Rd7 39. Qd5+ Qe6 40. Bc7 Qxd5 41. exd5 { ½-½ Murden,C (2315)-Ruefenacht,M (2487) Purdy Jubilee-B email ICCF email 2003 }) 12. Nd4 c6 13. dxc6 bxc6 14. a4 O-O 15. Qa3 c5 16. Bc3 Qb6 17. Qb3 Qd8 18. Nb5 Nc6 19. Rd1 Qe7 20. Be2 Nb4 21. O-O Ra6 22. Qb2 Re6 23. Qd2 Rb6 24. Nd6 Qe6 25. Bxf6 gxf6 26. Nb5 f5 27. Qc3 Qf6 28. Qxf6 Rxf6 29. Nc3 Kg7 30. Rd2 Rc6 31. f3 Re8 32. Rfd1 exf3 33. Bxf3 { 0.40/58 }) (2... dxc4 { 186494MN Torch v2: } 3. Nf3 { In total: 1531764Mn nodes spent on this line. I can't remember now 100% whether 7.dc or 7.b3 (with later ideas of dc) came out on top. } 3... a6 (3... Nf6 4. e3 e6 5. Bxc4 Be7 { Torch v2: } { 102797Mn } 6. O-O c5 7. Nc3 O-O 8. e4 cxd4 9. Nxd4 Qc7 10. Qe2 Nc6 (10... Ng4 11. Qxg4 Qxc4 12. Be3 Nc6 13. Nxc6 bxc6 14. Qg3 e5 15. Qxe5 Bf6 16. Qc5 Qxc5 17. Bxc5 Re8 18. Rfd1 Rb8 19. Bxa7 Rxb2 20. Bd4 Bxd4 21. Rxd4 Ba6 22. Rc1 h6 23. h4 c5 24. Ra4 Bd3 25. f3 c4 26. Nd5 Reb8 27. Kh2 Rd2 28. h5 Rbb2 29. Ne3 Re2 30. Nxc4 Rxg2+ 31. Kh3 Bxc4 32. Rcxc4 Rxa2 33. Rc8+ Kh7 34. Rxa2 Rxa2 35. Rc7 f6 36. Kg3 Kg8 37. Rc8+ Kf7 38. Rc7+ Kf8 39. f4 Ra3+ 40. Kg4 { 1-0 Le,Q (2731)-Zou,C (2449) Titled Tuesday intern op 23rd Jan Late Chess.com INT blitz 2024 (3) }) 11. Nxc6 bxc6 12. Be3 Bb7 13. Rfd1 Rfd8 { [#] } 14. f3 $146 (14. Rac1 h6 15. f3 Qa5 16. Kh1 Nd7 17. f4 Nb6 18. Bd3 c5 19. b3 Rac8 20. e5 Nd5 21. Nxd5 Rxd5 22. Rg1 Rd7 23. Bb5 Rdd8 24. Bc4 Bd5 25. Rc2 Rb8 26. Rgc1 Bxc4 27. Rxc4 Rb4 28. R1c2 a6 29. Bd2 Rxd2 30. Qxd2 Qb5 31. a4 Qb7 32. Rxb4 cxb4 33. Qc1 Bd8 34. Rc8 Qd5 35. h3 Kh7 36. Qc4 Qd1+ 37. Kh2 Qd2 38. Qc2+ Qxc2 39. Rxc2 g6 40. Rc8 { 1-0 Vitello,G (1744)-Farr,D (1480) OP-2022-0-05307 LSS email }) 14... Qa5 15. a3 c5 16. Bg5 h6 17. Bh4 Rd4 18. Be1 Qb6 19. a4 Bc6 20. a5 Qb8 21. Bf2 Rd8 22. Rxd8+ Qxd8 23. a6 Qc7 24. Rd1 Nh5 25. Be3 Nf6 26. Kh1 Qb6 27. e5 Nd7 28. f4 Rb8 29. f5 Nxe5 30. fxe6 Nxc4 31. Qxc4 Qxb2 32. Nd5 Bd6 33. exf7+ Kxf7 34. Bxc5 Bxc5 { 0.21/55;1d4 OVH2-94t }) 4. e3 c5 5. Bxc4 e6 6. O-O Nf6 7. b3 (7. dxc5 Bxc5 8. Qxd8+ Kxd8 9. Nc3 Ke7 10. Be2 Rd8 11. Na4 Ba7 12. b3 Nbd7 13. Nd4 Ke8 14. Bb2 Nd5 { [#] } 15. Nc2 $146 (15. Nf3 f6 16. Nc3 Nxc3 17. Bxc3 Nb6 18. Rfd1 Rxd1+ 19. Rxd1 Nd5 20. Bb2 b5 21. Bd3 h6 22. Nh4 Bd7 23. Bg6+ Ke7 24. Bh5 Be8 25. Ng6+ Bxg6 26. Bxg6 Rd8 27. Be4 Bb8 28. h3 Be5 29. Bxe5 fxe5 30. Rc1 Kd6 31. Bf3 { ½-½ Csiba,T (2458)-Malashenkov,A (2476) EU-chT12 sf2 email ICCF email 2021 }) 15... N7f6 16. Nc3 g6 (16... Bd7 17. Nxd5 Nxd5 18. Bxg7 Rac8 19. Rfc1 f6 20. Bf3 Kf7 21. Bxd5 exd5 22. Bh6 Rc3 23. Nd4 Rxc1+ 24. Rxc1 Bxd4 25. exd4 Rc8 26. Rxc8 Bxc8 27. Kf1 Kg6 (27... Bf5 28. Ke2 Ke6 29. Kd2 Bb1 30. Bf4 Kd7 31. h4 Bf5 32. f3 Ke6 33. g4 Bb1 { 0.24/59 }) 28. Bc1 Bd7 29. Ke1 Kf5 30. f3 Bb5 31. Kf2 h5 32. Bd2 b6 33. Bb4 Bd3 { 0.23/54 }) 17. Nxd5 Nxd5 18. Bf3 Bd7 19. Bxd5 exd5 20. Bf6 Rdc8 21. Nb4 Be6 22. Rad1 Rc5 23. Bd4 Rb5 24. Bxa7 Rxa7 25. Nc2 Ra5 26. a4 Ra8 27. Nd4 Rc5 28. f3 Rac8 29. Kf2 Rc3 { 0.20/49 }) 7... Nbd7 (7... cxd4 { was another line Torch looked at } 8. Nxd4 Be7 9. Nd2 Bd7 10. Be2 O-O 11. Bb2 Nc6 12. Rc1 Nxd4 13. Bxd4 Bc6 14. Nc4 Nd7 15. Qd2 Rc8 16. Rfd1 b5 17. Na5 Bd5 18. f3 Bg5 19. Rxc8 Qxc8 20. a4 bxa4 21. bxa4 Rd8 22. Rc1 Qb8 23. f4 Bf6 24. Nc6 Bxc6 25. Rxc6 Bxd4 26. Qxd4 Nf6 27. Qb6 Qxb6 28. Rxb6 a5 29. Rb5 g6 30. Rxa5 Rd2 31. Ra8+ Kg7 32. Kf2 Ra2 33. Kf3 Ra3 34. g3 Ra1 35. Kf2 { 0.18/63 }) 8. Bb2 Be7 9. dxc5 (9. Be2 { was another line Torch looked at } 9... O-O 10. Qc2 b5 11. dxc5 Bxc5 12. a4 Bb7 13. axb5 axb5 14. Bxf6 Qxf6 15. Rxa8 Rxa8 16. Rd1 Qe7 17. Bxb5 Nf6 18. Rc1 Bb4 19. Nd4 g6 20. Nd2 Ba3 21. Ra1 Rc8 22. Bc4 Bb4 23. h3 Nd5 24. Ne4 Nb6 25. Nf3 Bd5 26. Nfd2 Nxc4 27. bxc4 f5 28. Ng3 Bxd2 29. Qxd2 Bxc4 30. h4 Qxh4 31. Ra7 Rd8 32. Rd7 Rxd7 33. Qxd7 Qg4 34. Qd8+ { 0.21/67 }) 9... Bxc5 10. Nbd2 b6 11. Bd3 Bb7 12. Qe2 O-O 13. Rfd1 Qe7 14. a3 b5 15. Ng5 { [#] } 15... h6 $146 (15... Rfd8 16. Nge4 Bb6 17. a4 b4 18. Nxf6+ Nxf6 19. h3 h6 20. Rac1 a5 21. Nc4 Bc7 22. Ne5 Rac8 23. Ba6 Rxd1+ 24. Rxd1 Bxe5 25. Bxe5 Ne4 26. Bxb7 Qxb7 27. Qg4 f5 28. Qg6 Qf7 29. Qxf7+ Kxf7 30. Rd7+ Ke8 31. Rc7 Kd8 32. Rxg7 Rc1+ 33. Kh2 Nd2 34. h4 Nxb3 35. Rh7 Nc5 36. Rxh6 b3 37. Rh8+ Kd7 38. Rh7+ Ke8 39. Rh8+ Kd7 40. Rh7+ Ke8 41. Bd4 Nxa4 42. Rb7 b2 43. Bxb2 Rb1 44. Rb8+ Kf7 45. Rb7+ { ½-½ Glatzel,H (1937)-Andersen,J (2078) GER SC83 pr02 email ICCF email 2022 }) 16. Nge4 Rfc8 17. a4 Bb4 18. axb5 axb5 19. Rxa8 Bxa8 20. h3 Bd5 21. Ng3 e5 22. e4 Be6 23. Nf5 Qf8 24. Ne3 Bxd2 25. Rxd2 Qb4 26. Bxb5 Qxb3 27. Nd5 Bxd5 28. exd5 Rc5 29. Bc6 Qb4 30. Rd1 Qc4 31. Qd3 Qxd3 32. Rxd3 { 0.20/60 }) (2... e5 { For the Albin fans!1168817Mn } 3. dxe5 d4 4. Nf3 Nc6 5. a3 g6 6. Bg5 Be7 { [#] } 7. h4 $146 (7. Bf4 Bg4 8. Nbd2 Qd7 9. b4 f6 10. b5 Nxe5 11. Nxe5 fxe5 12. Bxe5 Nf6 13. h3 Be6 14. Nf3 Bxc4 15. Qxd4 Qxd4 16. Nxd4 O-O-O 17. Rc1 Rxd4 18. Bxd4 Bxb5 19. Bc5 Re8 20. Bxe7 Rxe7 21. g3 Bc6 22. Rg1 Re5 23. Bg2 Bxg2 24. Rxg2 Ra5 25. Rc3 Nd5 26. Rd3 Nb6 27. e4 c5 28. f4 c4 29. Rc3 Rb5 30. Rd2 Rb1+ 31. Ke2 h5 32. f5 gxf5 33. exf5 Rb5 34. f6 Re5+ 35. Re3 Rf5 36. Rf3 Re5+ { 1-0 Samunenkov,I (2501)-Reprintsev,A (2253) Titled Tuesday intern op 23rd May Early Chess.com INT blitz 2023 (2) }) 7... f6 8. Bf4 fxe5 9. Nxe5 Nxe5 10. Bxe5 Bf6 11. Qb3 Bxe5 12. Qb5+ Kf7 13. Qxe5 Nf6 14. h5 Nxh5 15. Rh4 Qxh4 16. Qxh8 Qf6 17. Qxh7+ Ng7 18. Qh2 Ne6 19. Nd2 Bd7 20. Ne4 Qh8 21. Qxh8 Rxh8 22. f3 Bc6 23. Nf2 Ba4 24. Ng4 Bc2 25. b4 Bf5 26. Nf2 g5 27. Ra2 a5 28. e4 dxe3 29. Nd1 e2 30. Bxe2 axb4 31. axb4 Nf4 32. Bf1 Bd3 33. Rd2 Re8+ 34. Kf2 Bxf1 35. Kxf1 Ra8 36. g3 Ne6 37. Ne3 Ra4 38. b5 Ra3 39. Kf2 Kg6 40. Rd7 Ra2+ 41. Kf1 Ra3 42. Ke2 Ra2+ 43. Rd2 Ra3 44. Rd5 { 0.54/67 }) 3. Nf3 Nf6 4. e3 Bf5 (4... g6 { One of my favourite lines as a professional. 137783Mn } 5. Nc3 Bg7 6. Be2 O-O 7. O-O Be6 8. b3 Ne4 9. Bb2 Nxc3 10. Bxc3 Bg4 11. h3 Bxf3 12. Bxf3 e6 { [#] } 13. a4 $146 (13. Rc1 Nd7 14. Qe2 a6 15. e4 dxe4 16. Bxe4 Re8 17. Rfd1 Qb8 18. g3 Qd6 19. Bg2 Rac8 20. a4 Qc7 21. a5 c5 22. b4 cxb4 23. Bxb4 Nb8 24. Qd2 Nc6 25. d5 Nxb4 26. d6 Qxa5 27. d7 b6 28. Rb1 Bf8 29. dxe8=N Rxe8 30. Qd7 Rb8 31. Qc7 Re8 32. Qd7 Rb8 33. Qc7 Re8 34. Bc6 Re7 35. Qc8 Kg7 36. Rd8 Nxc6 37. Qxc6 b5 38. Rc8 Ra7 39. c5 b4 40. Rc1 Qa3 41. Rd1 Be7 42. Qe8 Qb3 { 1-0 Socko,B (2636)-Prohaszka,P (2547) AUT-chT 1112 Austria 2012 (9.2) }) 13... Nd7 14. Qc2 Qe7 15. Rfd1 Nf6 16. Be1 Rfc8 17. Rab1 h5 18. Rdc1 a6 19. Ba5 Rf8 20. Rd1 Rfe8 21. Be2 Rac8 22. Bd3 Nd7 23. Rbc1 Nf6 24. Qb2 Nd7 25. Qd2 Bf8 26. Bc3 Bg7 27. Bb4 Qd8 28. Qe2 Bf8 29. Bc3 Qe7 30. Qc2 Qd8 31. Rb1 Qe7 32. Be1 Red8 33. Bf1 { 0.32/60 }) (4... a6 { Always an option at many different stages. 171002Mn } 5. Nbd2 Bf5 6. Nh4 Be6 7. Qc2 g6 { [#] } 8. Bd3 $146 (8. b3 Bg7 9. Bb2 Nbd7 10. Rc1 O-O 11. Be2 Rc8 12. O-O c5 13. Nhf3 Bf5 14. Qd1 dxc4 15. bxc4 cxd4 16. exd4 Ne4 17. h3 h5 18. Re1 e5 19. Nxe4 Bxe4 20. Nxe5 Nxe5 21. dxe5 Qg5 22. Bf1 Bxe5 23. Bxe5 Qxe5 24. Bd3 f5 25. Qb3 Rf7 26. Qb6 Rc6 27. Qb3 Kh7 28. Bxe4 fxe4 29. c5 Rfc7 30. Rc4 Rxc5 { ½-½ Meiners,E (2448)-Brunsteins,D (2401) WZ-ch C03 email ICCF email 2019 }) 8... c5 9. dxc5 Bg7 10. O-O Nbd7 11. c6 bxc6 12. Nhf3 O-O 13. Nd4 dxc4 14. Bxc4 Bxc4 15. Nxc4 Ng4 16. h3 Nge5 17. Nxe5 Nxe5 18. b3 Rc8 19. Rd1 Qa5 20. Bd2 Qb6 21. Ne2 c5 22. f4 Nd7 23. Rac1 Qb7 24. Ng3 Nb6 25. Qe4 Qxe4 26. Nxe4 c4 27. Ba5 cxb3 28. Rxc8 Nxc8 29. axb3 f5 30. Nc5 Nd6 31. Bc7 Ne4 32. Nxa6 Kf7 33. Rd8 Rxd8 34. Bxd8 e5 35. fxe5 Bxe5 36. Ba5 g5 37. Kf1 g4 38. Ke2 gxh3 39. gxh3 Ng5 40. h4 Ne4 41. Kf3 Ke6 { 0.21/57 }) 5. Nc3 { This Slow Slav line was Torch's first choice after 2...c6 } 5... e6 6. Nh4 Bg6 7. Nxg6 hxg6 8. Bd2 Nbd7 9. Qb3 Qb6 10. Be2 a6 11. O-O Qxb3 12. axb3 { [#] } 12... g5 $146 (12... Bd6 13. g3 Ne4 14. Be1 f5 15. f3 Nxc3 16. bxc3 Nf6 17. h4 Kd7 18. Kg2 Rh7 19. Bf2 Be7 20. Bd3 Rh5 21. Rh1 g5 22. hxg5 Rxg5 23. cxd5 cxd5 24. c4 g6 25. c5 Rh5 26. Rxh5 gxh5 27. b4 Rg8 28. b5 axb5 29. Bxb5+ Kc7 30. Kh3 Kb8 31. Be1 Bd8 32. Rb1 Kc8 33. Rc1 Bc7 34. c6 h4 35. Kxh4 Rh8+ 36. Kg5 Bd8 37. Kg6 Rg8+ 38. Kf7 bxc6 39. Rxc6+ Kb7 40. Rxe6 Rh8 { 1-0 Wu,S (2510)-Lim,Y (2348) Kuala Lumpur op 2nd 2005 (2) }) 13. f3 Be7 14. Rfd1 O-O 15. Kf1 Rad8 16. Na4 Rb8 17. g3 g6 18. Nc3 Rfe8 19. Kg2 Rbc8 20. Be1 c5 21. Na4 cxd4 22. exd4 Nb8 23. c5 Nc6 24. b4 Nd7 25. b5 axb5 26. Bxb5 Bf6 27. b4 Red8 28. Bc3 Ra8 29. Be2 Ne7 30. g4 e5 31. dxe5 Bxe5 32. Bxe5 Nxe5 33. Nb6 { 0.24/61 }) (1... f5 2. c4 e6 (2... Nf6 3. Nf3 g6 { 43545Mn. Forcing into the Leningrad } 4. g3 Bg7 5. Nc3 c6 6. Bg2 d6 7. O-O O-O 8. d5 e5 9. dxe6 Bxe6 10. b3 Na6 11. Ng5 Bc8 12. Bb2 h6 13. Nf3 Be6 14. Qc2 Nb4 15. Qd2 d5 16. a3 Na6 17. cxd5 Nxd5 18. Na4 { [#] } 18... Ndc7 $146 (18... Nf6 19. Qc2 Qe7 20. b4 Kh7 21. e3 Rad8 22. Bd4 Ne4 23. Bxg7 Kxg7 24. Rad1 Bd5 25. Nd4 Kh7 26. Rfe1 Qf6 27. Rd3 Nc7 28. Red1 Qe7 29. h4 Ne8 30. b5 N8f6 31. bxc6 bxc6 32. Nc3 Rd7 33. Nde2 Qf7 34. Nxd5 cxd5 35. Rc1 Qe6 36. Rb3 Qd6 37. Rcb1 Rc7 38. Qb2 Qd7 39. Rc1 Rf7 40. Rxc7 Qxc7 41. Bh3 Nc5 42. Rb5 a6 43. Rb8 Nd3 44. Qb1 h5 45. Rb3 Ne5 46. Bg2 Ne4 47. Qb2 Nc4 48. Qa1 { ½-½ Szerlak,A (2390)-Fabig,H (2334) EU-ch 2019 sf11 email ICCF email }) 19. Qc2 Bxb2 20. Nxb2 Qf6 21. Nd3 Rad8 22. b4 Bd5 23. a4 Kg7 24. Rab1 Ne6 25. b5 cxb5 26. axb5 Rc8 27. Qa4 Nac5 28. Nxc5 Rxc5 29. Rfd1 Be4 30. Rd7+ Rf7 31. Rbd1 { 0.47/54 }) 3. Nf3 Nf6 4. g3 Be7 5. Bg2 d5 { 31117Mn, As with most engines, they only want the Stonewall! } 6. Qc2 (6. O-O Ne4 7. Nc3 c6 8. Qc2 Nd7 9. Rb1 a5 10. a3 O-O 11. h4 Qe8 12. Bf4 h6 13. Be3 Nd6 14. b3 Qh5 15. Ne5 Nxe5 16. dxe5 Ne4 17. Nxe4 fxe4 18. f3 Qxe5 19. fxe4 Qxg3 20. Rxf8+ Bxf8 21. Bf2 Qe5 22. exd5 exd5 23. cxd5 cxd5 24. Rd1 Be6 25. Qg6 Bf7 26. Qb6 Bd6 27. Qxb7 Rf8 28. Bf3 Be6 29. Kf1 Rxf3 { 0-1 Nihal,S (2650)-Rapport,R (2763) Speed Chess Chess.com INT blitz 2021 (2.26) }) 6... c6 7. O-O Ne4 8. Be3 O-O 9. Nbd2 Nd7 10. Rad1 { [#] } 10... b5 $146 (10... Nef6 11. Bf4 Nh5 12. e3 g5 13. Be5 g4 14. Ne1 Nxe5 15. dxe5 Bd7 16. Nd3 Ng7 17. h3 b5 18. c5 h5 19. Nb3 a5 20. Nd4 Qc7 21. Kh2 Be8 22. Qe2 Bg5 23. Ra1 Bg6 24. Nf4 Bf7 25. a4 b4 26. Nd3 Kh7 { ½-½ Kolb,R (2160)-Wolf,K (2150) GER-chT2 LF-22 B4 email GER email 2007 }) 11. Nxe4 fxe4 12. Ne5 bxc4 13. Nxc6 Qe8 14. Nxe7+ Qxe7 15. b3 cxb3 16. axb3 Nf6 17. Ra1 Bd7 18. Qc5 Qxc5 19. dxc5 a5 20. Bd4 Rfe8 21. Rfc1 e5 22. Bc3 a4 23. bxa4 Rxa4 24. Rxa4 { 0.46/52 }) (1... e6 2. c4 b6 3. e4 Bb7 { 82744Mn Torch v2: } 4. Bd3 Nc6 5. Ne2 Nb4 6. O-O Nxd3 7. Qxd3 d6 { [#] } 8. a4 $146 (8. Nbc3 Nf6 9. d5 Be7 10. Nd4 Qd7 11. a4 c5 12. dxc6 Bxc6 13. b3 O-O 14. Ba3 Bb7 15. Ndb5 Rfd8 16. Rad1 Qc6 17. Qg3 Nxe4 18. Nxe4 Qxe4 19. Nxd6 Bxd6 20. Bxd6 Qg6 21. Bc7 Rxd1 22. Rxd1 Rc8 23. a5 b5 24. Qxg6 hxg6 25. Rd8+ { ½-½ Kramnik,V (2809)-Ivanchuk,V (2717) Amber-rapid 11th Monte Carlo 2002 (9) }) 8... Be7 9. Nbc3 Nf6 10. a5 bxa5 11. d5 O-O 12. Nd4 Qc8 13. Rxa5 a6 14. h3 Re8 15. Rd1 Nd7 16. Qc2 Bf6 17. Ra3 Rb8 18. Nce2 g6 19. Ng3 Ba8 20. b3 Be5 21. Nge2 Bg7 22. Be3 Nc5 23. Nc3 Nd7 24. Ra2 Nc5 25. Rb1 Rb4 26. Nce2 c6 27. dxe6 Nxe6 28. Nxe6 { 0.59/55 }) 2. c4 { Torch seemed to favour 2.Nf3 which cuts out some of the lines here, but I was still very interested! } (2. Nf3 g6 { My choice. I was curious how Torch would meet the Grunfeld as it was playing 2.Nf3 against 1...Nf6. 322441Mn } 3. c4 Bg7 4. Nc3 d5 5. cxd5 (5. Qb3 { A line I was interested in: what would Torch find? 952159Mn https://lichess.org/@/loepare: '952159Mn Torch v2:' } 5... dxc4 6. Qxc4 O-O 7. e4 a6 8. Be2 b5 9. Qb3 c5 10. dxc5 Be6 11. Qc2 Nbd7 12. Be3 Rc8 13. Rd1 b4 14. Nd5 Bxd5 15. exd5 Nxc5 16. O-O Nce4 17. Qd3 Qd6 18. Qxa6 Qxa6 19. Bxa6 Rc2 20. Bd4 Nd6 21. Bd3 Rc7 22. Bb1 Rb8 23. Rfe1 Rb5 24. g3 Rxd5 { [#] } 25. Be3 $146 (25. Kg2 h6 26. h4 h5 27. a4 bxa3 28. bxa3 Nc4 29. Rc1 Ng4 30. Ba2 Bxd4 31. Rxc4 Rxc4 32. Bxc4 Bxf2 33. Bxd5 Bxe1 34. Bxf7+ Kxf7 35. Nxe1 Ne3+ 36. Kf3 Nc4 37. a4 e5 38. Nc2 Ke7 39. Ne3 Nd2+ 40. Ke2 Nb3 41. Nc4 Nc5 42. a5 Ke6 43. Ke3 Kd5 44. Nd2 Ke6 45. Ne4 Na6 46. Nc3 Kf5 47. Kf3 Nc5 48. g4+ hxg4+ 49. Kg3 e4 50. Nd1 Ke5 51. Kxg4 Kd4 52. Kg3 Na6 53. Kf4 Nc5 54. Kg4 e3 { ½-½ Schnabel,M (2448)-Brasier,J (2427) ICCF GMN/055 email ICCF email 2017 }) 25... Rxd1 26. Rxd1 Ng4 27. Bc1 Rc8 28. h3 Ne5 29. Nxe5 Bxe5 30. Kg2 Kg7 31. g4 Rc7 32. Re1 Bd4 33. Bd2 b3 34. axb3 Bxb2 35. Rd1 Rb7 36. Bc2 Rc7 37. Bd3 Ra7 38. Be3 Ra3 39. Bc4 Be5 40. Rd5 Bc3 41. Rc5 Nxc4 42. bxc4 { 0.08/68;Fire Openings-More 1.d4 with theory review }) 5... Nxd5 6. e4 Nxc3 7. bxc3 c5 8. Be3 (8. Rb1 { I was curious about this line! 55814Mn } 8... O-O 9. Be2 cxd4 10. cxd4 Qa5+ 11. Bd2 Qxa2 12. O-O Bg4 13. Be3 Nc6 14. d5 Ne5 15. Rxb7 a5 16. Rxe7 a4 17. Re1 Nxf3+ 18. gxf3 Bh3 19. e5 a3 20. d6 Be6 21. f4 Qb2 22. Bf3 a2 23. Bxa8 Rxa8 24. d7 Bf8 25. d8=Q Rxd8 26. Qxd8 a1=Q 27. Rxa1 Qxa1+ 28. Kg2 Bd5+ 29. Qxd5 Bxe7 { [#] } 30. Qb7 $146 (30. Qc6 Qd1 31. h3 Qd8 32. e6 Kg7 33. exf7 Kxf7 34. Qc4+ Kf8 35. Kg3 Qd1 36. f5 Qh5 37. Qc8+ Kg7 38. Qd7 Kf8 39. fxg6 Qxg6+ 40. Qg4 Kf7 41. Qxg6+ hxg6 42. Kg4 Bd8 { ½-½ Cousins,R (2371)-Palladino,M (2271) W-ch WS/M/823 email ICCF email 2021 }) 30... Qd1 31. h3 Qd8 32. Kh2 Kf8 33. f5 gxf5 34. Bh6+ Ke8 35. Bg7 f6 36. Qf3 Qc7 37. Qh5+ Kd8 38. Qxf5 Qxe5+ 39. Qxe5 fxe5 40. Bxe5 Ke8 41. Bb8 Kf7 42. f4 Bh4 43. f5 Kg7 44. Be5+ Kg8 { 0.12/66 }) 8... Qa5 9. Qd2 Nc6 10. Rb1 a6 11. Rc1 cxd4 12. cxd4 Qxd2+ 13. Kxd2 e6 14. Bd3 O-O 15. h4 h6 16. Rc5 Bd7 17. Rb1 b5 18. e5 Rfd8 19. Be4 Rac8 20. Rbc1 Na5 21. Rxc8 Rxc8 22. Rxc8+ Bxc8 { [#] } 23. Kd3 $146 (23. Kc2) 23... Bd7 24. Bd2 Nc6 25. Ne1 Bf8 26. Nc2 a5 27. Ne3 h5 28. Bxc6 Bxc6 29. Bxa5 Be7 30. g3 f6 31. exf6 Bxf6 32. Kc3 g5 33. hxg5 Bxg5 34. Bb6 Kf7 35. Kb4 Ke8 36. f4 Bf6 37. d5 exd5 38. Nf5 Kd7 39. Nd4 h4 40. gxh4 Bxh4 41. Ka5 Be1+ 42. Ka6 { 0.15/63 }) 2... e6 (2... g6 3. h4 { Torch's final choice after a very large amount of thinking! 1486845Mn } (3. Nc3 Bg7 { Let's see the King's Indian! 656755Mn } 4. e4 d6 5. Nf3 (5. f3 O-O 6. Bg5 { My favourite! 45531Mn } (6. Nge2 { 52883Mn } 6... c5 7. d5 a6 8. a4 e6 9. Ng3 h5 10. Be2 exd5 11. cxd5 Nh7 12. Nf1 { [#] } 12... Qh4+ $146 (12... f5 13. exf5 gxf5 14. Bf4 Nd7 15. Nd2 Ne5 16. O-O Ng6 17. Bg3 h4 18. Bf2 Nf4 19. Kh1 Qg5 20. Rg1 Bd4 21. Bxd4 cxd4 22. Na2 d3 23. Bf1 Nh5 24. Bxd3 Ng3+ 25. hxg3 hxg3 26. Re1 Qh4+ 27. Kg1 Qd4+ { 0-1 Natsidis,C (2357)-Jaeger,D (2210) Oberliga Ost-A 1516 Germany 2015 (5.1) }) 13. g3 Qe7 14. Ne3 Bh3 15. Bf1 Bxf1 16. Kxf1 Nd7 17. a5 b5 18. axb6 Nxb6 19. Na4 Rab8 20. Nxb6 Rxb6 21. Qc2 Rb4 22. Kg2 Ng5 23. Rf1 Rfb8 24. Nd1 R4b6 25. Qe2 f5 26. Qd2 Nf7 27. exf5 gxf5 28. Ra3 Bd4 29. Re1 Qb7 30. Ne3 Qd7 31. Ra2 Ne5 32. Qc2 Bxe3 33. Rxe3 Qf7 34. b3 h4 35. Bb2 Ng6 36. Re6 Rxb3 37. Rxd6 { 0.21/58 }) (6. Be3 { 58928Mn } 6... c5 7. Nge2 Qa5 8. Nc1 cxd4 9. Nb3 Qb6 10. Bxd4 Qd8 11. Be2 Be6 12. O-O Nc6 13. Bf2 Nd7 14. Nd4 Nxd4 15. Bxd4 Bxd4+ 16. Qxd4 Qb6 17. Qxb6 Nxb6 18. b3 a5 { [#] } (18... Nd7 19. f4 f6 20. h3 a6 21. Rf3 Rfc8 22. Rg3 Rc5 23. h4 Kf8 24. a4 Rb8 25. Rd1 Bf7 26. Bg4 f5 27. Be2 Nf6 28. Re3 Nxe4 29. Nxe4 fxe4 30. Rxe4 Rbc8 31. Red4 { ½-½ Larwinski,P (2508)-Ludgate,A (2459) FICGS class GM 000007 email FICGS email 2021 (1) }) 19. h4 $146 (19. f4 f6 20. Bf3 Rad8 21. Rae1 Nd7 22. Rf2 Nc5 23. Rd2 Rc8 24. e5 dxe5 25. fxe5 f5 26. Ne2 Kg7 27. Nd4 Bg8 28. Red1 g5 29. g4 fxg4 30. Bxg4 Rce8 31. Rf2 Kh8 32. h3 Rd8 33. Rf3 Rxf3 34. Bxf3 Be6 35. Nxe6 Rxd1+ 36. Bxd1 Nxe6 { ½-½ Meissen,F (2399)-Anokhin,Y (2421) DE WebServ 10th sf 11 email ICCF email 2018 }) 19... a4 20. Kf2 axb3 21. axb3 Nd7 22. Rfe1 Rfc8 23. Bd3 Nc5 24. Bc2 Na6 25. Ke3 Nb4 26. Kd2 Kf8 27. Bd3 h6 28. Be2 Nc6 29. Nb5 g5 30. h5 Bd7 31. Kc3 Nd8 32. Nd4 e6 33. Kb2 Ke7 34. g3 Nc6 35. Nxc6+ { 0.26/60 }) 6... a6 7. Nge2 b5 8. Qd2 { [#] } 8... c5 $146 (8... Nbd7 9. Ng3 c5 10. d5 Qa5 11. cxb5 axb5 12. Nxb5 Qxd2+ 13. Bxd2 Ba6 14. a4 Rfb8 15. Rb1 Ne8 16. b3 Rb7 17. Kd1 h5 18. Na3 h4 19. Bxa6 Rxa6 20. Ne2 Ne5 21. Rf1 c4 22. bxc4 Rxb1+ 23. Nxb1 Rxa4 24. Kc2 Rxc4+ 25. Nbc3 f5 26. Bf4 Nd7 27. Kd3 Rb4 28. Be3 Ne5+ 29. Kc2 Nc4 30. Bc1 Kf7 31. Nf4 Nc7 32. g4 hxg3 33. hxg3 Ne5 34. Bd2 Nc4 35. Bc1 Ne5 36. Bd2 Rc4 37. Kb3 Na6 38. Ne6 { ½-½ Vitiugov,N (2724)-Najer,E (2707) FIDE World Cup Tbilisi 2017 (2.1) }) 9. dxc5 b4 10. Na4 Nc6 11. Nb6 Rb8 12. Nxc8 Qxc8 13. cxd6 Rd8 14. c5 exd6 15. cxd6 h6 16. Bxh6 Bxh6 17. Qxh6 Rxd6 18. Rc1 Qd8 19. Qe3 Nh5 20. Ng3 b3 21. axb3 Qh4 22. Qh6 Rxb3 23. Rc5 Qf6 24. Nxh5 Qd4 25. Qg7+ Qxg7 26. Nxg7 Kxg7 27. h4 Rxb2 28. h5 Nd4 29. hxg6 Rxg6 30. Rd5 Nc2+ 31. Ke2 Nd4+ 32. Kd3 Ne6 33. Ke3 Rb3+ 34. Rd3 Rxd3+ 35. Bxd3 Rxg2 36. Ra1 a5 37. Bc4 Rc2 38. Bxe6 fxe6 39. Rxa5 Rh2 40. Rg5+ Kf7 { 0.08/55 }) (5. f4 { 35517Mn Torch v2: } 5... O-O 6. Nf3 c5 7. Be2 cxd4 8. Nxd4 Nc6 9. Be3 Bg4 10. Nxc6 Bxe2 11. Nxd8 Bxd1 12. Rxd1 Rfxd8 13. b3 { [#] } (13. Ke2 Ng4 14. Bd4 e5 15. fxe5 dxe5 16. Be3 Nxe3 17. Kxe3 h5 18. Ke2 Bf8 19. Rd5 Rxd5 20. cxd5 Rc8 21. Kd3 Kg7 22. Rf1 a6 23. a4 Bb4 24. g3 Kf8 25. Ne2 Ke7 26. h3 Bd6 27. Nc3 Bc5 28. Ne2 Rf8 29. Kc4 Bd6 30. Ng1 { ½-½ Balta,M (2343)-Leemans,R (2382) ROM 100/B email ICCF email 2018 }) 13... Ne8 $146 (13... a6) 14. Bd4 Bxd4 15. Rxd4 f5 16. Ke2 Nf6 17. Rhd1 fxe4 18. Nxe4 Nxe4 19. Rxe4 Kf7 20. Rd5 e6 21. Rd3 h5 22. Rde3 Re8 23. h3 Rac8 24. g4 Rc5 25. a4 b6 26. Rd4 Rd8 27. Kf2 a6 28. Rde4 Re8 29. Re1 d5 30. cxd5 Rxd5 31. R1e3 b5 32. a5 b4 33. Rxb4 Rxa5 34. Rb6 hxg4 35. hxg4 Re7 36. Re4 Ra2+ 37. Ke3 Ra3 38. g5 { 0.14/60 }) 5... O-O 6. Be2 e5 7. O-O exd4 (7... Nc6 { Just to find out what Torch wants against the Mar del Plata lines! 386241Mn } 8. d5 Ne7 9. b4 a5 10. bxa5 Rxa5 11. a4 Ra8 { Recently 11...Ne8 got a lot of attention. } 12. Be3 Ng4 13. Bd2 Nf6 14. Ne1 b6 15. f3 Ne8 16. Nd3 f5 { [#] } 17. Qc2 $146 (17. Be3 h5 18. Ra3 Kh7 19. Qd2 fxe4 20. Nxe4 Nf5 21. Bg5 Nf6 22. Ndf2 Qe8 23. Nc3 Bd7 24. Bd3 Nd4 25. Rfa1 Ra5 26. h3 Qf7 27. R1a2 Rfa8 28. Qc1 Bf5 29. Bf1 Bd7 30. Bd2 Qf8 31. h4 Bh6 32. Bg5 Bf5 33. Qd1 Bd7 34. Qd2 Be8 35. Qc1 Bxg5 36. hxg5 Nd7 37. Nd3 Nc5 38. Nxc5 bxc5 39. Rb2 Bd7 40. Ne4 Kg7 41. Nf6 Qd8 42. Bd3 Rxa4 43. Rxa4 Rxa4 44. f4 exf4 45. Qxf4 Bg4 46. Qe3 Ra3 { ½-½ Repp,H (2515)-Oreopoulos,K (2504) ICCF GMN/A/05 email ICCF email 2020 }) 17... Kh8 18. Rfb1 Ng8 19. Qc1 Nef6 20. Ra3 fxe4 21. fxe4 Bd7 22. Nf2 h5 23. Rba1 Kh7 24. a5 Rxa5 25. Rxa5 bxa5 26. Rxa5 Bh6 27. c5 dxc5 28. Rxc5 Bxd2 29. Qxd2 Nh6 30. Ncd1 Nf7 31. Qc1 Ne8 32. Nb2 Nfd6 33. Nbd3 Bb5 34. Nh3 Qe7 35. Qe3 Bxd3 36. Ng5+ Kg8 { 0.52/63 }) 8. Nxd4 Nc6 9. Be3 Re8 10. f3 Nh5 11. Nc2 f5 12. Qd2 fxe4 13. fxe4 Nf6 14. Bg5 Rf8 { [#] } 15. h3 $146 (15. Rf2 Be6 16. Raf1 Rf7 17. Qf4 Qf8 18. Qh4 Nd7 19. Bg4 Bxg4 20. Rxf7 Qe8 21. Qxg4 Nde5 22. Rxg7+ { 1-0 Mareco,S (2568)-Pichot,A (2300) Buenos Aires La Porta op-A 2012 (8) }) 15... Be6 16. Rf2 Ne5 17. Nd4 Qe7 18. Nd5 Bxd5 19. exd5 h6 20. Bxf6 Bxf6 21. Ne6 Bg5 22. Qd4 Rxf2 23. Qxf2 Qf6 24. Qg3 Nd7 25. Rf1 Qe5 26. Qd3 Qe3+ 27. Kh1 Qxd3 28. Bxd3 Ne5 29. Be4 a5 30. b3 Rc8 31. Kh2 Be7 32. Kg3 c6 33. Kh2 Rb8 34. g4 Rc8 35. Kg3 Re8 36. Bb1 cxd5 37. cxd5 { 0.41/64 }) 3... Bg7 4. Nc3 c5 5. d5 d6 6. e4 e6 7. Be2 exd5 8. exd5 Nbd7 9. Kf1 h5 10. g3 O-O 11. Kg2 Re8 12. a4 Ne4 13. Nxe4 Rxe4 14. Bd3 Re8 15. Nf3 Ne5 16. Nxe5 Bxe5 { [#] } 17. Bg5 $146 (17. Qc2 Qf6 18. Bg5 Qg7 19. Rae1 Bd7 20. b3 b6 21. Re2 Bf6 22. Bf4 Rxe2 23. Qxe2 Re8 24. Qd2 Bc3 25. Qc1 Bb2 26. Qd1 Be5 { ½-½ Brodda,W-Wegelin,R Team-ch L21K1-R(6-7) freechess.de 2023 }) 17... Qc7 18. Qc2 Bg7 19. Rhe1 Bd7 20. Be4 b6 21. Re3 f5 22. Bf3 Rxe3 23. Bxe3 a5 24. Bg5 Rb8 25. Qe2 Ra8 26. Ra2 Rb8 27. Kh1 Re8 28. Qd2 Qb8 29. b3 Kf7 30. Kg2 Bf6 31. Bxf6 Kxf6 32. Qh6 Rh8 33. Qf4 Re8 34. Rb2 Kf7 35. Re2 Rxe2 36. Bxe2 Be8 37. Qh6 { 0.18/67 }) (2... e5 { Just for MrDodgy! 287266Mn } 3. dxe5 Ng4 4. e3 Nxe5 5. f4 Nec6 6. Nc3 g6 7. b3 Bg7 8. Bb2 d6 9. Qd2 a5 10. Nge2 O-O 11. Ng3 Nd7 12. Be2 { [#] } 12... Nb4 $146 (12... Nc5 13. O-O Nb4 14. Rad1 Qe7 15. f5 Bh6 16. Kh1 Bxe3 17. Qe1 Bg5 18. Qf2 c6 19. Qf3 h6 20. a3 Nc2 21. Nd5 cxd5 22. Qc3 Bf6 23. Qxc2 Bxb2 24. Qxb2 Ne4 25. Nxe4 dxe4 26. f6 Qe5 27. Qc1 Qg5 28. Qxg5 hxg5 29. Rxd6 g4 30. Kg1 Re8 31. Kf2 e3+ 32. Kg3 Bf5 33. Re1 Rac8 34. Rb6 Rc7 35. a4 Re4 36. Rb5 Rc6 37. Rxb7 Rxf6 38. Rb5 Bd7 39. c5 Rc6 40. Bd3 Re7 41. Rxa5 g5 42. h4 { ½-½ Camacho Dominguez,F (2338)-Krzyzanowski,A (2362) EU-ch 2021 sf16 email ICCF email }) 13. f5 Nc5 14. O-O Bd7 15. Rf4 Be5 16. Raf1 f6 17. R4f3 Nc6 18. Bd1 a4 19. bxa4 g5 20. h4 h6 21. hxg5 hxg5 22. Nh5 Be8 23. Nf4 gxf4 24. exf4 Bd4+ 25. Kh1 Rf7 26. Rh3 Bd7 27. g4 Rh7 28. Rxh7 Kxh7 29. Kg2 Kg7 30. Nd5 Bxb2 31. Qxb2 Nxa4 32. Bxa4 Rxa4 33. Rc1 Ne5 34. g5 Rxc4 { 0.50/59 }) (2... c5 3. d5 e6 { 449661Mn for Torch on the Modern Benoni: } (3... b5 { Not that popular nowadays but always a tough nut for engines to crack in engine games 399258Mn } 4. cxb5 a6 5. e3 axb5 6. Bxb5 Qa5+ 7. Nc3 Bb7 8. Bd2 Qb6 9. a4 Nxd5 10. Nf3 e6 11. O-O Be7 12. e4 Nb4 13. Ne5 O-O 14. Bf4 Qd8 15. Qg4 d6 16. Rad1 N8c6 { [#] } 17. Nf3 $146 (17. Nxc6 Nxc6 18. Bxc6 Bxc6 19. Rd3 f5 20. exf5 Rxf5 21. Re1 Qd7 22. Bg3 d5 23. Rde3 h5 24. Qe2 h4 25. Be5 d4 26. Rd3 Qb7 27. Qg4 Bd8 28. Qg6 Rxe5 29. Rxe5 dxc3 30. Qxe6+ Kf8 31. Rxd8+ { 1-0 Olsen,F (2335)-Bekasovs,R (2182) World ol U16 Konya 2018 (4.16) }) 17... Qb8 18. Qg3 e5 19. Bh6 Bf6 20. Bxc6 Bxc6 21. Nh4 Kh8 22. Rxd6 Rg8 23. Rxf6 gxf6 24. Qf3 Qd6 25. Nf5 Qe6 26. Be3 Nd3 27. Nh6 f5 28. Nxf5 f6 29. Ra1 Nxb2 30. Nh6 Rg7 31. h3 Nc4 32. Rd1 Nb2 33. Rc1 Nc4 34. Nf5 Rd7 35. Bh6 Rg8 36. Nd5 Nd6 { 0.38/62 }) (3... a6 { 191095Mn Torch v2: } 4. a4 d6 5. Nc3 g6 6. e4 Bg7 7. h3 a5 { [#] } 8. Bf4 $146 (8. Nf3 e5 9. dxe6 fxe6 10. e5 dxe5 11. Qxd8+ Kxd8 12. Nxe5 Ke7 13. Bg5 Nd7 14. f4 h6 15. Nxg6+ Ke8 16. Bxf6 Bxf6 17. Nxh8 Bxh8 18. Nb5 Ke7 19. O-O-O b6 20. Bd3 Bb7 21. Rhe1 Rf8 22. Be4 Bxe4 23. Rxe4 Nf6 24. Re3 Nh5 25. g3 Ng7 26. Rd6 Nf5 27. Rexe6+ Kf7 28. Rxb6 Rd8 29. g4 Nd4 30. Nxd4 Rxd4 31. Rxh6 Rxc4+ 32. Kb1 Bd4 33. Rb7+ Ke8 34. Rg6 { 1-0 Roeder,M (2467)-Canseco Arenas,A Madrid Once op 3rd 2000 (1) }) 8... Qb6 9. Ra3 Na6 10. Be2 e5 11. dxe6 Bxe6 12. Nf3 O-O 13. O-O Rad8 14. Nd2 Bd7 15. Qb1 Rfe8 16. Bg5 Nb4 17. f4 h6 18. Bh4 Nh7 19. Kh1 Bf6 20. Bg3 Bg7 21. Bf3 Qc7 22. Re1 b6 23. Nf1 Qc8 24. Nd5 Qb8 25. Nfe3 Nxd5 26. cxd5 b5 27. axb5 Qxb5 28. b3 Qb4 29. Nc4 Bb5 30. Qa2 f5 31. Rxa5 fxe4 32. Rxe4 { 0.88/59 }) 4. Nc3 g6 { Either this or 4...d6 is the most popular move order for engines to avoid the "Flick-knife" system! } (4... exd5 { The normal human choice } 5. cxd5 d6 { 928442Mn } 6. e4 g6 7. f4 Bg7 8. Bb5+ Nfd7 9. a4 Na6 10. Nf3 Nb4 11. O-O a6 12. Be2 (12. Bxd7+ Bxd7 13. f5 O-O 14. Bg5 f6 15. Bf4 gxf5 16. Qd2 Re8 17. Rae1 c4 18. exf5 Rxe1 19. Nxe1 Bxf5 20. Bxd6 Qxd6 21. Rxf5 Re8 22. g3 Qd7 23. Rf1 f5 24. d6 b5 25. axb5 axb5 26. Ne2 Re6 27. Rxf5 Rxe2 28. Qxe2 Qxf5 29. Qe8+ Bf8 30. d7 Nc6 31. d8=Q Nxd8 32. Qxd8 b4 33. Qd1 Bc5+ 34. Kg2 Qf2+ 35. Kh3 Qf1+ 36. Kg4 h5+ { 0-1 Keymer,V (2738)-Rapport,R (2720) Karlsruhe Grenke 2024 (8) }) 12... O-O 13. Be3 Re8 14. Bf2 f5 15. e5 dxe5 16. d6 exf4 17. Re1 h6 18. Nd5 Re4 19. Nd2 Nxd5 20. Nxe4 Ne3 21. Bxe3 fxe3 22. Qd5+ Kh7 23. Nxc5 Nf6 { [#] } 24. Qf7 $146 (24. Qd3 b6 25. Bf3 Rb8 26. Nxa6 Bxa6 27. Qxa6 Qxd6 28. Kh1 Qf4 29. Qe2 Re8 30. g3 Qd4 31. Rac1 h5 32. Kg2 Re7 33. Rc3 Ng4 34. h3 Ne5 35. Rd1 Qxa4 36. Rxe3 Qe8 37. Rd5 Qb8 38. b3 Qc7 39. g4 hxg4 40. hxg4 fxg4 41. Bxg4 Bf6 42. Bf3 Kg7 43. Re4 Qc3 44. Qe3 Qc2+ 45. Rd2 Qc7 46. Qf2 Qc3 47. Re3 Qb4 48. Rd5 Rf7 49. Rdxe5 Bxe5 { ½-½ Praznik,N (2442)-Dimov,D (2461) ICCF Slav Cup6 email ICCF email 2019 }) 24... Qxd6 25. Rac1 b6 26. Red1 Qb8 27. Nb3 Qf4 28. Kh1 Bd7 29. Rxd7 Nxd7 30. Qxd7 Qb4 31. Qe6 Ra7 32. Bc4 h5 33. Qxe3 Re7 34. Qd3 Bxb2 35. Rf1 Qxa4 36. Bxa6 Rd7 37. Qb5 Qxb5 38. Bxb5 Rd5 39. Bc4 Rd6 40. Kg1 Rc6 41. Bd5 Rd6 42. Bf3 Rd3 43. Nc1 Bd4+ 44. Kh1 Ra3 45. Rd1 Be3 46. Nd3 Kg7 47. Be2 Kh6 48. Rb1 h4 49. Ne1 { 0.74/66 }) 5. e4 d6 6. Be2 exd5 7. exd5 Bg7 8. Nf3 Bg4 9. O-O O-O 10. h3 Bxf3 11. Bxf3 Nbd7 12. Bg5 a6 13. Qc2 h6 14. Bh4 Qc7 { [#] } 15. Be2 $146 (15. Rae1 Rfe8 16. Be2 Rab8 17. f4 Qa5 18. Bd3 b5 19. Rxe8+ Nxe8 20. Re1 Nf8 21. Re2 bxc4 22. Bxc4 Qb4 23. Qd3 Nd7 24. a3 Qa5 25. Be1 Qb6 26. Kh1 Nc7 27. Re7 Rd8 28. Na4 Qb8 29. Ba5 Kf8 30. Re2 Nf6 31. Nc3 Nh5 32. g3 Rd7 33. Kh2 Re7 34. Rxe7 Kxe7 35. b3 Kf8 36. a4 f5 37. Nd1 Nf6 38. Nf2 Qb7 39. Bxc7 Qxc7 40. Bxa6 Qa5 41. Bc4 Qe1 42. Kg2 h5 43. Qd1 Qc3 44. Qf3 Qd2 { 0-1 Straka,V (2290)-Cerveny,M (2411) CZE-chT1W 1516 Czech Republic 2015 (2.2) }) 15... Nh7 16. Rae1 Rae8 17. f4 Re3 18. Bd3 Rxe1 19. Rxe1 Ndf6 20. Kh2 Rb8 21. a4 h5 22. Rf1 Re8 23. Kh1 Nd7 24. Bf2 Ndf6 25. Be1 Qe7 26. Bh4 Qc7 27. Rf3 Qd7 28. Qf2 Qd8 29. g3 Qb6 30. Qc2 Qc7 31. Kg1 Re1+ 32. Kh2 Re8 33. Rf2 Qd7 34. Kg2 Qc7 35. Qd2 Nd7 36. f5 Ne5 37. f6 { 0.60/69 }) 3. Nf3 (3. Nc3 Bb4 { I was curious to see whether Torch too favoured 4.e3... and it did! 218073Mn } 4. e3 (4. Qc2 { 34494Mn. Played a lot by Abasov in the Candidates. } 4... O-O 5. a3 Bxc3+ 6. Qxc3 d5 7. Bg5 dxc4 8. Qxc4 b6 9. Nf3 Ba6 10. Bxf6 Qxf6 11. Qxc7 Rc8 12. Qe5 Qg6 13. e4 Bxf1 14. Kxf1 Nd7 15. Qf4 Rc2 16. g3 Nf6 17. Re1 Rxb2 { [#] } 18. Qc1 $146 (18. Ne5 Qh5 19. h4 Qh6 20. Qf3 Rc8 21. Nxf7 Kxf7 22. e5 Rcc2 23. exf6 Qxf6 24. Qxf6+ Kxf6 25. Kg2 Rxf2+ 26. Kh3 Rbd2 27. Re4 h5 28. a4 g6 29. Re3 Rxd4 30. Rhe1 Rd6 31. Re4 Kf7 32. R1e3 Rdd2 33. g4 Rh2+ 34. Kg3 Rdg2+ 35. Kf3 Rf2+ 36. Kg3 Rhg2+ 37. Kh3 hxg4+ 38. Rxg4 Rh2+ 39. Kg3 Rhg2+ 40. Kh3 Rxg4 41. Kxg4 Rf5 42. Rc3 Kf6 43. Rc7 Ra5 44. Rc4 Rc5 45. Rf4+ Rf5 46. Rc4 Rf1 47. Rc8 Rb1 { 0-1 Diaz Lopez,P (1985)-Gonzalez Aguirre,L (2207) La Pobla de Lillet op 21st 2011 (4) }) 18... Ra2 19. Qc4 Rxa3 20. Kg2 Qh5 21. Ne5 h6 22. h3 Rd8 23. Qc7 Rf8 24. Qc2 Rd8 25. Rd1 b5 26. Qb2 Ra4 27. h4 Ng4 28. Qe2 f5 29. exf5 exf5 30. Qxb5 Raxd4 31. Rxd4 Rxd4 32. Re1 Rd2 33. Nxg4 Qxg4 34. Re5 Rd8 35. Rxf5 Qe4+ 36. Kh2 Qd3 37. Qxd3 Rxd3 38. f4 Rd4 39. Ra5 Kh7 40. Rxa7 { 0.08/56;Fire Openings-BEAST 1.d4 etc with theory re Fire Openings 2024 }) (4. a3 { 45423Mn } 4... Bxc3+ 5. bxc3 b6 6. e4 Nxe4 7. Qg4 f5 8. Qxg7 Qf6 9. Qxf6 Nxf6 10. Nf3 Bb7 11. Nd2 Nc6 12. Nb3 a5 13. a4 { [#] } 13... Ba6 $146 (13... Kf7 14. f3 e5 15. Bg5 d6 16. O-O-O exd4 17. cxd4 d5 18. c5 Ba6 19. cxb6 Bxf1 20. Rhxf1 cxb6 21. Kb1 Rhc8 22. Rd3 Ne7 23. Nd2 Nc6 24. Rc1 Nb4 25. Rdc3 { ½-½ Gray,G (2320)-Rita,G (2351) FICGS rapid SM 000028 email FICGS email 2023 (1) }) 14. f3 Kf7 15. Kf2 Rae8 16. h4 d6 17. Bd3 d5 18. cxd5 Bxd3 19. dxc6 Nd5 20. Re1 Rd8 21. Bd2 Bc4 22. Nc1 Rd6 23. Ne2 Rxc6 24. Nf4 Nxf4 25. Bxf4 h5 26. Ra3 Ke7 27. g3 Kd7 28. Be5 Rg8 29. Ke3 Bd5 30. Bf4 Rc4 31. Be5 { 0.00/62 }) (4. f3 { 34591Mn } 4... c5 5. d5 O-O 6. e4 b5 7. e5 Ne8 8. f4 exd5 9. cxd5 d6 10. Nf3 c4 11. a4 Nd7 12. Be2 Qb6 13. axb5 dxe5 14. fxe5 Nc7 15. Qd4 Qxd4 16. Nxd4 Nxe5 17. Kf2 Bxc3 18. bxc3 Nxd5 19. Nc6 { [#] } 19... Nxc3 $146 (19... f6 20. Ba3 Rf7 21. Rhd1 Be6 22. Rxd5 Bxd5 23. Ne7+ Rxe7 24. Bxe7 Nd3+ 25. Ke3 Re8 26. Rxa7 Kf7 27. Kd4 Rxe7 28. Rxe7+ Kxe7 29. Kxd5 Nf4+ 30. Kc6 Nxe2 31. b6 Nd4+ 32. cxd4 c3 33. b7 c2 34. b8=Q c1=Q+ 35. Kd5 Qg5+ 36. Kc4 Qc1+ 37. Kd5 { ½-½ Rezzuti,V (2381)-Parisi,G (2351) ITA-ch71 final email ICCF email 2021 }) 20. Nxe5 Nxe2 21. b6 Nxc1 22. Rhxc1 Be6 23. b7 Rab8 24. Rxa7 Bd5 25. Nd7 Rxb7 26. Rxb7 Bxb7 27. Nxf8 Kxf8 28. Rxc4 g6 29. Rc2 Kg7 30. Ke3 Bd5 31. Kd4 Be6 32. Rd2 Kf6 33. Re2 Kg7 34. Kc5 Bb3 35. Kd6 Bc4 36. Rb2 Be6 37. Rb7 Bc4 38. Rb6 Bf1 39. Rb2 Bc4 40. Ke5 Bf1 41. Rc2 Ba6 42. Kd4 Bf1 43. Rd2 Ba6 44. Kd5 Bc8 45. Kd6 Be6 46. Ke5 Bc4 47. Rd6 Bb5 48. Rf6 Bc4 { 0.07/63 }) 4... O-O (4... c5 { Another typical Black move order I was curious about. } 5. Ne2 d5 6. a3 Ba5 7. dxc5 dxc4 8. Bd2 b6 9. Ng3 O-O 10. Bxc4 bxc5 11. O-O Nbd7 12. Be2 Bb7 { [#] } 13. Qa4 $146 (13. Qc2 Rc8 14. e4 c4 15. Rad1 h6 16. h3 Qb6 17. Qc1 Rfd8 18. Be3 Qc6 19. Bf3 Ne5 20. Bxh6 Rxd1 21. Rxd1 Nxf3+ 22. gxf3 gxh6 23. Qxh6 Bxc3 24. bxc3 Ne8 25. Qg5+ { ½-½ Novak,V (2424)-Kunzelmann,F (2491) W-ch42 sf02 email ICCF email 2018 }) 13... Bc7 14. Rfd1 Qb8 15. Be1 Rd8 16. Qc2 Bc6 17. b3 Qb7 18. f3 Rab8 19. Rab1 Be5 20. a4 h6 21. Nf1 Rbc8 22. Bd3 Qb8 23. Kh1 Bb7 24. Bh4 Re8 25. Bb5 Red8 26. Be2 Re8 27. Be1 Nd5 28. Bb5 Qc7 29. Rbc1 Bc6 30. Be2 Nb4 31. Qb1 Qb7 32. Nb5 Nd5 33. e4 Nf4 34. Bc4 Rcd8 35. Qc2 Nf6 36. Rxd8 Rxd8 37. Rd1 Rxd1 { 0.17/67 }) 5. Bd3 d5 (5... c5 { An alternative move order for Black: 241244Mn } 6. Ne2 d5 7. cxd5 cxd4 8. exd4 Nxd5 9. a3 Bd6 10. O-O Nc6 11. Re1 h6 12. Bc2 Nf6 13. Qd3 Ne7 14. Ng3 Ng6 { [#] } 15. Nce4 $146 (15. Bd2 Bd7 16. Nce4 Be7 17. Nc5 Bxc5 18. dxc5 Ba4 19. Qxd8 Rfxd8 20. Bxa4 Rxd2 21. b4 Nf4 22. Red1 Rad8 23. b5 Kf8 24. c6 Rxd1+ 25. Bxd1 bxc6 26. bxc6 Rc8 27. Ba4 N6d5 28. Bb5 Nc3 29. a4 Nfd5 30. f3 Nc7 31. Bc4 N7d5 32. Bb5 Nc7 33. Bc4 Ne8 34. Bb5 Nd6 35. Nh5 Ncxb5 36. axb5 Nxb5 37. Ra5 Nd6 38. Rxa7 Rxc6 39. Ra8+ Rc8 40. Rxc8+ Nxc8 41. f4 Nd6 42. Kf2 Ne4+ 43. Kf3 f5 44. g4 g6 { 0-1 Gaal,Z (2304)-Heinemann,J (2318) EU-chT (Women) 24th Budva 2023 (4.2) }) 15... Nxe4 16. Nxe4 Bc7 17. Nc3 Re8 18. Bd2 Qd6 19. g3 Bb6 20. Ne4 Qd5 21. Qf3 Rd8 22. Rad1 Qf5 23. Qxf5 exf5 24. Nc5 f4 25. Bc3 Bg4 26. Ra1 Bf3 27. Rac1 Bc7 28. Bxg6 fxg6 29. Ne6 Rd7 30. Nxc7 Rxc7 31. gxf4 Rd7 32. Re3 Bc6 33. Rce1 Rf8 34. Re8 Rxe8 35. Rxe8+ Kf7 36. Re5 Rd5 37. h4 Rxe5 38. fxe5 g5 39. hxg5 hxg5 40. Kf1 g4 41. Ke2 Ke6 42. Ke3 Kf5 43. Bb4 Bd5 44. Bf8 g5 45. Kd2 Ke4 46. Bc5 { 0.10/70 }) 6. a3 dxc4 7. Bxc4 Bxc3+ 8. bxc3 c5 9. Nf3 Qc7 10. Be2 Nc6 11. Bb2 Rd8 { [#] } 12. a4 $146 (12. Qc2 Na5 13. dxc5 Qxc5 14. c4 b6 15. Bd4 Qc7 16. Rc1 Ba6 17. Qb2 Nxc4 18. Bxc4 Bxc4 19. Nd2 b5 20. Nxc4 bxc4 21. Bxf6 gxf6 22. Qxf6 Qa5+ 23. Qc3 Qxc3+ 24. Rxc3 Rab8 25. Ke2 Rb2+ 26. Kf3 Rdd2 27. Rf1 Rbc2 28. Rxc2 Rxc2 29. Rb1 Ra2 30. Rc1 Rxa3 31. Rxc4 a5 32. g4 { ½-½ Nisipeanu,L (2615)-Navara,D (2676) Bundesliga 2223 Germany 2022 (14.1) }) 12... b6 13. O-O Bb7 14. Re1 Na5 15. Bd3 Be4 16. Bf1 Ng4 17. g3 Nf6 18. Nd2 Bb7 19. e4 h6 20. Bd3 Rac8 21. Qe2 Qd7 22. Nf3 Nb3 23. Rab1 Na5 24. Qd1 Qc7 25. Ba1 Qe7 26. h4 Ng4 27. Qe2 Qd7 28. Bb2 cxd4 29. cxd4 Nb3 30. Rbd1 Qxa4 31. d5 exd5 32. e5 Nc5 33. Bf5 Ba6 34. Qd2 { 0.14/60 }) 3... d5 (3... Bb4+ { 121603Mn } 4. Nbd2 b6 5. a3 Bxd2+ 6. Nxd2 Bb7 7. e3 d6 8. Nf3 O-O 9. Be2 { [#] } 9... d5 $146 (9... a5 10. b3 Nbd7 11. O-O c5 12. Bb2 Ne4 13. d5 Qe7 14. dxe6 Qxe6 15. Ne1 Ne5 16. f3 Nf6 17. e4 h5 18. Nd3 a4 19. Nf4 Qe7 20. b4 h4 21. Qd2 Bc8 22. Rad1 Rd8 23. b5 Be6 24. Nxe6 Qxe6 25. Qc1 h3 26. f4 hxg2 27. Rf2 Ned7 28. Bf3 Rab8 29. Rxg2 Qe7 30. Kh1 Ne8 31. Rdg1 f6 32. e5 dxe5 33. Bd5+ Kf8 34. Qe3 Nc7 35. Qh3 Nxd5 36. Qh8+ { 1-0 Voveris,G (2270)-Rimkus,B (2107) LTU-ch33 email ICCF email 2015 }) 10. b3 dxc4 11. bxc4 c5 12. O-O Qe7 13. Bb2 Rd8 14. Qc2 Nc6 15. Rfe1 Rac8 16. Bc3 Na5 17. Bxa5 bxa5 18. Red1 h6 19. h3 Be4 20. Qa4 Qc7 21. Ne5 Qb6 22. f3 Bf5 23. Qb5 cxd4 24. Qxb6 axb6 25. Rxd4 Rxd4 26. exd4 Rd8 27. g4 Bc2 28. Rc1 Ba4 29. Rb1 Nd7 30. Nxd7 Rxd7 31. c5 bxc5 32. dxc5 Bc6 33. Rb8+ { 0.30/57 }) (3... c5 4. d5 exd5 5. cxd5 d6 { 76444Mn. The most common human move order. } 6. Nc3 g6 7. Nd2 Bg7 8. e4 O-O 9. Be2 Na6 10. O-O Nc7 11. a4 a6 12. f3 Rb8 13. a5 { [#] } 13... Nd7 $146 (13... b5 14. axb6 Rxb6 15. Nc4 Rb4 16. Bf4 Nfe8 17. Qd2 Nb5 18. Na2 Rb3 19. Nc1 Nd4 20. Nxb3 Nxb3 21. Qc2 Nxa1 22. Rxa1 f5 23. Qd2 fxe4 24. fxe4 Qf6 25. Be3 Qe7 26. Bf3 Nf6 27. Qd3 Nd7 28. Bg4 Ne5 29. Nxe5 Qxe5 30. Bxc8 Rxc8 31. Rxa6 Rb8 32. b3 Re8 33. Bf2 Qb2 34. h3 Be5 35. Bg3 Qc1+ 36. Kh2 Qg5 37. Bxe5 Qxe5+ 38. Qg3 Qxe4 39. Rxd6 Qe5 40. Rd7 Qxg3+ 41. Kxg3 Re3+ 42. Kf4 Rxb3 43. d6 { ½-½ Orlov,G (2461)-Walentukiewicz,M (2097) Titled Tuesday intern op 19th Jul Early Chess.com INT blitz 2022 (3) }) 14. Nc4 Ne5 15. Na3 Qe7 16. Kh1 b5 17. axb6 Nb5 18. Naxb5 axb5 19. Nxb5 Rxb6 20. Ra7 Rb7 21. Rxb7 Bxb7 22. Bd2 Ba6 23. Na3 Bxe2 24. Qxe2 f5 25. exf5 Rxf5 26. Nc4 Nc6 27. Qd3 Nb4 28. Bxb4 cxb4 29. Qd2 Qc7 30. b3 Bc3 31. Qd3 Qc5 32. Rd1 Rf8 33. h3 { 0.61/59 }) (3... b6 { Torch v2: } { Not a Torch choice in general. 351054Mn } 4. g3 Ba6 5. b3 Bb4+ 6. Bd2 Be7 7. Bg2 d5 8. O-O c6 9. Bc3 Nbd7 10. Nbd2 O-O 11. Re1 Bb7 12. e4 dxe4 13. Nxe4 c5 14. Nxf6+ Bxf6 15. Rc1 cxd4 16. Nxd4 Qc8 17. Bxb7 Qxb7 18. Nf3 Rfd8 19. Qe2 Bxc3 20. Rxc3 a5 21. a3 { [#] } 21... Rac8 $146 (21... Nf8 22. b4 axb4 23. axb4 f6 24. h4 e5 25. h5 Ne6 26. h6 gxh6 27. Rec1 Rac8 28. Rd1 Qe7 29. Rb1 { ½-½ Ashmarin,A (2277)-Alexa,J (2367) Champion's League 2021/B4 email ICCF email }) 22. b4 axb4 23. axb4 Nf8 24. Qc2 f6 25. Rb1 e5 26. c5 bxc5 27. bxc5 Qd5 28. Nh4 Ne6 29. Nf5 Rc7 30. Ne3 Qa8 31. Qb3 Rc6 32. Nf5 Kh8 33. Nd6 Nxc5 34. Nf7+ Kg8 35. Nxd8+ Nxb3 36. Nxc6 { 0.16/63 }) 4. Nc3 (4. g3 { 38403Mn Torch v2: } 4... Bb4+ 5. Bd2 { Torch's choice. I also suggested a few more gambit options. } (5. Nbd2 { 41191Mn Torch v2: } 5... dxc4 6. a3 Bxd2+ 7. Bxd2 a6 8. Bg2 b5 9. Nh4 c6 10. Nf3 Bb7 11. b3 cxb3 12. Qxb3 O-O 13. Rc1 Nbd7 14. O-O { [#] } 14... Re8 $146 (14... a5 15. Rfd1 Qe7 16. Bg5 h6 17. Bxf6 Qxf6 18. Ne1 Rfb8 19. Nd3 Qe7 20. Nc5 Nxc5 21. Rxc5 Qd8 22. e3 { ½-½ Malisevschi,C (2245)-Mihai,P (2343) ROM-ch61 email ICCF email 2022 }) 15. Rfd1 h6 16. Ne5 Nxe5 17. dxe5 Nd7 18. Qe3 Qc8 19. Qe4 Rb8 20. Bxh6 gxh6 21. Qg4+ Kf8 22. Qh5 c5 23. Qxh6+ Kg8 24. Qg5+ Kf8 { 0.00/64 }) (5. Nc3 { 37391Mn } 5... O-O 6. Bg2 dxc4 7. a3 Bxc3+ 8. bxc3 c5 9. O-O cxd4 10. Qxd4 { [#] } 10... Qxd4 $146 (10... Nc6 11. Qxc4 e5 12. Bg5 h6 13. Rfd1 Be6 14. Rxd8 Bxc4 15. Rxa8 Rxa8 16. Bxf6 gxf6 17. Kf1 Rd8 18. Ke1 Na5 19. Rd1 Rc8 20. Nd2 Be6 21. c4 Bxc4 22. Nxc4 Rxc4 23. Rd8+ Kg7 24. Bd5 Rc7 25. Ra8 a6 26. Rb8 f5 27. Re8 e4 28. g4 Rc5 29. Ba2 Nc4 30. a4 Nd6 31. Re7 fxg4 32. Rd7 e3 33. fxe3 Ne4 34. Kf1 Rc1+ 35. Kg2 Rc2 36. Bxf7 Rxe2+ 37. Kg1 Re1+ 38. Kg2 Re2+ 39. Kg1 Kf6 40. Bd5 { 0-1 Carlsen,M (2861)-Niemann,H (2688) Sinquefield Cup 9th+ Saint Louis 2022 (3) }) 11. Nxd4 Nd5 12. Nb5 Na6 13. a4 Bd7 14. Ba3 Rfc8 15. Nd6 Rc7 16. Bxd5 exd5 17. Rfd1 Bc6 18. a5 g6 19. Rab1 Rd7 20. Nb5 b6 21. axb6 axb6 22. Nd4 Ba4 23. Rdc1 Bb3 24. Nxb3 cxb3 25. Rxb3 Nc5 26. Bxc5 bxc5 27. Rc2 Kg7 28. Rb5 Ra1+ 29. Kg2 c4 30. Rc5 h5 31. h4 Rd1 32. f3 Re7 33. Kf2 Kf6 34. Rc8 Rh1 35. Kg2 Re1 36. Kf2 { 0.00/62 }) 5... Be7 6. Bg2 c6 7. O-O O-O 8. Qc2 b6 9. Ne5 Bb7 10. Rd1 Nbd7 11. cxd5 cxd5 12. Nc6 Bxc6 13. Qxc6 Rc8 14. Qb5 Ne8 15. Qa4 Nd6 16. Na3 Ra8 17. Rdc1 Nf6 { [#] } 18. Rc2 $146 (18. Bf4 a6 19. Qd1 Qd7 20. Rc2 Rac8 21. Rac1 Rxc2 22. Nxc2 Qb5 23. Rb1 Qa4 24. b3 Qd7 25. Rc1 Rc8 26. Ne1 Nfe4 27. Rc2 Rxc2 28. Qxc2 Qc8 29. Bxe4 dxe4 30. Qxc8+ Nxc8 31. f3 g5 32. Bc7 Bd6 33. Bxd6 Nxd6 34. Kf2 f5 35. Ke3 Kf7 36. Nc2 exf3 37. exf3 { ½-½ Oen,G (2351)-Perez Lopez,A (2436) WZ-ch C09 email ICCF email 2021 }) 18... a6 19. Rac1 b5 20. Qa5 Qxa5 21. Bxa5 Nf5 22. e3 Bxa3 23. bxa3 Nd6 24. Bb4 Rfd8 25. a4 Nc4 26. h4 h6 27. Bf3 Ne4 28. g4 g5 29. hxg5 hxg5 30. a5 Kg7 31. a4 Re8 32. Bxe4 { 0.19/57 }) 4... Bb4 { Torch's main line when starting with 1.d4 (just like AlphaZero!). 33850Mn } (4... a6 { 56445Mn Torch v2: } 5. cxd5 exd5 6. Bg5 Be6 7. e3 Nbd7 8. h3 c6 9. Bd3 Qc7 10. Bf4 Bd6 11. Qc1 O-O 12. O-O Rfe8 13. Re1 { [#] } 13... Rad8 $146 (13... g6 14. Qd2 Nh5 15. Bxd6 Qxd6 16. Rac1 Nhf6 17. b3 a5 18. Rcd1 Qb4 19. Qc1 Nb6 20. Re2 Qf8 21. Ne5 Nfd7 22. Nf3 Nf6 23. Bc2 Nc8 24. Ne5 Nd6 25. f3 Nb5 26. Nxb5 cxb5 27. g4 b4 28. f4 Rac8 29. Qd2 Rc3 30. f5 Bc8 31. fxg6 fxg6 32. Rf2 Qe7 33. Bd3 Be6 34. Qe2 Rec8 35. Qf3 Nd7 36. Qg3 R3c7 37. Kg2 Nxe5 38. dxe5 Re8 39. g5 Kh8 40. Qh4 Qc5 41. Qd4 Bg8 42. Bf1 Re6 43. h4 { ½-½ Egger,R (2376)-Lang,F (2215) SUI op5/1 email ICCF email 2022 }) 14. Bxd6 Qxd6 15. a3 Nb6 16. Qc2 Qe7 17. b4 Nc4 18. Ng5 g6 19. Nxe6 Qxe6 20. Na4 Nd6 21. Nc5 Qe7 22. a4 Nd7 23. Rac1 h5 24. Qb2 Qf6 25. Rc2 Re7 26. b5 Nxc5 27. Rxc5 axb5 28. axb5 Nc8 29. bxc6 bxc6 30. Rec1 Re6 31. Qb7 Ne7 32. Ra5 Kg7 33. Qc7 Red6 34. Rb1 R8d7 35. Qb6 h4 36. Ra6 Re6 { 0.35/60 }) (4... c6 { 122827Mn } 5. e3 (5. Bg5 { After 62908Mn and through this move order, Torch chose to offer the Botvinnik. } 5... dxc4 { 1086338Mn } (5... h6 6. Bxf6 (6. Bh4 dxc4 { 1761681Mn } 7. e4 g5 8. Bg3 b5 9. Be2 Bb7 10. Qc2 Nh5 11. Rd1 Nxg3 12. hxg3 Na6 13. O-O Qb6 14. b3 cxb3 15. axb3 Nb4 16. Qc1 { [#] } 16... O-O-O $146 (16... Bd6 17. Ne5 Qc7 18. Nd3 Nxd3 19. Rxd3 b4 20. e5 Be7 21. Ne4 Ba6 22. Rd2 Bxe2 23. Rxe2 Qd7 24. Rc2 Qxd4 25. Rd2 Qxe4 26. Re1 Qxe1+ 27. Qxe1 O-O 28. Rd7 Bc5 29. Qd1 Bb6 30. Qh5 Rad8 31. Qxh6 { ½-½ Koshmak,I (2423)-Hervet,G (2399) EU-chT11 sf3 email ICCF email 2017 [1] }) 17. Nxb5 Na2 18. Qc2 Nb4 { 0.00/71 }) 6... Qxf6 7. e3 g6 8. Bd3 dxc4 9. Bxc4 Bg7 10. O-O O-O 11. e4 Qd8 12. e5 c5 13. dxc5 Nd7 14. Qe2 Nxc5 15. Nb5 a6 16. Rfd1 Qe7 17. Nd6 b5 18. Qe3 { [#] } 18... bxc4 $146 (18... Nb7 19. Bd3 Nxd6 20. exd6 Qa7 21. Qe2 Bb7 22. Ne5 Rad8 23. Nxg6 fxg6 24. Qxe6+ Kh8 25. Qxg6 Qxf2+ 26. Kh1 Qxg2+ 27. Qxg2 Bxg2+ 28. Kxg2 Bxb2 29. Rab1 Be5 30. Be4 Rxd6 31. Rxd6 Bxd6 32. Bb7 Rg8+ 33. Kh3 b4 34. Bxa6 Ra8 35. Bc4 Ra3+ 36. Bb3 Ra5 37. Rd1 Bf4 { ½-½ Ambartsumova,K (2382)-Csonka,B (2498) Titled Tuesday intern op 18th May Chess.com INT blitz 2021 (10) }) 19. Qxc5 Bb7 20. Nd2 Bd5 21. Qe3 Qg5 22. Qxg5 hxg5 23. N2xc4 Rfb8 24. Rd3 a5 25. Re1 a4 26. h3 Rb4 27. Rc3 Rd8 28. f3 Bxc4 29. Nxc4 Rc8 30. b3 axb3 31. axb3 Rc5 32. Rd3 Rd5 33. Ree3 Rxd3 34. Rxd3 Rb5 35. Rd8+ { 0.21/59 }) 6. e4 b5 7. e5 h6 8. Bh4 g5 9. Nxg5 hxg5 10. Bxg5 Be7 (10... Nbd7 { 353796Mn Torch v2: } 11. exf6 (11. g3 { 530224Mn } 11... Bb7 12. Bg2 Qb6 13. exf6 O-O-O 14. Qe2 c5 15. dxc5 Nxc5 16. O-O Bxg2 17. Kxg2 Bh6 18. Bxh6 Rxh6 19. f3 Rdh8 { [#] } 20. h4 $146 (20. Rh1 Rxf6 21. Ne4 Rf5 22. Nxc5 Qxc5 23. Rad1 Rd8 { ½-½ Kerr,G (2314)-Massimini Gerbino,M (2311) FICGS W-ch st1 gM 01 email FICGS email 2020 (1) }) 20... Rg8 21. Kh2 Rxf6 22. Rac1 Rf5 23. Rc2 Qc7 24. f4 Nd3 25. Qe4 Rd8 26. Rd1 Qb7 27. Qxb7+ Kxb7 28. a4 a6 29. axb5 axb5 30. b3 cxb3 31. Rcd2 b4 32. Ne4 b2 33. Rxb2 Nxb2 34. Rxd8 Kc6 35. Nd2 e5 36. Rc8+ Kd7 37. Rc5 Ke6 38. Nf3 Nd3 39. Rb5 Kf6 40. fxe5+ Nxe5 41. Nxe5 Rxe5 42. Rxb4 Ra5 43. Kh3 Kg6 44. Kg4 Kg7 45. Kf4 Ra1 46. Rb5 Rf1+ 47. Kg5 Rg1 48. Kg4 Ra1 49. h5 Ra4+ 50. Kh3 Ra1 51. Rg5+ Kh7 52. Rd5 Rh1+ 53. Kg2 Ra1 54. Rf5 Kg7 55. g4 f6 56. Rb5 Ra3 57. Rb7+ Kh8 { 0.10/65 }) 11... Bb7 12. g3 c5 13. d5 Qb6 14. Bg2 O-O-O 15. O-O b4 16. Rb1 (16. Na4 Qb5 17. a3 Nb8 18. axb4 cxb4 19. Qg4 Bxd5 20. Rfc1 Nc6 21. Bxd5 Rxd5 22. Rxc4 Rxg5 23. Qd4 Kb8 24. Rxc6 Rxg3+ 25. fxg3 Qxc6 26. Rd1 Qc7 27. b3 Kc8 28. Qe3 Kb8 29. Qd2 Bc5+ 30. Nxc5 Qxc5+ 31. Qd4 Qc3 32. Qxc3 bxc3 33. Rc1 Rc8 34. Kf2 Rc5 35. g4 Kc7 36. Ke3 Kd6 37. h4 Ke5 38. g5 Kf5 39. Kd4 Rc8 40. Rxc3 { [#] } 40... Rd8+ $146 (40... e5+ 41. Kd3 e4+ 42. Kd2 Rd8+ { ½-½ Bross,H (2579)-Mueller,G (2569) GER MT-Soltau email ICCF email 2016 }) 41. Ke3 Rb8 42. Kd2 Rb4 43. Rc4 Rxb3 44. Rc7 Kg6 45. Rc8 Kf5 46. Rg8 Rh3 47. Rh8 Rh2+ 48. Ke3 Rh3+ { 0.13/67 }) 16... Qa6 17. dxe6 Bxg2 18. e7 Bxf1 19. Kxf1 Bxe7 20. fxe7 Rdg8 21. Ne4 Rxg5 22. Nxg5 Re8 23. Qe2 Qg6 24. Ne4 Rxe7 25. Re1 c3 26. bxc3 Kc7 { [#] } 27. Qe3 $146 (27. Qd3 Qc6 28. g4 Nf6 29. Qg3+ Kb6 30. Qb8+ Ka6 31. Qd6 Qxd6 32. Nxd6 Rxe1+ 33. Kxe1 Nxg4 34. h4 Ka5 35. h5 Ka4 36. f3 Nh6 37. Kd2 Ka3 38. Nb7 bxc3+ 39. Kc2 Kb4 40. Nd6 a5 41. Ne4 Kc4 42. Nxc3 Kd4 43. Kd2 f5 44. Ne2+ Kc4 45. Nc1 Nf7 46. Nb3 a4 47. Nc1 Kd4 48. Ne2+ Ke5 49. Kd3 Kf6 50. f4 Nd6 51. Nc3 a3 52. h6 Nf7 53. h7 Kg7 54. Kc4 Nd8 55. Kd5 Kxh7 56. Nb5 c4 { ½-½ Buzas,G (2242)-Simmelink,J (2259) SM-2012-0-00207 LSS email }) 27... f5 28. Qf4+ Kd8 29. Nxc5 Rxe1+ 30. Kxe1 Nxc5 31. Qb8+ Ke7 32. Qxa7+ Nd7 33. Qe3+ Kf7 34. cxb4 Qc6 35. Kf1 Qh1+ 36. Ke2 Qxh2 37. a4 Qh5+ 38. Qf3 Qg6 39. Qd5+ Ke7 40. a5 Qg4+ 41. Kf1 Qxb4 42. Qxf5 Qc4+ 43. Kg1 Qc1+ 44. Kg2 Qc6+ 45. f3 Qc4 46. Qh7+ { 0.06/60 }) 11. exf6 Bxf6 12. Bxf6 Qxf6 13. g3 Bb7 14. Ne4 Qe7 15. Bg2 Na6 16. O-O O-O-O 17. h4 c5 18. a4 Rxd4 19. Qe2 b4 20. Rad1 (20. Rac1 Bd5 21. Rfe1 Rd8 22. Ng5 Qd7 23. Bxd5 exd5 24. Qf3 Nc7 25. Qf6 Qd6 26. Qf5+ Qd7 27. Qf6 Qd6 28. Qf5+ Qd7 { ½-½ Mendonca,L (2628)-Mishra,A (2585) ESP-chT CECLUB Div1 Linares 2023 (7.7) }) 20... Qc7 21. Ng5 Bxg2 22. Kxg2 Qc6+ 23. Kh2 f6 24. Qxe6+ Kb7 25. Qe7+ Qc7 26. Qxc7+ Nxc7 27. Nf7 { [#] } 27... Rg8 $146 (27... Rh7 28. Nd6+ Kc6 29. Rxd4 cxd4 30. Nxc4 Ne6 31. Re1 Nc5 32. Re8 Nxa4 33. Rd8 Rd7 34. Rxd7 Kxd7 35. h5 Ke7 36. Kg2 f5 37. f3 Kf6 38. Kf2 Nc5 39. Ke2 a6 40. Na5 Na4 41. Nc4 Nc5 42. g4 fxg4 43. fxg4 Kg5 44. Ne5 Na4 45. Nd3 a5 46. Kf3 Nb6 47. Ke4 a4 48. Nxb4 Nc4 49. Kxd4 Nxb2 50. Nc2 Nd1 51. Kc4 Nf2 52. Ne3 Nxg4 53. Nxg4 Kxh5 54. Kb4 a3 55. Kxa3 { ½-½ Tomashevsky,E (2706)-Idani,P (2614) FIDE World Cup Krasnaya Polyana 2021 (3.3) }) 28. Rxd4 cxd4 29. Nd6+ Kc6 30. Nxc4 Kd5 31. Nd2 Ne6 32. Kg2 Nf4+ 33. Kf3 Nd3 34. b3 f5 35. h5 Ne5+ 36. Kg2 d3 37. Rh1 Kd4 38. Nb1 Ng4 39. Rc1 Re8 40. Rc4+ Ke5 41. Rxb4 Kf6 42. Rd4 Re2 43. Rxd3 Rxf2+ 44. Kg1 Rh2 45. Rd6+ Ke5 46. Ra6 Rh3 47. Ra5+ Kf6 48. Nd2 Rxg3+ 49. Kf1 Rh3 { 0.26/70 }) 5... Nbd7 6. Be2 (6. Bd3 { 674570Mn Torch v2: } 6... dxc4 7. Bxc4 b5 8. Bd3 a6 { 188502Mn Torch v2: } (8... Bb7 9. e4 { 1056802Mn Torch v2: } 9... b4 10. Na4 c5 11. e5 Nd5 12. O-O cxd4 13. Re1 g6 14. Bg5 Qa5 15. Nxd4 a6 16. Bd2 Bg7 17. a3 Nxe5 18. axb4 Qc7 19. Rc1 Qe7 20. Bf1 O-O 21. Nc5 Rad8 22. Qb3 h5 { [#] } 23. h3 $146 (23. Nc2 Ba8 24. Ra1 h4 25. Rxa6 Nc7 26. Rxa8 Rxa8 27. Bf4 Ng4 28. Qc4 Nf6 29. Bg5 Rfc8 30. h3 Ncd5 31. Qxh4 Qd6 32. Na3 Qb8 33. Bd2 Ne7 34. Bc3 Nfd5 35. Bxg7 Kxg7 36. Nb5 Nf5 37. Qg5 Qf4 38. Qxf4 Nxf4 39. Nc3 Nd4 { ½-½ Leimgruber,R (2428)-Babic,D (2433) SUI-ch30 B email ICCF email 2015 }) 23... Ba8 24. Qg3 h4 25. Qg5 Bf6 26. Qh6 Bg7 { 0.00/76 }) (8... b4 9. Ne4 Nxe4 10. Bxe4 Bb7 11. Nd2 Be7 12. O-O O-O 13. b3 Nf6 14. Bf3 Nd5 15. Bb2 c5 16. dxc5 Bxc5 17. Qe2 Nc3 18. Qe1 Bd5 19. Rc1 { [#] } 19... Be7 $146 (19... Rc8 20. Bxd5 Nxd5 21. Nc4 Qg5 22. g3 Rc7 23. Qe2 Qe7 24. Be5 Rcc8 25. Rfd1 f6 26. Bb2 h6 { ½-½ Wood,B (1947)-Malmstroem,J (2052) EU-ch SC-OR/504 email ICCF email 2022 }) 20. e4 Bb7 21. Bxc3 bxc3 22. Nc4 Ba6 23. Qxc3 Bxc4 24. Rfd1 Qe8 25. Qxc4 Ba3 26. e5 Bxc1 27. Bxa8 Bb2 28. Be4 g6 29. Qc7 Qb8 30. Qxb8 Rxb8 31. f4 Rb4 32. Re1 Bd4+ 33. Kf1 Bb6 34. g3 Rd4 35. Bc2 Rd2 36. Re2 Rd8 37. Rg2 Ba5 38. Ke2 Rd2+ 39. Kf3 Rxg2 40. Kxg2 Bb4 41. Bd3 h5 42. Ba6 Kg7 43. Kf2 Bc5+ 44. Kf3 Bb4 45. Ke2 Bc5 46. a4 Bg1 47. Kf3 Bc5 48. Bb5 Bb4 49. Bc6 { 0.11/71 }) 9. e4 c5 10. e5 (10. d5 { 465721Mn Torch v2: } 10... Qc7 11. dxe6 fxe6 12. O-O Bb7 13. Bc2 Bd6 14. Ng5 Nf8 15. f4 O-O-O 16. Qe2 h6 17. Nf3 Bxf4 18. Bxf4 Qxf4 19. Rae1 Ng4 20. g3 Qb8 21. e5 Bxf3 22. Qxf3 Nxe5 23. Rxe5 Qxe5 { [#] } 24. Qa8+ $146 (24. Qc6+) 24... Qb8 25. Qc6+ Qc7 26. Qa8+ { 0.00/70 }) 10... cxd4 11. Nxb5 Bb4+ 12. Bd2 Bxd2+ 13. Qxd2 axb5 14. exf6 Qxf6 15. Bxb5 e5 16. O-O O-O 17. Rfe1 Rd8 18. Qe2 { [#] } 18... Bb7 $146 (18... Ba6 19. Bxa6 Qxa6 20. Qxa6 Rxa6 21. Nxe5 Nxe5 22. Rxe5 d3 23. Kf1 g6 24. Ree1 Rc8 25. Rec1 Re8 26. b4 Ra3 27. Rcb1 Rb8 28. b5 Kf8 29. Ke1 Ke7 30. Kd2 Kd6 31. Rb2 h5 32. h4 Re8 33. Re1 Rea8 34. Re3 Rxa2 35. Rxd3+ Kc5 36. Rc3+ Kd6 37. Rxa2 Rxa2+ 38. Rc2 Ra4 39. Rb2 Kc7 40. g3 Kb6 41. Ke3 Rc4 42. Kf3 Rd4 43. Ke3 Rc4 44. Kd3 Ra4 45. Kc3 Re4 46. Rb4 Re2 47. Rf4 f5 48. Kc4 { 1-0 Maghsoodloo,P (2707)-Gukesh,D (2758) Asian Games tt Hangzhou 2023 (5.1) }) 19. Nxe5 Nxe5 20. Qxe5 d3 21. Qxf6 gxf6 22. Rad1 d2 23. Re7 Bc8 24. Bc4 Be6 25. Bxe6 fxe6 26. Rxe6 Rxa2 27. Kf1 Rxb2 28. Rxf6 Rb5 29. Rh6 Rbd5 30. f3 Kg7 31. Ra6 h5 32. h3 Kf7 33. Ra7+ Kg6 34. Re7 R8d6 35. Ke2 Rd8 36. Re6+ Kg7 37. Re3 Kg6 38. Kf2 R8d6 39. Rb3 Re5 40. Rb7 Rd8 41. Rb6+ Kh7 42. Rb2 Red5 43. Rc2 Kg6 44. Ke2 Re5+ 45. Kf1 Red5 46. Rc6+ Kf7 47. Rc7+ Kg6 48. Kg1 R8d6 49. Rc8 Re5 50. Kf1 Red5 51. Kf2 Kg7 52. Rc2 Kf7 53. Rc7+ { 0.13/70;1.d4 TO DO }) 6... Bd6 7. Qc2 { Back into a 6.Qc2 system } 7... O-O 8. O-O e5 9. cxd5 cxd5 10. Nb5 Bb8 11. dxe5 Nxe5 12. Bd2 Ne4 13. Bc3 Nxf3+ 14. Bxf3 Ng5 15. Be2 a6 16. Nd4 Qd6 17. g3 Re8 { [#] } 18. Rad1 $146 (18. Rac1 Nh3+ 19. Kg2 Ng5 20. Rfe1 h6 21. Nf3 Bh3+ 22. Kg1 Ne4 23. Bf1 Bg4 24. Nd2 Qe6 25. Qb3 Nc5 26. Qa3 Ne4 27. Nxe4 dxe4 28. Qb4 b5 29. a4 Bd6 30. Qa5 bxa4 31. Qxa4 a5 32. Ra1 Qf5 33. Rec1 Be5 34. Qb5 Bxc3 35. Qxf5 { ½-½ Roth,P (2149)-Sempio,S (2161) W-ch WS/CCE/A/06 email ICCF email 2019 }) 18... Bh3 19. Rfe1 Ba7 20. Qb3 b5 21. Nf3 Ne4 22. Qxd5 Qxd5 23. Rxd5 Be6 24. Rd3 Bxa2 25. Bd4 Bc4 26. Rdd1 Bxe2 27. Rxe2 Bxd4 28. Nxd4 Rec8 29. Ra1 g6 30. Kg2 b4 31. Ra5 Nd6 32. Rd5 Nb7 33. Nb3 Rd8 34. Red2 Rxd5 35. Rxd5 Rc8 36. Rd7 Nc5 37. Nxc5 Rxc5 38. Rb7 Kg7 39. Rxb4 a5 { 0.19/62 }) (4... c5 { 98309Mn } 5. cxd5 cxd4 6. Qxd4 exd5 7. e4 Nc6 8. Bb5 dxe4 9. Qxd8+ Kxd8 10. Ng5 Be6 11. Bxc6 bxc6 12. Nxe6+ fxe6 13. Ke2 Bb4 14. Rd1+ Ke7 15. Na4 Rhd8 16. Rxd8 Rxd8 17. a3 Bd6 18. Be3 Nd5 19. Bg5+ Nf6 20. Rc1 Kd7 21. Be3 a6 22. Nb6+ Kc7 23. Nc4 Rb8 24. b4 Kd7 25. Na5 Rc8 26. Bc5 Bc7 27. Nb3 e5 { [#] } 28. Be3 $146 (28. Rc4 Nd5 29. Kd2 Nf6 30. Be3 Bd6 31. Ke2 Rb8 32. Bc5 Rb5 33. h3 h6 34. Rc2 Nd5 35. g3 g6 36. Be3 { ½-½ De Palma,F (2016)-Rheindt,S (1721) EU-ch SC-OR/480 email ICCF email 2022 }) 28... Bd6 29. Rc2 h5 30. Rc1 Nd5 31. Rc4 Nf6 32. Bc5 Bc7 33. h3 Ke6 34. Be3 Bd6 35. Nd2 Be7 36. Bc5 Bd8 37. Nxe4 { 0.17/64 }) (4... Be7 { 70634Mn } 5. Bf4 O-O 6. e3 Nbd7 7. c5 c6 8. b4 b6 9. Bd3 a5 10. a3 Ba6 11. O-O Qc8 12. h3 Qb7 13. Rb1 Bxd3 14. Qxd3 axb4 15. axb4 Ra3 16. Ra1 Rfa8 17. Rxa3 Rxa3 18. Qc2 Qa8 19. Rb1 h6 { [#] } 20. Bc7 $146 (20. Qb2 Ra7 { ½-½ Zaas,D-Mueller,M W-ch WS/M/414 email ICCF email 2013 }) 20... Qb7 21. Bg3 Qa8 22. Ne1 Bd8 23. Nd3 b5 24. Nc1 Nf8 25. Nb3 Ng6 26. Rb2 Ne4 27. Nxe4 dxe4 28. Qxe4 Ne7 29. Qc2 Nd5 30. Nc1 Qa4 31. Qxa4 Rxa4 32. Nd3 Ra3 33. Rd2 Ra4 34. Kh2 Nxb4 35. Nxb4 Rxb4 { 0.21/61 }) (4... dxc4 { 50692Mn Torch v2: } 5. e4 Bb4 (5... b5 { Not a Torch choice, just my suggestion: 16986Mn } 6. e5 Nd5 7. Nxb5 Nb6 8. Be2 Nc6 9. Be3 Bb7 10. O-O Be7 11. Nc3 O-O 12. Na4 Nb4 13. Nxb6 axb6 14. Bxc4 Nd5 { [#] } 15. Bc1 $146 (15. a3 Qd7 16. Qd3 Rfd8 17. Rfd1 Ra5 18. Bb3 Qc8 19. Rac1 Rd7 20. Nd2 Qa8 21. f3 Nxe3 22. Qxe3 b5 23. Ne4 b4 24. a4 Bd5 25. Bxd5 exd5 26. Nc5 Bxc5 27. Rxc5 Rxc5 28. dxc5 Qxa4 29. e6 Qxd1+ { 0-1 Elissalt Cardenas,H (2279)-Goltseva,E (2295) Titled Tuesday intern op 16th Feb Chess.com INT blitz 2021 (4) }) 15... Ba6 16. Bxa6 Rxa6 17. a3 Qd7 18. Bg5 h6 19. Bxe7 Nxe7 20. Qb3 Ra5 21. Rfd1 Rd8 22. Qc2 Rd5 23. Rd2 Nf5 24. Rad1 Qc8 25. h3 Ne7 26. h4 R8d7 27. b4 Nf5 28. Qc3 Qa8 29. h5 Ne7 30. Qb3 Nf5 31. Rc1 Qd8 { 0.34/53 }) 6. Bxc4 Nxe4 7. O-O Nf6 8. Qa4+ Nc6 9. Ne5 a5 10. Nxc6 bxc6 11. Qxc6+ Bd7 12. Qf3 Rb8 { [#] } 13. Bf4 $146 (13. d5 e5 14. Qg3 O-O 15. Qxe5 Bd6 16. Qg5 Re8 17. h3 h6 18. Qd2 Qe7 19. Qd4 c5 20. dxc6 Bxc6 21. Bf4 Bc5 22. Qd2 Rbd8 23. Qc1 Ne4 24. Be3 Bd6 25. Ne2 Ba8 26. Rd1 Rc8 27. b3 Ng5 28. Nf4 Bxf4 29. Bxf4 Qe4 30. f3 Nxf3+ 31. gxf3 Qxf3 32. Qd2 Qh1+ 33. Kf2 Qg2# { 0-1 Holm,K (2436)-Meier,G (2647) PRO League Stage Chess.com INT rapid 2018 (4) }) 13... a4 14. Be5 Bd6 15. b3 axb3 16. Bxb3 O-O 17. Bc2 Ra8 18. Rfe1 Qe7 19. Rad1 Ra3 20. h3 Ra5 21. Qd3 Re8 22. Bxf6 Qxf6 23. Qxh7+ Kf8 24. Bb3 Qf4 25. g3 Qh6 26. Qxh6 gxh6 27. Re3 Rb8 28. Re2 h5 29. h4 Kg7 30. Red2 Rb4 31. Rc2 Bc6 32. d5 exd5 { 0.21/60 }) (4... Nbd7 { 43497Mn } 5. Bf4 dxc4 6. e3 Bd6 7. Bxd6 cxd6 8. Bxc4 Nb6 9. Bb3 Bd7 10. Qe2 { [#] } 10... O-O $146 (10... Bc6 11. e4 d5 12. e5 Ne4 13. O-O Nxc3 14. bxc3 Qd7 15. Rfc1 Bb5 16. Qd1 h6 17. a4 Ba6 18. Ne1 O-O 19. a5 Nc4 20. Nd3 Qd8 21. Nc5 Nxa5 22. Nxa6 Nxb3 23. Qxb3 bxa6 24. Rxa6 Qg5 25. Qc2 Rfc8 26. Rca1 Rc7 27. g3 Rac8 28. R1a3 Qg4 29. Qd2 Qg5 30. Qc2 Qg4 { ½-½ Gelfand,B (2668)-Martirosyan,H (2685) Prague Masters 5th 2023 (2) }) 11. O-O Rc8 12. Rfc1 d5 13. Ne5 Bc6 14. a4 Nbd7 15. Nd3 a5 16. Bd1 Qe7 17. Rc2 e5 18. dxe5 Nxe5 19. Nxe5 Qxe5 20. Rd2 Ne4 21. Rd4 Nc5 22. Bc2 Rfe8 23. Rad1 g6 24. R4d2 Rcd8 25. Qg4 Rd6 26. h4 h5 27. Qd4 Qxd4 28. Rxd4 Red8 29. g3 Ne6 30. R4d2 Kf8 31. Ne2 b6 32. b3 { 0.23/56 }) 5. Bg5 h6 6. Qa4+ Nc6 7. Bxf6 Qxf6 8. e3 O-O 9. Be2 dxc4 (9... Bd7 10. Qb3 dxc4 11. Qxc4 Qe7 12. Rd1 { [#] } (12. a3 Bd6 13. O-O e5 14. Rfe1 a6 15. Rad1 Rae8 16. Ne4 Bf5 17. Nxd6 cxd6 18. d5 Nb8 19. Qb4 Rc8 20. Rc1 Rc7 21. Nd2 Rfc8 22. Rxc7 Qxc7 23. e4 Bd7 24. Nc4 b5 25. Na5 f5 26. exf5 Bxf5 27. a4 Qc5 28. Qxc5 Rxc5 29. axb5 axb5 30. Rd1 Rc2 31. Bxb5 Rc5 32. Nc6 Bg4 33. f3 Bxf3 34. gxf3 Rxb5 35. Ne7+ Kf8 36. Nc8 Rxb2 37. Nxd6 Nd7 38. Ne4 Nf6 39. d6 Ke8 40. Nc5 Nd7 41. Ne4 Nf6 { ½-½ Vidit,S (2742)-Donchenko,A (2643) Tata Steel-A 86th Wijk aan Zee 2024 (8) }) 12... Bd6 $146 (12... Na5 13. Qd3 c5 14. a3 c4 15. Qc2 Bd6 16. g4 f5 17. Rg1 Be8 18. d5 fxg4 19. Nd4 Qh4 20. Bxg4 Qxh2 21. Kf1 Bh5 22. Bxh5 Qxh5 23. Nxe6 Qh3+ 24. Ke1 Rf7 25. Rd4 Bh2 26. Rh1 Qg2 27. Rf1 Bg3 28. Nd1 Be5 29. Qe4 Qxe4 30. Rxe4 Bf6 31. Rg4 h5 32. Rg2 Nb3 33. f4 Re8 34. Nc3 Rd7 35. Ne4 Bh4+ 36. Ke2 Rxd5 37. Rxg7+ Kh8 38. Rg6 Kh7 39. Rfg1 b6 40. Nf6+ Bxf6 41. Rxf6 Rd7 42. Nf8+ { 1-0 Yilmaz,M (2639)-Daneshvar,B (2577) TUR-chT Ankara 2023 (6.5) }) 13. O-O e5 14. d5 Na5 15. Qh4 Qxh4 16. Nxh4 Rfd8 17. Nf3 Rab8 18. Ne4 b5 19. b3 Nb7 20. Rc1 Rdc8 21. Rc2 f5 22. Nxd6 cxd6 23. Rfc1 a6 24. b4 Rxc2 25. Rxc2 Rc8 26. Rxc8+ Bxc8 27. Nd2 Kf8 28. e4 Ke7 29. Bd3 f4 30. Kf1 g5 31. f3 Bd7 32. Nb3 g4 33. fxg4 { 0.20/57 }) 10. O-O Bd7 11. Bxc4 Bxc3 12. bxc3 Rfd8 13. Be2 b6 14. Bb5 e5 15. Rfd1 Be8 16. Qc4 Na5 17. Qe2 Bxb5 18. Qxb5 e4 19. Nd2 Qe6 { [#] } 20. Qa4 $146 (20. c4 c5 21. dxc5 Rd3 22. Nb3 Qxc4 23. Qxc4 Nxc4 24. Rxd3 exd3 25. Rd1 Rd8 26. cxb6 axb6 27. Kf1 Nb2 28. Rd2 Nc4 29. Rd1 Nb2 30. Rd2 Nc4 31. Rd1 { ½-½ Xu,Y (2531)-Zeng,C (2571) Tianjin Binhai Cup-A 3rd 2023 (9) }) 20... f5 21. h3 Kh7 22. Rac1 Rd7 23. c4 c5 24. dxc5 Rad8 25. cxb6 axb6 26. Nf1 Rxd1 27. Rxd1 Rxd1 28. Qxd1 Nxc4 { 0.17/56 } *
-    </pgn-app>
+    </pgn-study>
     
     <!--
-    <pgn-app>
+    <pgn-study>
     [White "White"]
     [Black "Black"]
     [Event "Event"]
@@ -311,14 +408,14 @@
     [Annotator "Annotator"]
     
     1. e4 (1. d4 d5 {[#]} (1... Nf6 2. c4 {[#]} (2. Nf3 g6 {[#]} (2... d5 3. c4 {[#]} (3. g3 g6 {[#]} (3... e6 4. c4 {[#]} (4. Bg2 c5 {[#]} (4... Be7 5. c4 {[#]} (5. O-O c5 {[#]} (5... O-O 6. b3 {[#]} (6. c4 c6 {[#]} (6... dxc4 7. Qc2 {[#]} (7. Ne5 c5 {[#]} (7... Nc6 8. Bxc6 {[#]} (8. Nxc6 a6 {[#]} (8... bxc6 9. Bxc6 {[#]} (9. Na3 c5 {[#]} (9... Bxa3))))))))))))))))))
-    </pgn-app>
+    </pgn-study>
     -->
 
     <script src="../dist/ChessPublica.all.min.js"></script>
     <script type="module" src="../script.js"></script>
     
     <script type="module">
-        /* <pgn-app> holds the PGN text exactly once. Split it into a real
+        /* <pgn-study> holds the PGN text exactly once. Split it into a real
            <pgn-player> (left) and a real <pgn clickable-moves> (right) —
            the same two elements this page always used, just built from
            one shared source instead of two hand-kept-in-sync copies of
@@ -328,14 +425,14 @@
            on the page — nothing about how <pgn>/<pgn-player> themselves
            work is touched, only this page's markup.
 
-           innerHTML (not textContent) both ways: <pgn-app>'s content was
+           innerHTML (not textContent) both ways: <pgn-study>'s content was
            parsed as real HTML by the browser like any element, so this
            preserves inline HTML inside comments (<br>, <em>, …) exactly
            as the original two separate blocks did — <pgn-player> reads
            it back via .textContent (tags collapse away, same as before),
            <pgn> via .innerHTML (tags survive, same as before). */
-        const appEl = document.querySelector('pgn-app');
-        const pgnHTML = appEl.innerHTML;
+        const studyEl = document.querySelector('pgn-study');
+        const pgnHTML = studyEl.innerHTML;
 
         const playerEl = document.createElement('pgn-player');
         playerEl.innerHTML = pgnHTML;
@@ -344,7 +441,27 @@
         pgnEl.setAttribute('clickable-moves', '');
         pgnEl.innerHTML = pgnHTML;
 
-        appEl.replaceChildren(playerEl, pgnEl);
+        studyEl.replaceChildren(playerEl, pgnEl);
+
+        /* Ribbon icons, read straight off <pgn-player>'s own (hidden)
+           lucide icons rather than hardcoding a duplicate icon URL here
+           — same trick the move picker below already uses for its own
+           "play" icon. Safe to do this immediately, unlike the button
+           click-forwarding further down: connectedCallback builds
+           <pgn-player>'s whole template (including these icons'
+           already-set --icon custom properties) synchronously, before
+           its actual engine — which the buttons need — finishes
+           constructing. */
+        const ribbonIconMap = {
+            pgnStudyBrandIcon:    '.video-title-emoji.lucide-icon',
+            pgnStudyDownloadIcon: '.settings-btn[data-action="download"] .lucide-icon',
+            pgnStudyFlipIcon:     '.settings-btn[data-action="flip"] .lucide-icon',
+            pgnStudySpeedIcon:    '.settings-btn[data-action="speed"] .lucide-icon',
+        };
+        Object.entries(ribbonIconMap).forEach(([id, selector]) => {
+            const iconUrl = playerEl.querySelector(selector)?.style.getPropertyValue('--icon');
+            if (iconUrl) document.getElementById(id).style.setProperty('--icon', iconUrl);
+        });
 
         /* Chessbase-style reading sync between the <pgn-player> on the left
            and the static <pgn> column on the right:
@@ -367,13 +484,13 @@
             // ChessPublica's own DOMContentLoaded listener has run — it
             // was registered before this one, so that's already true by
             // the time this fires.
-            const movesRoot = appEl.querySelector('.pgn-container .pgn-moves');
+            const movesRoot = studyEl.querySelector('.pgn-container .pgn-moves');
             if (!movesRoot) {
                 // Nothing to sync, but still a reason to stop showing the
-                // loading placeholder forever — reveal whatever <pgn-app>
+                // loading placeholder forever — reveal whatever <pgn-study>
                 // did render instead of leaving the spinner stuck.
-                document.getElementById('sadlerLoading')?.remove();
-                appEl.classList.add('cp-ready');
+                document.getElementById('pgnStudyLoading')?.remove();
+                studyEl.classList.add('cp-ready');
                 return;
             }
 
@@ -479,10 +596,36 @@
             // real thing now that <pgn-player> has finished loading — on
             // success or failure alike, so a load error can't leave the
             // spinner stuck forever instead of showing whatever did render.
-            document.getElementById('sadlerLoading')?.remove();
-            appEl.classList.add('cp-ready');
+            document.getElementById('pgnStudyLoading')?.remove();
+            studyEl.classList.add('cp-ready');
 
             if (!engine) return;
+
+            /* Ribbon buttons forward to <pgn-player>'s own (hidden)
+               settings buttons — same three actions (download/flip/
+               speed) and same underlying logic, just always-visible
+               app-style chrome instead of tucked behind a gear-icon
+               toggle. Only wired up now, not any earlier: those
+               buttons' own click handlers aren't attached until the
+               engine itself has finished constructing (see
+               VideoEngine's constructor in pgn-player.js), same
+               reason the buttons start out disabled in the markup. */
+            document.querySelectorAll('.pgn-study-ribbon-btn').forEach(btn => {
+                const action = btn.dataset.ribbonAction;
+                const target = playerEl.querySelector(`.settings-btn[data-action="${action}"]`);
+                if (!target) return;
+
+                btn.disabled = false;
+                btn.addEventListener('click', () => {
+                    target.click();
+                    // The speed button's own label lives on the hidden
+                    // internal button, not this one — resync ours from
+                    // the engine's actual state after every click.
+                    if (action === 'speed') {
+                        document.getElementById('pgnStudySpeedLabel').textContent = engine.state.speed + 'x';
+                    }
+                });
+            });
 
             /* Move picker — replaces <pgn-player>'s own comment/variation
                box (hidden in the CSS above) with just the mainline move
@@ -495,7 +638,7 @@
                cache[moveIdx] is the FEN they all branch from — rather
                than re-parsing anything. */
             const pickerEl = document.createElement('div');
-            pickerEl.className = 'sadler-move-picker';
+            pickerEl.className = 'pgn-study-move-picker';
             playerEl.querySelector('.player-wrapper').appendChild(pickerEl);
 
             // Reuse the site's actual "play" icon (same lucide glyph as
@@ -503,7 +646,7 @@
             // instead of a plain "▶" character — read straight off the
             // board's own (hidden) play button so this stays in sync
             // with whatever icon the rest of the site uses, rather than
-            // hardcoding a duplicate icon URL here. .sadler-picker-icon
+            // hardcoding a duplicate icon URL here. .pgn-study-picker-icon
             // below is `.lucide-icon` (shared mask-image technique) and
             // inherits this custom property from its ancestor.
             const playIconUrl = playerEl.querySelector('.play .lucide-icon')?.style.getPropertyValue('--icon');
@@ -525,7 +668,7 @@
             }
 
             const setActiveRow = (row) => {
-                pickerEl.querySelectorAll('.sadler-picker-row').forEach(r => r.classList.remove('active'));
+                pickerEl.querySelectorAll('.pgn-study-picker-row').forEach(r => r.classList.remove('active'));
                 row.classList.add('active');
             };
 
@@ -540,7 +683,7 @@
             // triggered that — a fresh branch point, or a plain mouse
             // click on a row.
             let pickerFocusIndex = -1;
-            const pickerRows = () => Array.from(pickerEl.querySelectorAll('.sadler-picker-row'));
+            const pickerRows = () => Array.from(pickerEl.querySelectorAll('.pgn-study-picker-row'));
             function syncPickerFocus() {
                 const rows = pickerRows();
                 const activeIdx = rows.findIndex(r => r.classList.contains('active'));
@@ -549,8 +692,8 @@
 
             const makeRow = (label, isMainline, onClick) => {
                 const row = document.createElement('div');
-                row.className = 'sadler-picker-row' + (isMainline ? ' mainline' : '');
-                row.innerHTML = '<span class="sadler-picker-icon lucide-icon"></span><span></span>';
+                row.className = 'pgn-study-picker-row' + (isMainline ? ' mainline' : '');
+                row.innerHTML = '<span class="pgn-study-picker-icon lucide-icon"></span><span></span>';
                 row.lastElementChild.textContent = label;
                 row.onclick = () => { setActiveRow(row); onClick(); };
                 pickerEl.appendChild(row);
@@ -1032,24 +1175,24 @@
                 if (!toc.length) return; // nothing in this PGN matched a named opening
 
                 const tocEl = document.createElement('div');
-                tocEl.className = 'sadler-toc';
+                tocEl.className = 'pgn-study-toc';
                 const heading = document.createElement('h3');
-                heading.className = 'sadler-toc-heading';
+                heading.className = 'pgn-study-toc-heading';
                 heading.textContent = 'Table of Contents';
                 tocEl.appendChild(heading);
                 const listEl = document.createElement('div');
-                listEl.className = 'sadler-toc-list';
+                listEl.className = 'pgn-study-toc-list';
                 tocEl.appendChild(listEl);
 
                 toc.forEach(entry => {
                     const row = document.createElement('div');
-                    row.className = 'sadler-toc-entry';
+                    row.className = 'pgn-study-toc-entry';
                     row.style.marginLeft = (entry.depth * 1.25) + 'rem';
                     const name = document.createElement('span');
-                    name.className = 'sadler-toc-name';
+                    name.className = 'pgn-study-toc-name';
                     name.textContent = entry.name;
                     const move = document.createElement('span');
-                    move.className = 'sadler-toc-move';
+                    move.className = 'pgn-study-toc-move';
                     move.textContent = entry.label;
                     row.appendChild(name);
                     row.appendChild(move);
