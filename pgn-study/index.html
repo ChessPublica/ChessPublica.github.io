@@ -39,6 +39,30 @@
             overflow-y: auto;
             overflow-x: hidden;
         }
+        /* The board's actual pixel size is normally driven by --board-size
+           against the *viewport* (see styles.css's root default), which
+           made sense on a full-width page but not here: pgn-player only
+           ever gets a fraction of the frame (a third of it, on the desktop
+           two-column grid below), so a viewport-relative size either
+           overflows the column or leaves it half-empty depending on
+           screen width. Making pgn-player itself a size container lets
+           --board-size be expressed in cqw (% of pgn-player's own
+           rendered width) instead, so the board actually tracks the
+           column's real size — including live drags of a browser window,
+           not just the breakpoint switch at 900px — capped at the same
+           400px/500px ceilings the fixed values used before. */
+        pgn-study > pgn-player {
+            /* Explicit width, not just the grid item's default stretch:
+               contain:inline-size (implied by container-type below) blocks
+               the browser from resolving an auto/stretch width against the
+               grid track's content-independent 1fr share, which otherwise
+               collapses the column to 0 instead. */
+            width: 100%;
+            container-type: inline-size;
+        }
+        pgn-study pgn-player {
+            --board-size: min(400px, 94cqw);
+        }
         @media (max-width: 899px) {
             /* Stacked single column — give the board and the reading
                list an equal share of the frame's height to scroll
@@ -61,7 +85,7 @@
                 align-items: stretch;
                 padding: var(--frame-pad);
             }
-            pgn-study pgn-player { --board-size: calc(400px * 1.25); }
+            pgn-study pgn-player { --board-size: min(calc(400px * 1.25), 94cqw); }
             /* Row 1, spanning both columns — pgn-player/.pgn-container
                have no placement rules of their own, so grid auto-flow
                puts them in row 2 (row 1's cells are already taken) col 1
@@ -223,6 +247,32 @@
         .pgn-study-close .lucide-icon {
             width: 1.1rem;
             height: 1.1rem;
+        }
+
+        /* REOPEN BUTTON — sits wherever the closed frame used to be (top
+           of the body), hidden until the close button actually hides
+           pgn-study, so the body isn't left with no way back in. */
+        .pgn-study-reopen {
+            display: none;
+            position: fixed;
+            top: calc(5vh + 0.5rem);
+            left: calc(5vw + 0.5rem);
+            z-index: 20;
+            padding: 0.5rem 1rem;
+            background: #18181b;
+            color: #fff;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .pgn-study-reopen:hover {
+            background: #3f3f46;
+        }
+        .pgn-study-reopen.visible {
+            display: block;
         }
 
         pgn-study pgn-player .video-title,
@@ -416,6 +466,12 @@
 <body>
 
     <header class="pgn-study-ribbon">
+        <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="play" title="Play" aria-label="Play" disabled>
+            <span class="lucide-icon" id="pgnStudyPlayIcon"></span>
+        </button>
+        <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="pause" title="Pause" aria-label="Pause" disabled>
+            <span class="lucide-icon" id="pgnStudyPauseIcon"></span>
+        </button>
         <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="download" title="Download PGN" aria-label="Download PGN" disabled>
             <span class="lucide-icon" id="pgnStudyDownloadIcon"></span>
         </button>
@@ -425,10 +481,17 @@
         <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="speed" title="Playback speed (1x)" aria-label="Playback speed" disabled>
             <span class="lucide-icon" id="pgnStudySpeedIcon"></span>
         </button>
+        <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="toc" title="Jump to table of contents" aria-label="Jump to table of contents" disabled>
+            <span class="lucide-icon" id="pgnStudyTocIcon"></span>
+        </button>
     </header>
 
     <button class="pgn-study-close" type="button" id="pgnStudyClose" title="Close" aria-label="Close">
         <span class="lucide-icon" id="pgnStudyCloseIcon"></span>
+    </button>
+
+    <button class="pgn-study-reopen" type="button" id="pgnStudyReopen">
+        Open PGN Study
     </button>
 
     <div class="pgn-study-loading" id="pgnStudyLoading">
@@ -514,6 +577,7 @@
            its actual engine — which the buttons need — finishes
            constructing. */
         const ribbonIconMap = {
+            pgnStudyPlayIcon:     '.play .lucide-icon',
             pgnStudyDownloadIcon: '.settings-btn[data-action="download"] .lucide-icon',
             pgnStudyFlipIcon:     '.settings-btn[data-action="flip"] .lucide-icon',
             pgnStudySpeedIcon:    '.settings-btn[data-action="speed"] .lucide-icon',
@@ -523,20 +587,32 @@
             if (iconUrl) document.getElementById(id).style.setProperty('--icon', iconUrl);
         });
 
-        // The close button has no equivalent already-rendered icon anywhere
-        // in <pgn-player> to borrow from (unlike the three above), so this
-        // one goes straight through ChessPublica's own public lucideIconUrl()
-        // instead — see assets/icons.js / assets/ChessPublica.js.
+        // The close button, pause button, and TOC button have no equivalent
+        // already-rendered icon anywhere in <pgn-player> to borrow from
+        // (unlike the four above — the on-board overlay button only ever
+        // shows the "play" glyph, never "pause"), so these go straight
+        // through ChessPublica's own public lucideIconUrl() instead — see
+        // assets/icons.js / assets/ChessPublica.js.
         document.getElementById('pgnStudyCloseIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('x'));
+        document.getElementById('pgnStudyPauseIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('pause'));
+        document.getElementById('pgnStudyTocIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('list'));
 
         // Closing doesn't depend on the engine, or even on loading having
         // finished — hide whichever of the loading placeholder or the real
         // <pgn-study> is currently showing (?.remove()/[none] no-op safely
-        // either way) and reveal the bare body behind them.
+        // either way) and reveal the bare body behind them, but leave a way
+        // back in via the reopen button.
+        const reopenBtn = document.getElementById('pgnStudyReopen');
         document.getElementById('pgnStudyClose').addEventListener('click', () => {
             document.getElementById('pgnStudyLoading')?.remove();
             studyEl.style.display = 'none';
             document.getElementById('pgnStudyClose').style.display = 'none';
+            reopenBtn.classList.add('visible');
+        });
+        reopenBtn.addEventListener('click', () => {
+            studyEl.style.display = '';
+            document.getElementById('pgnStudyClose').style.display = '';
+            reopenBtn.classList.remove('visible');
         });
 
         /* Chessbase-style reading sync between the <pgn-player> on the left
@@ -704,6 +780,40 @@
                         btn.setAttribute('aria-label', label);
                     }
                 });
+            });
+
+            /* Play / Pause ribbon buttons drive the engine directly —
+               unlike download/flip/speed above, there's no hidden
+               .settings-btn counterpart to forward to (the on-board
+               overlay button only ever shows/hides itself, it doesn't
+               expose a separate "pause" control). Each button only acts
+               when it's the valid transition (play while paused, pause
+               while playing) and the pair's disabled state is kept in
+               sync with engine.state.playing via the same "cp-move"
+               event goTo() already fires on every play tick, pause, and
+               manual navigation — see the move-picker/TOC listeners
+               below for the same pattern. */
+            const playBtn  = document.querySelector('.pgn-study-ribbon-btn[data-ribbon-action="play"]');
+            const pauseBtn = document.querySelector('.pgn-study-ribbon-btn[data-ribbon-action="pause"]');
+            const syncPlayPauseButtons = () => {
+                pauseBtn.disabled = !engine.state.playing;
+                playBtn.disabled  = engine.state.playing;
+            };
+            playBtn.addEventListener('click', () => { if (!engine.state.playing) engine.play(); });
+            pauseBtn.addEventListener('click', () => { if (engine.state.playing) engine.pause(); });
+            syncPlayPauseButtons();
+            playerEl.addEventListener('cp-move', syncPlayPauseButtons);
+
+            /* TOC ribbon button — page-level navigation (scrolls the
+               reading column to the table of contents built further
+               down), not a board/playback action, so there's nothing to
+               forward to. Looked up at click time rather than cached
+               here since buildOpeningToc() below still needs to fetch
+               and render it first. */
+            const tocBtn = document.querySelector('.pgn-study-ribbon-btn[data-ribbon-action="toc"]');
+            tocBtn.disabled = false;
+            tocBtn.addEventListener('click', () => {
+                document.querySelector('.pgn-study-toc')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             });
 
             /* Move picker — replaces <pgn-player>'s own comment/variation
