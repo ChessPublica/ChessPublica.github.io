@@ -1485,15 +1485,25 @@ class VideoComment {
         iconSpan.setAttribute("aria-label", "Replay");
         btn.onclick = () => {
           this.el.querySelectorAll(".var-move").forEach(s => s.classList.remove("active"));
-          this.engine.goTo(0);
-          this.engine.showPlayBtn();
+          /* "Replay" restarts whatever this comment was showing — the
+             active variation if there is one (back to its own first
+             move, not the main line's), the main line otherwise. */
+          if (this.engine._variation) {
+            this.engine.variationGoTo(0);
+          } else {
+            this.engine.goTo(0);
+            this.engine.showPlayBtn();
+          }
         };
       } else {
         iconSpan.style.setProperty("--icon", lucideIconUrl("play"));
         iconSpan.setAttribute("aria-label", "Play");
         btn.onclick = () => {
           this.el.querySelectorAll(".var-move").forEach(s => s.classList.remove("active"));
-          this.engine.play();
+          /* Resumes whichever is currently paused — the active variation
+             if there is one, the main line otherwise — exactly like
+             pressing spacebar (togglePlay()) would from here. */
+          this.engine.togglePlay();
         };
       }
       btn.appendChild(iconSpan);
@@ -2215,6 +2225,15 @@ class VideoEngine {
       }
     }
 
+    /* Keep the comment box in sync with whatever position is actually on
+       the board — every path into this method (variationGoTo() stepping,
+       variation autoplay, entering a fresh variation, a host page's own
+       direct preview call) must show *this* move's comment, and clear
+       any stale one left over from wherever the board was showing before
+       (mainline or a different variation), exactly like goTo() already
+       does for the main line below. */
+    this._updateVariationCommentBox(fen);
+
     /* Notify the page a variation position is showing — the "cp-move"
        counterpart (see goTo()) for every path that lands here:
        variationGoTo() (arrow-key stepping and the variation
@@ -2229,6 +2248,52 @@ class VideoEngine {
       bubbles: true,
       detail: { fen, headers: this.state.headers },
     }));
+  }
+
+  /* Variation counterpart to goTo()'s commentBox.update() call — reads
+     the current variation move's comment/diagram/child-variations off
+     this._variation.variationObj (the parsed { moves, commentsByMove, … }
+     enterVariation() was handed) at this._variation.index, exactly like
+     renderSubPicker()'s own lookup in sadler/index.html. Always runs (not
+     just while paused), so a comment shows the instant its move is
+     reached — during autoplay or single-step alike — and clears the
+     moment the board moves past it. variationObj is null for a variation
+     entered without one (e.g. a bare FEN preview with no parsed move
+     data behind it) — nothing to look up, but still clears any stale
+     comment left over from a previous position. */
+  _updateVariationCommentBox(fen) {
+    if (!this.commentBox) return;
+
+    const v = this._variation;
+    if (!v) {
+      this.commentBox.update(-1, [], [], [], null, false, null, 1, false, false);
+      return;
+    }
+
+    const variationObj = v.variationObj;
+    const index   = v.index;
+    const moveIdx = index - 1;
+
+    const comments = variationObj ? variationObj.commentsByMove  : [];
+    const diagrams = variationObj ? variationObj.diagramByMove   : [];
+    const children = variationObj ? variationObj.childrenByMove  : [];
+
+    const branchFEN = v.fens[Math.max(moveIdx, 0)] || null;
+    const ctx = this._fenMoveContext(branchFEN || v.fens[0] || fen);
+    const isGameOver = index >= v.fens.length - 1;
+
+    this.commentBox.update(
+      moveIdx,
+      comments,
+      children,
+      diagrams,
+      fen,
+      !v.playing,
+      branchFEN,
+      ctx.fullMoveNum,
+      ctx.isBlack,
+      isGameOver
+    );
   }
 
 
@@ -2302,6 +2367,15 @@ class VideoEngine {
       fullMoveNum: (this.state.startMoveNumber || 1) + Math.floor(virtualIndex / 2),
       isBlack:     virtualIndex % 2 === 1
     };
+  }
+
+  /* A variation move's color/move-number, read straight off a FEN's own
+     side-to-move + fullmove-number fields — unlike _moveContext() above,
+     which walks the main line's move index, a variation position has no
+     such index to offset from, only the FENs enterVariation() was handed. */
+  _fenMoveContext(fen) {
+    const parts = fen.split(" ");
+    return { isBlack: parts[1] === "b", fullMoveNum: parseInt(parts[5], 10) || 1 };
   }
 
 

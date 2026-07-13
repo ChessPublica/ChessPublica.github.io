@@ -646,19 +646,39 @@ function markDiagramClickable(wrapper, fen, node, options) {
    VARIATION branch above) — never a real move — so `.parent.fen` is
    exactly the FEN this variation branches from, giving fens[0].
 
-   Returns { fens, verbose } shaped for VideoEngine.enterVariation():
-   fens[0] is the branch position, fens[k] is the position after the
-   k-th move; verbose[k-1] is that move's { from, to }. */
+   Returns { fens, verbose, comments, diagrams } shaped for
+   VideoEngine.enterVariation()/showVariationPosition(): fens[0] is the
+   branch position, fens[k] is the position after the k-th move;
+   verbose[k-1] is that move's { from, to }; comments[k-1]/diagrams[k-1]
+   are that same move's prose comment (already stripped of [%…]/[D]/[#]
+   markers, same as processComment() above) and whether it carried a
+   diagram marker — the shape <pgn-player>'s own variation objects use
+   for commentsByMove/diagramByMove, so a host page can hand this
+   straight to VideoComment.update() via a variationObj-like object. */
 function collectVariationSequence(firstMoveNode) {
   var fens = [firstMoveNode.parent ? firstMoveNode.parent.fen : firstMoveNode.fen];
   var verbose = [];
+  var comments = [];
+  var diagrams = [];
   var n = firstMoveNode;
   while (n) {
     fens.push(n.fen);
     verbose.push(n.from && n.to ? { from: n.from, to: n.to } : null);
+
+    var comment = null;
+    var hasDiagram = false;
+    if (n.parts && n.parts.length) {
+      n.parts.forEach(function (part) {
+        if (part.type === "text") comment = comment ? comment + " " + part.value : part.value;
+        else if (part.type === "diagram") hasDiagram = true;
+      });
+    }
+    comments.push(comment);
+    diagrams.push(hasDiagram);
+
     n = n.next;
   }
-  return { fens: fens, verbose: verbose };
+  return { fens: fens, verbose: verbose, comments: comments, diagrams: diagrams };
 }
 
 function renderLine(node, parent, isVariation, plyCounter, options) {
@@ -795,6 +815,8 @@ function renderLine(node, parent, isVariation, plyCounter, options) {
           var seq = collectVariationSequence(variationRoot);
           variationWrapper.cpFens = seq.fens;
           variationWrapper.cpVerbose = seq.verbose;
+          variationWrapper.cpComments = seq.comments;
+          variationWrapper.cpDiagrams = seq.diagrams;
         }
         renderLine(variationRoot, variationWrapper, true, plyCounter, options);
       });
@@ -830,11 +852,13 @@ function flushBuffer(parent, text, isVariation) {
  *       span carrying either `data-ply` (mainline) or
  *       `data-fen`/`data-from`/`data-to`/`data-vindex` (variation) — see
  *       renderLine() below. A variation move's `.pgn-variation` wrapper
- *       also carries the whole variation's `fens`/`verbose` sequence
- *       (as `.cpFens`/`.cpVerbose` element properties, not
- *       attributes — see collectVariationSequence()) so a host page can
- *       hand both to <pgn-player>'s enterVariation() and get real
- *       keyboard (arrow-key/spacebar) stepping through the variation,
+ *       also carries the whole variation's `fens`/`verbose`/`comments`/
+ *       `diagrams` sequence (as `.cpFens`/`.cpVerbose`/`.cpComments`/
+ *       `.cpDiagrams` element properties, not attributes — see
+ *       collectVariationSequence()) so a host page can hand it all to
+ *       <pgn-player>'s enterVariation() and get real keyboard
+ *       (arrow-key/spacebar) stepping through the variation, with its
+ *       own comments showing under the board,
  *       not just a single-position preview;
  *     - every diagram's `.cp-board-wrapper` is tagged
  *       `.pgn-clickable-diagram` with `data-fen` (and `data-from`/
