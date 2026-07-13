@@ -255,10 +255,19 @@
            frame is centered with a flat 5vw/5vh margin — see pgn-study/
            .pgn-study-loading above — so a fixed offset lines up with it
            exactly without needing to be a positioned descendant of
-           either one, and keeps working across the loading -> ready
-           swap unchanged). Always enabled/visible: closing doesn't
-           depend on the engine being ready. */
+           either one). Hidden for as long as the loading placeholder is
+           showing — same reasoning as the ribbon above (see its own
+           comment) — via :has(), since (unlike the ribbon) this button
+           is never moved inside <pgn-study>, so a plain
+           "pgn-study.cp-ready > .pgn-study-close" selector can't reach
+           it. Once revealed, closing no longer depends on the engine
+           being ready (its own click handler doesn't check cp-ready or
+           anything else) — only *becoming visible in the first place*
+           does. */
         .pgn-study-close {
+            display: none;
+        }
+        body:has(pgn-study.cp-ready) .pgn-study-close {
             position: fixed;
             top: calc(5vh + 0.5rem);
             right: calc(5vw + 0.5rem);
