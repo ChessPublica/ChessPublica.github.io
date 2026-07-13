@@ -80,15 +80,12 @@
                column exactly as tall as the reading column next to it —
                almost always taller than the board + its (often near-
                empty) comment box actually need, since .player-wrapper's
-               own site-wide min-height is only 500px. Rather than
-               leaving 100+px of dead space below the board, split it
-               evenly above and below by centering — "safe" so a comment
-               long enough to actually need the extra room falls back to
-               top-alignment instead of scrolling in from a clipped top
-               edge. */
+               own site-wide min-height is only 500px. Pinned to the top
+               (flex's own default) so the board lines up with the
+               reading column's first line of text instead of floating
+               mid-column — any leftover space just falls below it. */
             display: flex;
             flex-direction: column;
-            justify-content: safe center;
         }
         pgn-study > pgn-player > .player-wrapper {
             /* Flex items default to flex-shrink: 1 — without this, a
