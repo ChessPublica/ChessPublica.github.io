@@ -157,6 +157,38 @@
             .pgn-study-resizer.dragging::after {
                 background: #a1a1aa;
             }
+            /* GRIP HANDLE — the thin line above reads as a border, not
+               something draggable, so a small pill with a grip icon sits
+               on top of it at vertical center as a more obvious
+               affordance. pointer-events: none so it doesn't intercept
+               anything — the drag/hover/click target is still the whole
+               .pgn-study-resizer track, same as before this existed. */
+            .pgn-study-resizer-handle {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 1.1rem;
+                height: 2.75rem;
+                background: #e4e4e7;
+                border: 1px solid #d4d4d8;
+                border-radius: 0.5rem;
+                color: #71717a;
+                pointer-events: none;
+                transition: background 0.15s, border-color 0.15s;
+            }
+            .pgn-study-resizer-handle .lucide-icon {
+                width: 0.85rem;
+                height: 0.85rem;
+            }
+            .pgn-study-resizer:hover .pgn-study-resizer-handle,
+            .pgn-study-resizer.dragging .pgn-study-resizer-handle {
+                background: #d4d4d8;
+                border-color: #a1a1aa;
+            }
         }
         @media (max-width: 899px) {
             /* No side-by-side columns to resize in the stacked mobile
@@ -728,6 +760,13 @@
         resizerEl.setAttribute('role', 'separator');
         resizerEl.setAttribute('aria-orientation', 'vertical');
         resizerEl.setAttribute('aria-label', 'Resize columns');
+        const resizerHandle = document.createElement('span');
+        resizerHandle.className = 'pgn-study-resizer-handle';
+        const resizerHandleIcon = document.createElement('span');
+        resizerHandleIcon.className = 'lucide-icon';
+        resizerHandleIcon.style.setProperty('--icon', window.ChessPublica.lucideIconUrl('grip-vertical'));
+        resizerHandle.appendChild(resizerHandleIcon);
+        resizerEl.appendChild(resizerHandle);
 
         studyEl.replaceChildren(playerEl, resizerEl, pgnEl);
         studyEl.prepend(document.querySelector('.pgn-study-ribbon'));
