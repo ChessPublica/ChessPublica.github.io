@@ -34,6 +34,13 @@
             display: none;
         }
 
+        /* .pgn-title .video-title-text sizes in rem, not em, so it
+           doesn't pick up pgn-app's 110% scale via inheritance like
+           everything else on the page — override it explicitly. */
+        pgn-app .pgn-title .video-title-text {
+            font-size: 1.1rem;
+        }
+
         .sadler-move-picker {
             margin: 0.5rem 0;
             display: flex;
@@ -66,6 +73,16 @@
             font-weight: bold;
         }
 
+        pgn-app .pgn-container {
+            /* Captured once under its own name so nested .pgn-variation
+               levels can each scale from the real ambient board size
+               (400px by default, smaller on narrow viewports per
+               styles.css's own media query) without redeclaring
+               --board-size itself, which would cycle — see the
+               .pgn-variation rules below. */
+            --base-board-size: var(--board-size);
+        }
+
         pgn-app .pgn-container .pgn-move,
         pgn-app .pgn-container .pgn-clickable-diagram {
             cursor: pointer;
@@ -92,7 +109,29 @@
             margin-left: 1.25rem;
             padding-left: 0.75rem;
             border-left: 2px solid rgba(128, 128, 128, 0.3);
+            /* font-size compounds on its own through plain inheritance —
+               em is relative to the parent's own computed font-size, so a
+               sub-variation-of-a-sub-variation naturally starts from its
+               parent's already-shrunk size, no per-depth selectors
+               needed. --board-size can't use the same trick: a custom
+               property that references var(--board-size) inside its own
+               --board-size declaration is a cycle by spec (computes to
+               invalid) even though the reference is meant to mean "the
+               inherited value from further up" — there's no way to name
+               "the parent's value" separately from "this element's own
+               value" for a custom property the way em does for
+               font-size. So diagram size is instead read from
+               --base-board-size (captured once, see .pgn-container below,
+               untouched at every depth) and scaled by an explicit factor
+               per nesting level. */
+            font-size: 0.9em;
         }
+        pgn-app .pgn-container .pgn-variation { --board-size: calc(var(--base-board-size) * 0.88); }
+        pgn-app .pgn-container .pgn-variation .pgn-variation { --board-size: calc(var(--base-board-size) * 0.774); }
+        pgn-app .pgn-container .pgn-variation .pgn-variation .pgn-variation { --board-size: calc(var(--base-board-size) * 0.681); }
+        pgn-app .pgn-container .pgn-variation .pgn-variation .pgn-variation .pgn-variation { --board-size: calc(var(--base-board-size) * 0.599); }
+        pgn-app .pgn-container .pgn-variation .pgn-variation .pgn-variation .pgn-variation .pgn-variation { --board-size: calc(var(--base-board-size) * 0.527); }
+        pgn-app .pgn-container .pgn-variation .pgn-variation .pgn-variation .pgn-variation .pgn-variation .pgn-variation { --board-size: calc(var(--base-board-size) * 0.464); }
         /* The static reading column defaults to 2 sub-columns
            (ChessPublica.css's .pgn-moves) for narrower single-column
            blog layouts elsewhere on the site; with a dedicated column
@@ -571,18 +610,28 @@
                     ? { from: moveEl.dataset.from, to: moveEl.dataset.to }
                     : null;
 
-                // A variation move (not a diagram) carries data-vindex —
-                // its 0-based index into the fens/verbose sequence pgn.js
-                // stashed on the enclosing .pgn-variation (see
-                // collectVariationSequence() there). Handing that whole
-                // sequence to enterVariation(), not just this one FEN, is
-                // what makes arrow keys/spacebar step through the rest of
-                // the variation afterward instead of falling back to
-                // mainline navigation.
-                const vIndex = moveEl.dataset.vindex;
-                const varWrapper = vIndex !== undefined ? moveEl.closest('.pgn-variation') : null;
+                // A variation move carries data-vindex — its 0-based index
+                // into the fens/verbose sequence pgn.js stashed on the
+                // enclosing .pgn-variation (see collectVariationSequence()
+                // there). A diagram inside a variation carries no such
+                // index (it isn't itself one of the sequence's moves), so
+                // find it by matching its FEN in that same sequence
+                // instead. Either way, handing the whole sequence to
+                // enterVariation(), not just this one FEN, is what makes
+                // arrow keys/spacebar step through the REST of the
+                // variation from here afterward, instead of falling back
+                // to mainline playback (which is all showVariationPosition()
+                // alone gives you — a static preview with no position of
+                // its own to resume from).
+                const varWrapper = moveEl.closest('.pgn-variation');
                 if (varWrapper && varWrapper.cpFens) {
-                    engine.enterVariation(varWrapper.cpFens, null, parseInt(vIndex, 10) + 1, null, varWrapper.cpVerbose, null);
+                    const vIndex = moveEl.dataset.vindex;
+                    const index = vIndex !== undefined
+                        ? parseInt(vIndex, 10) + 1
+                        : varWrapper.cpFens.indexOf(fen);
+                    if (index >= 0) {
+                        engine.enterVariation(varWrapper.cpFens, null, index, null, varWrapper.cpVerbose, null);
+                    }
                 }
 
                 engine.showVariationPosition(fen, null, move, null);
