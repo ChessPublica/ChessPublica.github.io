@@ -286,6 +286,10 @@ pgn-study.pgn-study-collapsed {
        frame's own left edge instead. */
     margin-left: 5vw;
     margin-right: auto;
+    /* The whole pill doubles as an expand button while collapsed (see
+       studyEl's click listener in pgn-study.js) - signal that the same
+       way the toggle button itself already does. */
+    cursor: pointer;
 }
 pgn-study.pgn-study-collapsed > pgn-player,
 pgn-study.pgn-study-collapsed > .pgn-study-resizer,
