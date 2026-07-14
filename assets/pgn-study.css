@@ -1,0 +1,788 @@
+/**
+ * ChessPublica — PGN Study page styles
+ *
+ * Pairs with pgn-study.js: a fixed-frame layout (90vw x 90vh) that turns
+ * a bare <pgn-study>[PGN text]</pgn-study> element into a two-column
+ * (desktop) / stacked (mobile) study, with a ribbon, loading placeholder,
+ * resizable columns, and a collapsed state. See
+ * pgn-study/sadler/index.html for a minimal page that uses it.
+ */
+
+/* This page is exactly one 90vw x 90vh frame (or its loading-
+   placeholder stand-in), each centered with a flat 5vh top/bottom
+   margin — 5vh + 90vh + 5vh should sum to exactly 100vh, but
+   margin collapsing/vh rounding can leave body a hair taller
+   than the viewport, letting it scroll by a few px. That's more
+   than just an unwanted scrollbar: the close (X) button below is
+   position:fixed (viewport-relative, so its offset lines up with
+   the frame without needing to be its DOM descendant), while the
+   frame itself scrolls with the page like normal content — the
+   two visibly drift apart the moment that scroll is possible.
+   Killing body/html scroll entirely removes the drift along with
+   the scrollbar, and costs nothing: nothing on this page is
+   meant to need it (the frame's own columns already scroll
+   independently — see the overflow-y rules below). */
+html, body {
+    height: 100%;
+    overflow: hidden;
+}
+pgn-study {
+    --frame-pad: 1.5rem;
+    /* Bottom gets less than the other three sides — with the
+       columns/divider already stretched (align-items: stretch,
+       desktop rule below) to fill the row exactly, the padding
+       here is the *only* gap left between them and the border,
+       and a full --frame-pad of it read as noticeably more
+       breathing room than the top/left/right, which each also
+       have real content sitting flush against them. */
+    --frame-pad-bottom: 0.75rem;
+    font-size: 110%;
+    display: flex;
+    flex-direction: column;
+    width: 90vw;
+    height: 90vh;
+    max-width: 1600px;
+    margin: 5vh auto;
+    padding: var(--frame-pad) var(--frame-pad) var(--frame-pad-bottom) var(--frame-pad);
+    border: 1px solid #d4d4d8;
+    border-radius: 0.75rem;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+pgn-study > pgn-player,
+pgn-study > .pgn-container {
+    min-height: 0; /* grid/flex items default to min-height:auto, which blocks the overflow below from ever kicking in */
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+pgn-study > .pgn-container {
+    /* assets/ChessPublica.css's shared .pgn-container rule adds
+       margin-bottom: 1rem for breathing room before whatever
+       comes after it on a normal page — here it IS the scrollable
+       column, with nothing after it to separate from, so it was
+       just adding dead space between the last line of text and
+       the frame's own bottom padding. */
+    margin-bottom: 0;
+}
+/* The board's actual pixel size is normally driven by --board-size
+   against the *viewport* (see styles.css's root default), which
+   made sense on a full-width page but not here: pgn-player only
+   ever gets a fraction of the frame (a third of it, on the desktop
+   two-column grid below), so a viewport-relative size either
+   overflows the column or leaves it half-empty depending on
+   screen width. Making pgn-player itself a size container lets
+   --board-size be expressed in cqw (% of pgn-player's own
+   rendered width) instead, so the board actually tracks the
+   column's real size — including live drags of a browser window,
+   not just the breakpoint switch at 900px — capped at the same
+   400px/500px ceilings the fixed values used before. */
+pgn-study > pgn-player {
+    /* Explicit width, not just the grid item's default stretch:
+       contain:inline-size (implied by container-type below) blocks
+       the browser from resolving an auto/stretch width against the
+       grid track's content-independent 1fr share, which otherwise
+       collapses the column to 0 instead. */
+    width: 100%;
+    container-type: inline-size;
+    /* The desktop grid's align-items: stretch (below) makes this
+       column exactly as tall as the reading column next to it —
+       almost always taller than the board + its (often near-
+       empty) comment box actually need, since .player-wrapper's
+       own site-wide min-height is only 500px. Pinned to the top
+       (flex's own default) so the board lines up with the
+       reading column's first line of text instead of floating
+       mid-column — any leftover space just falls below it. */
+    display: flex;
+    flex-direction: column;
+}
+pgn-study > pgn-player > .player-wrapper {
+    /* Flex items default to flex-shrink: 1 — without this, a
+       comment long enough to overflow this fixed-height column
+       would get silently squashed short of its natural size
+       instead of actually overflowing, which is what's supposed
+       to make the column's own overflow-y: auto (above) kick in
+       and let it scroll. */
+    flex-shrink: 0;
+}
+pgn-study pgn-player {
+    --board-size: min(400px, 94cqw);
+}
+.pgn-study-mobile-title {
+    /* Hidden by default (desktop): excluding it from the grid
+       entirely (rather than just visually hiding it) means it
+       doesn't consume one of the two content-row cells grid
+       auto-placement would otherwise assign it ahead of
+       pgn-player/the resizer/.pgn-container — see the
+       DOMContentLoaded listener below for where this clone
+       actually gets inserted, and why it's a clone and not a
+       move. Declared before the max-width query below so that
+       query's own display: flex — same specificity, later in
+       the cascade — is what actually wins under 900px, not
+       this. */
+    display: none;
+}
+@media (max-width: 899px) {
+    /* Single column: ribbon, title/byline, board (+ its own move
+       picker and current-move comment, already part of
+       <pgn-player> itself — nothing extra needed for those),
+       nothing else — nowhere near enough room for a second
+       column of move text too. pgn-player is the only piece left
+       with real room to grow into, so it alone gets flex: 1 1 0
+       (fill whatever the ribbon/title don't use, scrolling
+       internally past that); those two keep flex's default
+       0 0 auto — sized to their own content instead. */
+    pgn-study > pgn-player {
+        flex: 1 1 0;
+    }
+    pgn-study > .pgn-container {
+        display: none;
+    }
+    .pgn-study-mobile-title {
+        display: flex;
+    }
+
+    /* ARTICLE VIEW — toggled by the mobile-only Article ribbon
+       button (see .pgn-study-article-btn below): swaps the board
+       out for the reading column, still one column, still filling
+       the same space. Higher specificity than the plain rules
+       above (an extra class each), not source order, is what
+       makes these win. */
+    pgn-study.mobile-article-view > pgn-player,
+    pgn-study.mobile-article-view > .pgn-study-mobile-title {
+        display: none;
+    }
+    pgn-study.mobile-article-view > .pgn-container {
+        display: block;
+        flex: 1 1 0;
+    }
+}
+@media (min-width: 900px) {
+    pgn-study {
+        --frame-pad: 2.5rem;
+        --frame-pad-bottom: 1.25rem;
+        /* Defaults reproduce the old fixed 1fr:2fr split exactly —
+           the resizer below only ever overrides --left-col-width
+           (switching it from a fr share to a hard px value once
+           the reader actually drags), --right-col-width stays untouched at 2fr since
+           the right column just keeps filling whatever's left. */
+        --left-col-width: 1fr;
+        --right-col-width: 2fr;
+        display: grid;
+        grid-template-columns: var(--left-col-width) 6px var(--right-col-width);
+        grid-template-rows: auto 1fr;
+        align-items: stretch;
+        padding: var(--frame-pad) var(--frame-pad) var(--frame-pad-bottom) var(--frame-pad);
+    }
+    pgn-study pgn-player { --board-size: min(calc(400px * 1.25), 94cqw); }
+    /* Row 1, spanning every column (including the resizer track)
+       — pgn-player/.pgn-study-resizer/.pgn-container have no
+       placement rules of their own, so grid auto-flow puts them
+       in row 2 (row 1's only cell is already taken) in DOM order:
+       pgn-player, then the resizer, then .pgn-container. */
+    pgn-study > .pgn-study-ribbon {
+        grid-column: 1 / -1;
+    }
+    .pgn-study-resizer {
+        position: relative;
+        cursor: col-resize;
+        touch-action: none;
+    }
+    .pgn-study-resizer::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 50%;
+        width: 2px;
+        transform: translateX(-50%);
+        background: #e4e4e7;
+        transition: background 0.15s;
+    }
+    .pgn-study-resizer:hover::after,
+    .pgn-study-resizer.dragging::after {
+        background: #a1a1aa;
+    }
+    /* GRIP HANDLE — the thin line above reads as a border, not
+       something draggable, so a small pill with a grip icon sits
+       on top of it at vertical center as a more obvious
+       affordance. pointer-events: none so it doesn't intercept
+       anything — the drag/hover/click target is still the whole
+       .pgn-study-resizer track, same as before this existed. */
+    .pgn-study-resizer-handle {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        /* ::after (the line) is painted after the handle's own
+           DOM children by default regardless of source order —
+           this keeps the handle on top instead of getting
+           visually sliced by the line underneath it, most
+           noticeably once ::after darkens/thickens on hover. */
+        z-index: 1;
+        transform: translate(-50%, -50%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.1rem;
+        height: 2.75rem;
+        background: #e4e4e7;
+        border: 1px solid #d4d4d8;
+        border-radius: 0.5rem;
+        color: #71717a;
+        pointer-events: none;
+        transition: background 0.15s, border-color 0.15s;
+    }
+    .pgn-study-resizer-handle .lucide-icon {
+        width: 0.85rem;
+        height: 0.85rem;
+    }
+    .pgn-study-resizer:hover .pgn-study-resizer-handle,
+    .pgn-study-resizer.dragging .pgn-study-resizer-handle {
+        background: #d4d4d8;
+        border-color: #a1a1aa;
+    }
+}
+@media (max-width: 899px) {
+    /* No side-by-side columns to resize in the stacked mobile
+       layout — the resizer only exists for the desktop grid. */
+    .pgn-study-resizer {
+        display: none;
+    }
+}
+
+/* COLLAPSED VIEW — toggled by the ribbon's collapse/expand button
+   (see .pgn-study-collapse-toggle below), on either layout: hides
+   every direct child of <pgn-study> except the ribbon itself, and
+   lets the frame's own fixed height (normally 90vh) shrink down to
+   just that ribbon's natural height instead. Each selector here
+   targets an element some *other* rule elsewhere also sets
+   display on (mobile-article-view's own toggle among them) — an
+   extra class on top of the plain "pgn-study > X" / ".X" selectors
+   those use is what wins on specificity, and this block is placed
+   after all of them so a tie (same specificity, different states)
+   still resolves in the collapsed view's favor. */
+pgn-study.pgn-study-collapsed {
+    height: auto;
+}
+pgn-study.pgn-study-collapsed > pgn-player,
+pgn-study.pgn-study-collapsed > .pgn-study-resizer,
+pgn-study.pgn-study-collapsed > .pgn-container,
+pgn-study.pgn-study-collapsed > .pgn-study-mobile-title {
+    display: none;
+}
+pgn-study.pgn-study-collapsed > .pgn-study-ribbon {
+    /* Cancels the ribbon's own trailing margin-bottom (see its
+       main rule below) — otherwise collapsing would still leave a
+       gap below it sized for content that's no longer there. */
+    margin-bottom: 0;
+}
+/* Play/TOC/article/settings all act on the board or reading
+   column — pointless controls once both are hidden, and on a
+   narrow mobile ribbon they'd otherwise crowd the title down to a
+   sliver (barely a couple of characters before ellipsizing).
+   Hiding them leaves just the title on the left and the toggle on
+   the right, which is what "collapsed" should look like anyway. */
+pgn-study.pgn-study-collapsed > .pgn-study-ribbon .pgn-study-ribbon-left,
+pgn-study.pgn-study-collapsed > .pgn-study-ribbon [data-ribbon-action="settings"],
+pgn-study.pgn-study-collapsed > .pgn-study-ribbon .pgn-study-settings-inline {
+    display: none;
+}
+pgn-study.pgn-study-collapsed .pgn-study-toc-accordion.open {
+    /* A reader could collapse mid-TOC-browse — force it shut so
+       the "collapsed" frame doesn't still show a tall accordion. */
+    max-height: 0;
+}
+
+/* <pgn-study> starts out holding its PGN as raw, unstyled text (see
+   the module script below) — hidden here so it never flashes on
+   screen before that script swaps it for the real <pgn-player>/
+   <pgn> elements, and before those finish their own async load
+   (parsing the PGN, building the board). #pgnStudyLoading below
+   stands in for it — same two-column footprint, empty board on
+   the left, spinner on the right — until the script reveals the
+   real thing by adding .cp-ready (see the DOMContentLoaded
+   listener at the bottom of this file). */
+pgn-study:not(.cp-ready) {
+    display: none;
+}
+
+/* Same 90vw x 90vh framed footprint as the real <pgn-study> (see
+   above) so swapping one for the other doesn't visibly resize
+   the page. Starts visible (see its "visible" class in the
+   markup below) since the study now opens automatically on
+   page load rather than behind a button — this stands in until
+   loading finishes and revealStudy() swaps it for the real
+   thing. */
+.pgn-study-loading:not(.visible) {
+    display: none !important;
+}
+.pgn-study-loading {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    width: 90vw;
+    height: 90vh;
+    max-width: 1600px;
+    margin: 5vh auto;
+    padding: 1.5rem 1.5rem 0.75rem 1.5rem;
+    border: 1px solid #d4d4d8;
+    border-radius: 0.75rem;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+@media (min-width: 900px) {
+    .pgn-study-loading {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        align-items: start;
+        padding: 2.5rem 2.5rem 1.25rem 2.5rem;
+    }
+}
+.pgn-study-loading-board {
+    width: 400px;
+    max-width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 4px;
+    background-image:
+        conic-gradient(#b58863 90deg, #f0d9b5 90deg 180deg, #b58863 180deg 270deg, #f0d9b5 270deg);
+    background-size: 25% 25%;
+}
+@media (min-width: 900px) {
+    .pgn-study-loading-board { width: 500px; }
+}
+.pgn-study-loading-side {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    min-height: 200px;
+    color: #777;
+}
+.pgn-study-loading-spinner {
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 4px solid rgba(0, 0, 0, 0.15);
+    border-top-color: #777;
+    border-radius: 50%;
+    animation: pgn-study-loading-spin 0.8s linear infinite;
+}
+@keyframes pgn-study-loading-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* RIBBON — minimal top bar, standing in for the board's own
+   gear-icon settings panel (hidden below, same as .video-title/
+   .board-toolbar/.play — see the "pgn-study pgn-player" rules
+   just below): download/flip/speed forward to it, plus
+   play/pause and a TOC dropdown of its own. Deliberately hidden
+   for as long as the loading placeholder is showing — not "page
+   chrome" independent of it — via the same not(.cp-ready) gate
+   as pgn-study itself: it's moved inside pgn-study as its first
+   child (see the DOMContentLoaded listener below), but starts
+   display:none here, unconditionally, since it's still a
+   page-level sibling in the raw HTML for a brief window before
+   that synchronous move runs — this rule (rather than relying on
+   pgn-study:not(.cp-ready) alone) is what keeps it from flashing
+   on screen during that window. Buttons start disabled — see the
+   DOMContentLoaded listener below — since they forward clicks to
+   <pgn-player>'s own (hidden) settings buttons, which aren't
+   wired up until the engine itself is ready. Icon-only: the
+   speed button's current multiplier (1x/2x/…) — the one piece of
+   state an icon alone can't show — lives in its title/aria-label
+   tooltip instead of on-screen text, kept in sync after every
+   click (see the DOMContentLoaded listener below). */
+.pgn-study-ribbon {
+    display: none;
+}
+pgn-study.cp-ready > .pgn-study-ribbon {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+    padding: 0.5rem var(--frame-pad);
+    margin: calc(-1 * var(--frame-pad)) calc(-1 * var(--frame-pad)) 1rem calc(-1 * var(--frame-pad));
+    background: #fff;
+    border-bottom: 1px solid #e4e4e7;
+}
+/* Button row: left = play/pause + TOC, right = settings (cog,
+   toggles the flip/speed/download group inline — see
+   .pgn-study-settings-inline below) + close. */
+.pgn-study-ribbon-toprow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+/* Each side is its own tight group so the gap between the two
+   groups can stretch (space-between, above) independently of the
+   gap within either one. */
+.pgn-study-ribbon-group {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+.pgn-study-ribbon-btn {
+    position: relative; /* anchors .pgn-study-speed-badge below */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    background: transparent;
+    border: none;
+    border-radius: 0.4rem;
+    color: #52525b;
+    cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
+}
+.pgn-study-ribbon-btn:hover:not(:disabled) {
+    background: #f4f4f5;
+}
+.pgn-study-ribbon-btn:focus {
+    outline: none;
+}
+.pgn-study-ribbon-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+.pgn-study-ribbon-btn .lucide-icon {
+    width: 2rem;
+    height: 2rem;
+}
+
+/* ARTICLE BUTTON — desktop already has the reading column as its
+   own permanent second column, so this only ever shows up in the
+   stacked mobile layout, re-enabled by the "max-width: 899px"
+   rule just below. Both rules share the same specificity (an
+   extra class each, on top of .pgn-study-ribbon-btn's own
+   display: flex) — with a tie, source order decides, so the
+   mobile override has to come *after* this one, not before.
+   Highlighted while article view is showing (toggled alongside
+   aria-pressed — see the DOMContentLoaded listener below) so the
+   button itself reflects which of the two mobile views is
+   currently on screen. */
+.pgn-study-ribbon-btn.pgn-study-article-btn {
+    display: none;
+}
+@media (max-width: 899px) {
+    .pgn-study-ribbon-btn.pgn-study-article-btn {
+        display: flex;
+    }
+}
+.pgn-study-article-btn.active {
+    background: #e4e4e7;
+}
+
+/* SPEED BADGE — sits on the speed button itself (icon-only, so
+   the tooltip trick the old text-based speed label used isn't
+   visible at a glance) showing the current playback multiplier
+   at all times, not just on hover. Kept in sync by
+   syncSpeedBadge() below, alongside the tooltip. */
+.pgn-study-speed-badge {
+    position: absolute;
+    bottom: 0.15rem;
+    right: 0.15rem;
+    font-size: 0.6rem;
+    font-weight: 700;
+    line-height: 1;
+    padding: 0.1rem 0.25rem;
+    border-radius: 0.5rem;
+    background: #52525b;
+    color: #fff;
+    pointer-events: none;
+}
+
+/* COLLAPSE/EXPAND TOGGLE — a real ribbon child now (right group,
+   alongside settings — see the DOMContentLoaded listener below for
+   where it actually gets moved there), styled as a plain
+   .pgn-study-ribbon-btn from that point on. Until that move
+   happens it's still sitting at its original spot, a page-level
+   sibling before <pgn-study> — hidden by default here (same
+   reasoning the ribbon's own default display:none has) so it
+   doesn't flash there first; the override only re-shows it once
+   it's an actual descendant of the (by then visible) ribbon. */
+.pgn-study-collapse-toggle {
+    display: none;
+}
+pgn-study.cp-ready > .pgn-study-ribbon .pgn-study-collapse-toggle {
+    display: flex;
+}
+
+/* RIBBON TITLE — the icon + game title shown in the ribbon in
+   place of the button row's own middle gap once collapsed (see
+   .pgn-study-collapsed above); built once from a clone of the
+   reading column's own .pgn-title (see the DOMContentLoaded
+   listener below), same idea as .pgn-study-mobile-title's own
+   clone just above it. Hidden the rest of the time — nothing
+   useful to show in the space between the two button groups on
+   the expanded ribbon. min-width: 0 is what lets the text actually
+   shrink/ellipsize inside a flex row instead of forcing the row
+   wider than the ribbon. */
+.pgn-study-ribbon-title {
+    display: none;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    overflow: hidden;
+    font-weight: 600;
+    color: #18181b;
+}
+pgn-study.pgn-study-collapsed > .pgn-study-ribbon .pgn-study-ribbon-title {
+    display: flex;
+}
+.pgn-study-ribbon-title .lucide-icon {
+    flex-shrink: 0;
+    width: 1.5rem;
+    height: 1.5rem;
+    color: #52525b;
+}
+.pgn-study-ribbon-title-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+pgn-study pgn-player .video-title,
+pgn-study pgn-player .board-toolbar,
+pgn-study pgn-player .video-moves,
+pgn-study pgn-player .play {
+    display: none;
+}
+
+pgn-study pgn-player .video-comment .variation-block,
+pgn-study pgn-player .video-comment .comment-play-btn,
+pgn-study pgn-player .video-comment .comment-diagram {
+    display: none;
+}
+
+/* .pgn-title .video-title-text sizes in rem, not em, so it
+   doesn't pick up pgn-study's 110% scale via inheritance like
+   everything else on the page — override it explicitly. */
+pgn-study .pgn-title .video-title-text {
+    font-size: 1.1rem;
+}
+
+.pgn-study-move-picker {
+    margin: 0.5rem 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    row-gap: 2px;
+    column-gap: 4px;
+}
+.pgn-study-picker-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    width: fit-content;
+}
+.pgn-study-picker-row:hover {
+    background: #eee;
+}
+.pgn-study-picker-row.active {
+    background: #c8e6c9;
+}
+
+/* Matches the comment icon's own size (pgn-player's comment box,
+   left column) — that one needs no override here since it (and
+   .variation-icon/.video-title-emoji, the article/annotator "A≡"
+   byline mark on the right) already default to 2rem via
+   assets/ChessPublica.css's shared, site-wide rules. Every other
+   icon on this page (ribbon, close, move picker) is sized to
+   match that 2rem instead of the other way around. */
+.pgn-study-picker-icon {
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
+    color: #555;
+}
+/* Mainline "continue" row always comes first (see makeRow() call
+   order in renderMainlinePicker()/renderSubPicker()) — no special
+   placement needed now, it just reads first in the inline row. */
+.pgn-study-picker-row.mainline {
+    font-weight: bold;
+}
+
+/* All icons at 80% of their normal 2rem on mobile only — same
+   five groups unified to 2rem above, just scaled down together
+   instead of leaving desktop's size untouched. */
+@media (max-width: 899px) {
+    .pgn-study-ribbon-btn .lucide-icon,
+    .pgn-study-picker-icon,
+    pgn-study .comment-icon,
+    pgn-study .variation-icon,
+    pgn-study .video-title-emoji {
+        width: 1.6rem;
+        height: 1.6rem;
+    }
+}
+
+pgn-study .pgn-container {
+    /* Captured once under its own name so nested .pgn-variation
+       levels can each scale from the real ambient board size
+       (400px by default, smaller on narrow viewports per
+       styles.css's own media query) without redeclaring
+       --board-size itself, which would cycle — see the
+       .pgn-variation rules below. */
+    --base-board-size: var(--board-size);
+}
+
+pgn-study .pgn-container .pgn-move,
+pgn-study .pgn-container .pgn-clickable-diagram {
+    cursor: pointer;
+}
+pgn-study .pgn-container .pgn-move:hover {
+    background: #eee;
+    border-radius: 3px;
+}
+pgn-study .pgn-container .pgn-clickable-diagram:hover {
+    box-shadow: 0 0 0 3px #c8e6c9;
+    border-radius: 4px;
+}
+pgn-study .pgn-container .pgn-move-active {
+    background: #c8e6c9;
+    border-radius: 3px;
+    box-shadow: 0 0 0 2px #c8e6c9;
+}
+
+pgn-study .pgn-container .pgn-clickable-diagram.pgn-move-active {
+    background: transparent;
+}
+
+/* .pgn-comment carries its own padding-top (ChessPublica.css) on
+   top of the margin-top/margin-bottom it shares with .pgn-mainline
+   and .pgn-variation — margins collapse between adjacent blocks,
+   padding never does, so a mainline move followed by its comment
+   ends up with a visibly bigger gap than, say, a variation
+   followed by a nested sub-variation (margin only). Zero it out
+   here so a move-to-comment gap matches every other paragraph
+   gap in this column. */
+pgn-study .pgn-container .pgn-comment {
+    padding-top: 0;
+}
+
+pgn-study .pgn-container .pgn-variation {
+    margin-left: 1.25rem;
+    padding-left: 0.75rem;
+    border-left: 2px solid rgba(128, 128, 128, 0.3);
+    /* Depth ladder: main line is bold (.pgn-mainline, set in
+       ChessPublica.css) at 1x size. A variation (this level) is
+       regular weight but stays at that same 1x size — no
+       font-size here. A sub-variation (one level deeper) adds
+       italic, still at 1x. Only from the sub-sub-variation level
+       down does the text actually start shrinking — see the
+       dedicated font-size rule below, which (like the old
+       single-rule version this replaced) only needs to be
+       declared once: em compounds through plain inheritance, so
+       each further nesting level naturally starts from its
+       parent's already-shrunk size. */
+    font-weight: normal;
+}
+pgn-study .pgn-container .pgn-variation .pgn-variation {
+    font-style: italic;
+}
+pgn-study .pgn-container .pgn-variation .pgn-variation .pgn-variation {
+    font-size: 0.92em;
+}
+pgn-study .pgn-container .pgn-variation { --board-size: calc(var(--base-board-size) * 0.88); }
+pgn-study .pgn-container .pgn-variation .pgn-variation { --board-size: calc(var(--base-board-size) * 0.774); }
+pgn-study .pgn-container .pgn-variation .pgn-variation .pgn-variation { --board-size: calc(var(--base-board-size) * 0.681); }
+pgn-study .pgn-container .pgn-variation .pgn-variation .pgn-variation .pgn-variation { --board-size: calc(var(--base-board-size) * 0.599); }
+pgn-study .pgn-container .pgn-variation .pgn-variation .pgn-variation .pgn-variation .pgn-variation { --board-size: calc(var(--base-board-size) * 0.527); }
+pgn-study .pgn-container .pgn-variation .pgn-variation .pgn-variation .pgn-variation .pgn-variation .pgn-variation { --board-size: calc(var(--base-board-size) * 0.464); }
+/* The static reading column defaults to 2 sub-columns
+   (ChessPublica.css's .pgn-moves) for narrower single-column
+   blog layouts elsewhere on the site; with a dedicated column
+   this wide, and variations now indented, a column break mid-line
+   reads as broken rather than efficient. */
+pgn-study .pgn-container .pgn-moves {
+    column-count: 1;
+}
+
+pgn-study .pgn-container .cp-board-wrapper {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* OPENING TOC — index of every named opening/variation reached
+   anywhere in the game (main line or any variation, however
+   deep), appended at the bottom of the reading column — see
+   buildOpeningToc(). One entry per position where the
+   recognized name changes from its immediate predecessor (so
+   "Queen's Gambit Declined" gets one entry, then
+   "…Ragozin Defense" gets its own right where it first
+   diverges, not one entry per move along the way); nesting
+   depth shown via indent. */
+.pgn-study-toc {
+    margin-top: 2rem;
+    padding-top: 1.25rem;
+    border-top: 2px solid rgba(128, 128, 128, 0.3);
+}
+.pgn-study-toc-heading {
+    margin: 0 0 0.75rem 0;
+    font-size: 1.15rem;
+}
+.pgn-study-toc-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.pgn-study-toc-entry {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.pgn-study-toc-entry:hover {
+    background: #eee;
+}
+.pgn-study-toc-name {
+    flex: 1 1 auto;
+}
+.pgn-study-toc-move {
+    color: #777;
+    flex-shrink: 0;
+}
+
+/* TOC ACCORDION — the ribbon's TOC button expands/collapses this
+   in place (part of the ribbon's own flow, below the button row —
+   see .pgn-study-ribbon's flex-direction: column above — rather
+   than a floating overlay) instead of scrolling to the
+   .pgn-study-toc built at the bottom of the reading column: same
+   entries (renderTocEntries() below renders the same `toc` array
+   into both places, each row wired to the same entry.enter
+   callback), just reachable without paging through the whole
+   game first. max-height (not height) is what's animated, since
+   the real height depends on how many entries this particular
+   game's TOC ends up with. */
+.pgn-study-toc-accordion {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease;
+}
+.pgn-study-toc-accordion.open {
+    max-height: min(50vh, 500px);
+    overflow-y: auto;
+    margin-top: 0.75rem;
+}
+.pgn-study-toc-accordion .pgn-study-toc-heading {
+    font-size: 1rem;
+}
+
+/* SETTINGS INLINE GROUP — the cog button's flip/speed/download,
+   moved off their own dropdown into the ribbon's right-hand
+   group directly (between the cog and the close button — see
+   the markup below), toggled with display: contents so its
+   buttons become plain flex items of .pgn-study-ribbon-right
+   (inheriting its gap/alignment) the instant they're shown,
+   rather than needing a nested flex context of their own. */
+.pgn-study-settings-inline {
+    display: none;
+}
+.pgn-study-settings-inline.open {
+    display: contents;
+}
