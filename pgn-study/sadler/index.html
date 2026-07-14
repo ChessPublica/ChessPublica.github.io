@@ -1,0 +1,2166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>title</title>
+    <meta name="description" content="description">
+    <link rel="stylesheet" href="../dist/ChessPublica.all.min.css">
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        /* This page is exactly one 90vw x 90vh frame (or its loading-
+           placeholder stand-in), each centered with a flat 5vh top/bottom
+           margin — 5vh + 90vh + 5vh should sum to exactly 100vh, but
+           margin collapsing/vh rounding can leave body a hair taller
+           than the viewport, letting it scroll by a few px. That's more
+           than just an unwanted scrollbar: the close (X) button below is
+           position:fixed (viewport-relative, so its offset lines up with
+           the frame without needing to be its DOM descendant), while the
+           frame itself scrolls with the page like normal content — the
+           two visibly drift apart the moment that scroll is possible.
+           Killing body/html scroll entirely removes the drift along with
+           the scrollbar, and costs nothing: nothing on this page is
+           meant to need it (the frame's own columns already scroll
+           independently — see the overflow-y rules below). */
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+        pgn-study {
+            --frame-pad: 1.5rem;
+            /* Bottom gets less than the other three sides — with the
+               columns/divider already stretched (align-items: stretch,
+               desktop rule below) to fill the row exactly, the padding
+               here is the *only* gap left between them and the border,
+               and a full --frame-pad of it read as noticeably more
+               breathing room than the top/left/right, which each also
+               have real content sitting flush against them. */
+            --frame-pad-bottom: 0.75rem;
+            font-size: 110%;
+            display: flex;
+            flex-direction: column;
+            width: 90vw;
+            height: 90vh;
+            max-width: 1600px;
+            margin: 5vh auto;
+            padding: var(--frame-pad) var(--frame-pad) var(--frame-pad-bottom) var(--frame-pad);
+            border: 1px solid #d4d4d8;
+            border-radius: 0.75rem;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        pgn-study > pgn-player,
+        pgn-study > .pgn-container {
+            min-height: 0; /* grid/flex items default to min-height:auto, which blocks the overflow below from ever kicking in */
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+        pgn-study > .pgn-container {
+            /* assets/ChessPublica.css's shared .pgn-container rule adds
+               margin-bottom: 1rem for breathing room before whatever
+               comes after it on a normal page — here it IS the scrollable
+               column, with nothing after it to separate from, so it was
+               just adding dead space between the last line of text and
+               the frame's own bottom padding. */
+            margin-bottom: 0;
+        }
+        /* The board's actual pixel size is normally driven by --board-size
+           against the *viewport* (see styles.css's root default), which
+           made sense on a full-width page but not here: pgn-player only
+           ever gets a fraction of the frame (a third of it, on the desktop
+           two-column grid below), so a viewport-relative size either
+           overflows the column or leaves it half-empty depending on
+           screen width. Making pgn-player itself a size container lets
+           --board-size be expressed in cqw (% of pgn-player's own
+           rendered width) instead, so the board actually tracks the
+           column's real size — including live drags of a browser window,
+           not just the breakpoint switch at 900px — capped at the same
+           400px/500px ceilings the fixed values used before. */
+        pgn-study > pgn-player {
+            /* Explicit width, not just the grid item's default stretch:
+               contain:inline-size (implied by container-type below) blocks
+               the browser from resolving an auto/stretch width against the
+               grid track's content-independent 1fr share, which otherwise
+               collapses the column to 0 instead. */
+            width: 100%;
+            container-type: inline-size;
+            /* The desktop grid's align-items: stretch (below) makes this
+               column exactly as tall as the reading column next to it —
+               almost always taller than the board + its (often near-
+               empty) comment box actually need, since .player-wrapper's
+               own site-wide min-height is only 500px. Pinned to the top
+               (flex's own default) so the board lines up with the
+               reading column's first line of text instead of floating
+               mid-column — any leftover space just falls below it. */
+            display: flex;
+            flex-direction: column;
+        }
+        pgn-study > pgn-player > .player-wrapper {
+            /* Flex items default to flex-shrink: 1 — without this, a
+               comment long enough to overflow this fixed-height column
+               would get silently squashed short of its natural size
+               instead of actually overflowing, which is what's supposed
+               to make the column's own overflow-y: auto (above) kick in
+               and let it scroll. */
+            flex-shrink: 0;
+        }
+        pgn-study pgn-player {
+            --board-size: min(400px, 94cqw);
+        }
+        .pgn-study-mobile-title {
+            /* Hidden by default (desktop): excluding it from the grid
+               entirely (rather than just visually hiding it) means it
+               doesn't consume one of the two content-row cells grid
+               auto-placement would otherwise assign it ahead of
+               pgn-player/the resizer/.pgn-container — see the
+               DOMContentLoaded listener below for where this clone
+               actually gets inserted, and why it's a clone and not a
+               move. Declared before the max-width query below so that
+               query's own display: flex — same specificity, later in
+               the cascade — is what actually wins under 900px, not
+               this. */
+            display: none;
+        }
+        @media (max-width: 899px) {
+            /* Single column: ribbon, title/byline, board (+ its own move
+               picker and current-move comment, already part of
+               <pgn-player> itself — nothing extra needed for those),
+               nothing else — nowhere near enough room for a second
+               column of move text too. pgn-player is the only piece left
+               with real room to grow into, so it alone gets flex: 1 1 0
+               (fill whatever the ribbon/title don't use, scrolling
+               internally past that); those two keep flex's default
+               0 0 auto — sized to their own content instead. */
+            pgn-study > pgn-player {
+                flex: 1 1 0;
+            }
+            pgn-study > .pgn-container {
+                display: none;
+            }
+            .pgn-study-mobile-title {
+                display: flex;
+            }
+        }
+        @media (min-width: 900px) {
+            pgn-study {
+                --frame-pad: 2.5rem;
+                --frame-pad-bottom: 1.25rem;
+                /* Defaults reproduce the old fixed 1fr:2fr split exactly —
+                   the resizer below only ever overrides --left-col-width
+                   (switching it from a fr share to a hard px value once
+                   the reader actually drags), --right-col-width stays untouched at 2fr since
+                   the right column just keeps filling whatever's left. */
+                --left-col-width: 1fr;
+                --right-col-width: 2fr;
+                display: grid;
+                grid-template-columns: var(--left-col-width) 6px var(--right-col-width);
+                grid-template-rows: auto 1fr;
+                align-items: stretch;
+                padding: var(--frame-pad) var(--frame-pad) var(--frame-pad-bottom) var(--frame-pad);
+            }
+            pgn-study pgn-player { --board-size: min(calc(400px * 1.25), 94cqw); }
+            /* Row 1, spanning every column (including the resizer track)
+               — pgn-player/.pgn-study-resizer/.pgn-container have no
+               placement rules of their own, so grid auto-flow puts them
+               in row 2 (row 1's only cell is already taken) in DOM order:
+               pgn-player, then the resizer, then .pgn-container. */
+            pgn-study > .pgn-study-ribbon {
+                grid-column: 1 / -1;
+            }
+            .pgn-study-resizer {
+                position: relative;
+                cursor: col-resize;
+                touch-action: none;
+            }
+            .pgn-study-resizer::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                left: 50%;
+                width: 2px;
+                transform: translateX(-50%);
+                background: #e4e4e7;
+                transition: background 0.15s;
+            }
+            .pgn-study-resizer:hover::after,
+            .pgn-study-resizer.dragging::after {
+                background: #a1a1aa;
+            }
+            /* GRIP HANDLE — the thin line above reads as a border, not
+               something draggable, so a small pill with a grip icon sits
+               on top of it at vertical center as a more obvious
+               affordance. pointer-events: none so it doesn't intercept
+               anything — the drag/hover/click target is still the whole
+               .pgn-study-resizer track, same as before this existed. */
+            .pgn-study-resizer-handle {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                /* ::after (the line) is painted after the handle's own
+                   DOM children by default regardless of source order —
+                   this keeps the handle on top instead of getting
+                   visually sliced by the line underneath it, most
+                   noticeably once ::after darkens/thickens on hover. */
+                z-index: 1;
+                transform: translate(-50%, -50%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 1.1rem;
+                height: 2.75rem;
+                background: #e4e4e7;
+                border: 1px solid #d4d4d8;
+                border-radius: 0.5rem;
+                color: #71717a;
+                pointer-events: none;
+                transition: background 0.15s, border-color 0.15s;
+            }
+            .pgn-study-resizer-handle .lucide-icon {
+                width: 0.85rem;
+                height: 0.85rem;
+            }
+            .pgn-study-resizer:hover .pgn-study-resizer-handle,
+            .pgn-study-resizer.dragging .pgn-study-resizer-handle {
+                background: #d4d4d8;
+                border-color: #a1a1aa;
+            }
+        }
+        @media (max-width: 899px) {
+            /* No side-by-side columns to resize in the stacked mobile
+               layout — the resizer only exists for the desktop grid. */
+            .pgn-study-resizer {
+                display: none;
+            }
+        }
+
+        /* <pgn-study> starts out holding its PGN as raw, unstyled text (see
+           the module script below) — hidden here so it never flashes on
+           screen before that script swaps it for the real <pgn-player>/
+           <pgn> elements, and before those finish their own async load
+           (parsing the PGN, building the board). #pgnStudyLoading below
+           stands in for it — same two-column footprint, empty board on
+           the left, spinner on the right — until the script reveals the
+           real thing by adding .cp-ready (see the DOMContentLoaded
+           listener at the bottom of this file). */
+        pgn-study:not(.cp-ready) {
+            display: none;
+        }
+
+        /* Same 90vw x 90vh framed footprint as the real <pgn-study> (see
+           above) so swapping one for the other doesn't visibly resize
+           the page. Hidden until the reader actually clicks "Open PGN
+           Study" (see the reopen button's own click handler below) —
+           the page loads with the study closed, not mid-load; this only
+           actually appears if loading is still in flight at that click,
+           to stand in until it finishes (see openStudy() below). */
+        .pgn-study-loading:not(.visible) {
+            display: none !important;
+        }
+        .pgn-study-loading {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            width: 90vw;
+            height: 90vh;
+            max-width: 1600px;
+            margin: 5vh auto;
+            padding: 1.5rem 1.5rem 0.75rem 1.5rem;
+            border: 1px solid #d4d4d8;
+            border-radius: 0.75rem;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        @media (min-width: 900px) {
+            .pgn-study-loading {
+                display: grid;
+                grid-template-columns: 1fr 2fr;
+                align-items: start;
+                padding: 2.5rem 2.5rem 1.25rem 2.5rem;
+            }
+        }
+        .pgn-study-loading-board {
+            width: 400px;
+            max-width: 100%;
+            aspect-ratio: 1 / 1;
+            border-radius: 4px;
+            background-image:
+                conic-gradient(#b58863 90deg, #f0d9b5 90deg 180deg, #b58863 180deg 270deg, #f0d9b5 270deg);
+            background-size: 25% 25%;
+        }
+        @media (min-width: 900px) {
+            .pgn-study-loading-board { width: 500px; }
+        }
+        .pgn-study-loading-side {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            min-height: 200px;
+            color: #777;
+        }
+        .pgn-study-loading-spinner {
+            width: 2.5rem;
+            height: 2.5rem;
+            border: 4px solid rgba(0, 0, 0, 0.15);
+            border-top-color: #777;
+            border-radius: 50%;
+            animation: pgn-study-loading-spin 0.8s linear infinite;
+        }
+        @keyframes pgn-study-loading-spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* RIBBON — minimal top bar, standing in for the board's own
+           gear-icon settings panel (hidden below, same as .video-title/
+           .board-toolbar/.play — see the "pgn-study pgn-player" rules
+           just below): download/flip/speed forward to it, plus
+           play/pause and a TOC dropdown of its own. Deliberately hidden
+           for as long as the loading placeholder is showing — not "page
+           chrome" independent of it — via the same not(.cp-ready) gate
+           as pgn-study itself: it's moved inside pgn-study as its first
+           child (see the DOMContentLoaded listener below), but starts
+           display:none here, unconditionally, since it's still a
+           page-level sibling in the raw HTML for a brief window before
+           that synchronous move runs — this rule (rather than relying on
+           pgn-study:not(.cp-ready) alone) is what keeps it from flashing
+           on screen during that window. Buttons start disabled — see the
+           DOMContentLoaded listener below — since they forward clicks to
+           <pgn-player>'s own (hidden) settings buttons, which aren't
+           wired up until the engine itself is ready. Icon-only: the
+           speed button's current multiplier (1x/2x/…) — the one piece of
+           state an icon alone can't show — lives in its title/aria-label
+           tooltip instead of on-screen text, kept in sync after every
+           click (see the DOMContentLoaded listener below). */
+        .pgn-study-ribbon {
+            display: none;
+        }
+        pgn-study.cp-ready > .pgn-study-ribbon {
+            display: flex;
+            flex-direction: column;
+            flex: 0 0 auto;
+            padding: 0.5rem var(--frame-pad);
+            margin: calc(-1 * var(--frame-pad)) calc(-1 * var(--frame-pad)) 1rem calc(-1 * var(--frame-pad));
+            background: #fff;
+            border-bottom: 1px solid #e4e4e7;
+        }
+        /* Button row: left = play/pause + TOC, right = settings (cog,
+           toggles the flip/speed/download group inline — see
+           .pgn-study-settings-inline below) + close. */
+        .pgn-study-ribbon-toprow {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        /* Each side is its own tight group so the gap between the two
+           groups can stretch (space-between, above) independently of the
+           gap within either one. */
+        .pgn-study-ribbon-group {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .pgn-study-ribbon-btn {
+            position: relative; /* anchors .pgn-study-speed-badge below */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 3rem;
+            height: 3rem;
+            background: transparent;
+            border: none;
+            border-radius: 0.4rem;
+            color: #52525b;
+            cursor: pointer;
+            transition: background 0.15s, opacity 0.15s;
+        }
+        .pgn-study-ribbon-btn:hover:not(:disabled) {
+            background: #f4f4f5;
+        }
+        .pgn-study-ribbon-btn:focus {
+            outline: none;
+        }
+        .pgn-study-ribbon-btn:disabled {
+            opacity: 0.35;
+            cursor: default;
+        }
+        .pgn-study-ribbon-btn .lucide-icon {
+            width: 2rem;
+            height: 2rem;
+        }
+
+        /* SPEED BADGE — sits on the speed button itself (icon-only, so
+           the tooltip trick the old text-based speed label used isn't
+           visible at a glance) showing the current playback multiplier
+           at all times, not just on hover. Kept in sync by
+           syncSpeedBadge() below, alongside the tooltip. */
+        .pgn-study-speed-badge {
+            position: absolute;
+            bottom: 0.15rem;
+            right: 0.15rem;
+            font-size: 0.6rem;
+            font-weight: 700;
+            line-height: 1;
+            padding: 0.1rem 0.25rem;
+            border-radius: 0.5rem;
+            background: #52525b;
+            color: #fff;
+            pointer-events: none;
+        }
+
+        /* CLOSE BUTTON — a real ribbon child now (right group, alongside
+           settings — see the DOMContentLoaded listener below for where
+           it actually gets moved there), styled as a plain
+           .pgn-study-ribbon-btn from that point on. Until that move
+           happens it's still sitting at its original spot, a page-level
+           sibling before <pgn-study> — hidden by default here (same
+           reasoning the ribbon's own default display:none has) so it
+           doesn't flash there first; the override only re-shows it once
+           it's an actual descendant of the (by then visible) ribbon. */
+        .pgn-study-close {
+            display: none;
+        }
+        pgn-study.cp-ready > .pgn-study-ribbon .pgn-study-close {
+            display: flex;
+        }
+
+        /* REOPEN BUTTON — sits wherever the closed frame used to be (top
+           of the body), hidden until the close button actually hides
+           pgn-study, so the body isn't left with no way back in. */
+        .pgn-study-reopen {
+            display: none;
+            position: fixed;
+            top: calc(5vh + 0.5rem);
+            left: calc(5vw + 0.5rem);
+            z-index: 20;
+            padding: 0.5rem 1rem;
+            background: #18181b;
+            color: #fff;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .pgn-study-reopen:hover {
+            background: #3f3f46;
+        }
+        .pgn-study-reopen.visible {
+            display: block;
+        }
+
+        pgn-study pgn-player .video-title,
+        pgn-study pgn-player .board-toolbar,
+        pgn-study pgn-player .video-moves,
+        pgn-study pgn-player .play {
+            display: none;
+        }
+
+        pgn-study pgn-player .video-comment .variation-block,
+        pgn-study pgn-player .video-comment .comment-play-btn,
+        pgn-study pgn-player .video-comment .comment-diagram {
+            display: none;
+        }
+
+        /* .pgn-title .video-title-text sizes in rem, not em, so it
+           doesn't pick up pgn-study's 110% scale via inheritance like
+           everything else on the page — override it explicitly. */
+        pgn-study .pgn-title .video-title-text {
+            font-size: 1.1rem;
+        }
+
+        .pgn-study-move-picker {
+            margin: 0.5rem 0;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            row-gap: 2px;
+            column-gap: 4px;
+        }
+        .pgn-study-picker-row {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 6px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: fit-content;
+        }
+        .pgn-study-picker-row:hover {
+            background: #eee;
+        }
+        .pgn-study-picker-row.active {
+            background: #c8e6c9;
+        }
+
+        /* Matches the comment icon's own size (pgn-player's comment box,
+           left column) — that one needs no override here since it (and
+           .variation-icon/.video-title-emoji, the article/annotator "A≡"
+           byline mark on the right) already default to 2rem via
+           assets/ChessPublica.css's shared, site-wide rules. Every other
+           icon on this page (ribbon, close, move picker) is sized to
+           match that 2rem instead of the other way around. */
+        .pgn-study-picker-icon {
+            flex-shrink: 0;
+            width: 2rem;
+            height: 2rem;
+            color: #555;
+        }
+        /* Mainline "continue" row always comes first (see makeRow() call
+           order in renderMainlinePicker()/renderSubPicker()) — no special
+           placement needed now, it just reads first in the inline row. */
+        .pgn-study-picker-row.mainline {
+            font-weight: bold;
+        }
+
+        /* All icons at 80% of their normal 2rem on mobile only — same
+           five groups unified to 2rem above, just scaled down together
+           instead of leaving desktop's size untouched. */
+        @media (max-width: 899px) {
+            .pgn-study-ribbon-btn .lucide-icon,
+            .pgn-study-picker-icon,
+            pgn-study .comment-icon,
+            pgn-study .variation-icon,
+            pgn-study .video-title-emoji {
+                width: 1.6rem;
+                height: 1.6rem;
+            }
+        }
+
+        pgn-study .pgn-container {
+            /* Captured once under its own name so nested .pgn-variation
+               levels can each scale from the real ambient board size
+               (400px by default, smaller on narrow viewports per
+               styles.css's own media query) without redeclaring
+               --board-size itself, which would cycle — see the
+               .pgn-variation rules below. */
+            --base-board-size: var(--board-size);
+        }
+
+        pgn-study .pgn-container .pgn-move,
+        pgn-study .pgn-container .pgn-clickable-diagram {
+            cursor: pointer;
+        }
+        pgn-study .pgn-container .pgn-move:hover {
+            background: #eee;
+            border-radius: 3px;
+        }
+        pgn-study .pgn-container .pgn-clickable-diagram:hover {
+            box-shadow: 0 0 0 3px #c8e6c9;
+            border-radius: 4px;
+        }
+        pgn-study .pgn-container .pgn-move-active {
+            background: #c8e6c9;
+            border-radius: 3px;
+            box-shadow: 0 0 0 2px #c8e6c9;
+        }
+        
+        pgn-study .pgn-container .pgn-clickable-diagram.pgn-move-active {
+            background: transparent;
+        }
+
+        /* .pgn-comment carries its own padding-top (ChessPublica.css) on
+           top of the margin-top/margin-bottom it shares with .pgn-mainline
+           and .pgn-variation — margins collapse between adjacent blocks,
+           padding never does, so a mainline move followed by its comment
+           ends up with a visibly bigger gap than, say, a variation
+           followed by a nested sub-variation (margin only). Zero it out
+           here so a move-to-comment gap matches every other paragraph
+           gap in this column. */
+        pgn-study .pgn-container .pgn-comment {
+            padding-top: 0;
+        }
+
+        pgn-study .pgn-container .pgn-variation {
+            margin-left: 1.25rem;
+            padding-left: 0.75rem;
+            border-left: 2px solid rgba(128, 128, 128, 0.3);
+            /* Depth ladder: main line is bold (.pgn-mainline, set in
+               ChessPublica.css) at 1x size. A variation (this level) is
+               regular weight but stays at that same 1x size — no
+               font-size here. A sub-variation (one level deeper) adds
+               italic, still at 1x. Only from the sub-sub-variation level
+               down does the text actually start shrinking — see the
+               dedicated font-size rule below, which (like the old
+               single-rule version this replaced) only needs to be
+               declared once: em compounds through plain inheritance, so
+               each further nesting level naturally starts from its
+               parent's already-shrunk size. */
+            font-weight: normal;
+        }
+        pgn-study .pgn-container .pgn-variation .pgn-variation {
+            font-style: italic;
+        }
+        pgn-study .pgn-container .pgn-variation .pgn-variation .pgn-variation {
+            font-size: 0.92em;
+        }
+        pgn-study .pgn-container .pgn-variation { --board-size: calc(var(--base-board-size) * 0.88); }
+        pgn-study .pgn-container .pgn-variation .pgn-variation { --board-size: calc(var(--base-board-size) * 0.774); }
+        pgn-study .pgn-container .pgn-variation .pgn-variation .pgn-variation { --board-size: calc(var(--base-board-size) * 0.681); }
+        pgn-study .pgn-container .pgn-variation .pgn-variation .pgn-variation .pgn-variation { --board-size: calc(var(--base-board-size) * 0.599); }
+        pgn-study .pgn-container .pgn-variation .pgn-variation .pgn-variation .pgn-variation .pgn-variation { --board-size: calc(var(--base-board-size) * 0.527); }
+        pgn-study .pgn-container .pgn-variation .pgn-variation .pgn-variation .pgn-variation .pgn-variation .pgn-variation { --board-size: calc(var(--base-board-size) * 0.464); }
+        /* The static reading column defaults to 2 sub-columns
+           (ChessPublica.css's .pgn-moves) for narrower single-column
+           blog layouts elsewhere on the site; with a dedicated column
+           this wide, and variations now indented, a column break mid-line
+           reads as broken rather than efficient. */
+        pgn-study .pgn-container .pgn-moves {
+            column-count: 1;
+        }
+
+        pgn-study .pgn-container .cp-board-wrapper {
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* OPENING TOC — index of every named opening/variation reached
+           anywhere in the game (main line or any variation, however
+           deep), appended at the bottom of the reading column — see
+           buildOpeningToc(). One entry per position where the
+           recognized name changes from its immediate predecessor (so
+           "Queen's Gambit Declined" gets one entry, then
+           "…Ragozin Defense" gets its own right where it first
+           diverges, not one entry per move along the way); nesting
+           depth shown via indent. */
+        .pgn-study-toc {
+            margin-top: 2rem;
+            padding-top: 1.25rem;
+            border-top: 2px solid rgba(128, 128, 128, 0.3);
+        }
+        .pgn-study-toc-heading {
+            margin: 0 0 0.75rem 0;
+            font-size: 1.15rem;
+        }
+        .pgn-study-toc-list {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .pgn-study-toc-entry {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .pgn-study-toc-entry:hover {
+            background: #eee;
+        }
+        .pgn-study-toc-name {
+            flex: 1 1 auto;
+        }
+        .pgn-study-toc-move {
+            color: #777;
+            flex-shrink: 0;
+        }
+
+        /* TOC ACCORDION — the ribbon's TOC button expands/collapses this
+           in place (part of the ribbon's own flow, below the button row —
+           see .pgn-study-ribbon's flex-direction: column above — rather
+           than a floating overlay) instead of scrolling to the
+           .pgn-study-toc built at the bottom of the reading column: same
+           entries (renderTocEntries() below renders the same `toc` array
+           into both places, each row wired to the same entry.enter
+           callback), just reachable without paging through the whole
+           game first. max-height (not height) is what's animated, since
+           the real height depends on how many entries this particular
+           game's TOC ends up with. */
+        .pgn-study-toc-accordion {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.25s ease;
+        }
+        .pgn-study-toc-accordion.open {
+            max-height: min(50vh, 500px);
+            overflow-y: auto;
+            margin-top: 0.75rem;
+        }
+        .pgn-study-toc-accordion .pgn-study-toc-heading {
+            font-size: 1rem;
+        }
+
+        /* SETTINGS INLINE GROUP — the cog button's flip/speed/download,
+           moved off their own dropdown into the ribbon's right-hand
+           group directly (between the cog and the close button — see
+           the markup below), toggled with display: contents so its
+           buttons become plain flex items of .pgn-study-ribbon-right
+           (inheriting its gap/alignment) the instant they're shown,
+           rather than needing a nested flex context of their own. */
+        .pgn-study-settings-inline {
+            display: none;
+        }
+        .pgn-study-settings-inline.open {
+            display: contents;
+        }
+    </style>
+</head>
+<body>
+
+    <header class="pgn-study-ribbon">
+        <div class="pgn-study-ribbon-toprow">
+            <div class="pgn-study-ribbon-group pgn-study-ribbon-left">
+                <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="toggle-play" title="Play" aria-label="Play" disabled>
+                    <span class="lucide-icon" id="pgnStudyPlayPauseIcon"></span>
+                </button>
+                <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="toc" title="Table of contents" aria-label="Table of contents" disabled>
+                    <span class="lucide-icon" id="pgnStudyTocIcon"></span>
+                </button>
+            </div>
+            <div class="pgn-study-ribbon-group pgn-study-ribbon-right">
+                <span class="pgn-study-settings-inline" id="pgnStudySettingsInline">
+                    <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="download" title="Download PGN" aria-label="Download PGN" disabled>
+                        <span class="lucide-icon" id="pgnStudyDownloadIcon"></span>
+                    </button>
+                    <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="speed" title="Playback speed (1x)" aria-label="Playback speed" disabled>
+                        <span class="lucide-icon" id="pgnStudySpeedIcon"></span>
+                        <span class="pgn-study-speed-badge" id="pgnStudySpeedBadge">1x</span>
+                    </button>
+                    <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="flip" title="Flip board" aria-label="Flip board" disabled>
+                        <span class="lucide-icon" id="pgnStudyFlipIcon"></span>
+                    </button>
+                </span>
+                <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="settings" title="Settings" aria-label="Settings" disabled>
+                    <span class="lucide-icon" id="pgnStudySettingsIcon"></span>
+                </button>
+                <!-- The close button (#pgnStudyClose) is moved in here at
+                     runtime — see the DOMContentLoaded listener below — from
+                     its original spot as a page-level sibling before
+                     <pgn-study> — after the settings (cog) button, so it
+                     stays the rightmost button whether or not the inline
+                     group is showing. -->
+            </div>
+        </div>
+
+        <div class="pgn-study-toc-accordion" id="pgnStudyTocAccordion"></div>
+    </header>
+
+    <button class="pgn-study-ribbon-btn pgn-study-close" type="button" id="pgnStudyClose" title="Close" aria-label="Close">
+        <span class="lucide-icon" id="pgnStudyCloseIcon"></span>
+    </button>
+
+    <button class="pgn-study-reopen visible" type="button" id="pgnStudyReopen">
+        Open PGN Study
+    </button>
+
+    <div class="pgn-study-loading" id="pgnStudyLoading">
+        <div class="pgn-study-loading-board"></div>
+        <div class="pgn-study-loading-side">
+            <div class="pgn-study-loading-spinner"></div>
+            <p>Loading game…</p>
+        </div>
+    </div>
+
+    <pgn-study>
+[Event "The Swedish Variation of the Tarrasch Defence"]
+[Site ""]
+[Date "2026.07.08"]
+[Round ""]
+[White "Matthew Sadler"]
+[Black "The Swedish Variation of the Tarrasch Defence"]
+[Result "*"]
+{As promised, I will dedicate an article to a deep dive on the main lines of the Swedish Variation of the Tarrasch Defence which we saw in the game Carlsson-Stoltz, Stockholm 1938. The variation starts as follows.}
+1. d4 d5 2. c4 e6 3. Nc3 c5 4. cxd5 exd5 5. Nf3 Nc6 6. g3 c4
+{The characteristic advance.}
+7. Bg2
+(
+{The main line by far, but Stoltz also faced the rigorous 7.e4 several times during his career.}
+7. e4 dxe4 8. Ng5
+{The clever idea is that 8...Be7 is met by 9.Bxc4 Bxg5 10.Qh5 regaining the piece.}
+8... Qxd4 9. Bf4 Nf6 10. Qxd4 Nxd4 11. O-O-O Ne6
+{Black is fine after}
+12. Nb5 Nxf4 13. gxf4
+(
+13. Nc7+ Ke7 14. Nxa8 Ne6 15. Nxe6 fxe6 16. Nc7 Ng4 17. Rd2 g6
+{Threatening ...Bh6. Activating the rook on h8 is surprisingly awkward for White. The knight on c7 is not out either, as ...Bd7 will cut its retreat to b5.}
+)
+13... h6 14. Nc7+ Ke7 15. Nxf7 Kxf7 16. Bxc4+ Kg6 17. Rhg1+ Kh7 18. Nxa8 Bc5
+{Threatening ...Bg4.}
+19. Nc7 Bxf2
+{Black has very good compensation for the exchange.}
+)
+7... Bb4 8. O-O Nge7
+{Here once again there are two important choices, also the engine's two favourite moves.}
+9. a3
+{This is the engine's second choice, and Stoltz also faced it several times.}
+(
+9... Bxc3 10. bxc3 O-O
+{This is logical for the system and worked well for Black in a game of Rudolf Spielmann, who spent considerable time in Sweden playing matches against Stahlberg and Stoltz and therefore knew their opening innovations well.}
+11. a4 Re8 12. Nd2 Bf5
+{It is remarkable what happens from here. White stands much better, but within only three moves Black is already slightly better.}
+13. f3 Bg6 14. Re1 a6 15. Bb2 b5 16. e4 b4 17. Qc1 Nxd4 18. cxb4 Nec6 19. Qc3 dxe4 20. fxe4 Rb8 21. Nxc4 Rxb4 22. Ra3 Qe7 23. Ne3 Bxe4 24. Bxe4 Qxe4 25. Nc2 Qxe1+ 26. Nxe1 Ne2+ 27. Kf2 Nxc3 28. Bxc3 Rbe4 29. Ra2 Nb4 30. Rb2 Nd5 31. Bd4 0-1
+{Landau - Spielmann, Amsterdam 1936.
+By playing f3 so early White removed much of the force of the e4 break, allowing Black to concentrate on activating his queenside majority with ...a6 and ...b5. The passive placement of the bishop on b2 instead of a3 also contributes. A stronger plan would have been 13.Re1 followed by Ba3, preserving the immediate e4 break as a serious threat. Black must then spend time completing development instead of expanding on the queenside. For example: 13...a6 14.Ba3 b5 15.e4 dxe4 16.Nxe4 with ideas such as Nd6 and Qf3. If Black instead chooses 13...Qc7 14.Ba3 Rad8, then White may even consider 15.f3, although 15.e4 also remains strong. After 15...f6 16.e4 Bg6 17.Rb1 White enjoys two bishops, a strong centre and Black's queenside play has not yet begun.}
+)
+9... Ba5 10. b4
+(
+10. e4
+{This also transposes more or less to the 9.e4 lines.}
+)
+{10.b4 is the principal independent continuation. White exploits the exposed bishop to gain queenside space with tempo, forcing Black either to abandon the queenside expansion completely or accept an isolated queen's pawn after ...cxb3 in order to undermine White's queenside structure and fight for the weakened light squares.}
+(
+10... cxb3 11. Qxb3
+{In principle, this feels like a victory for White, having driven back Black's ambitions to create a queenside pawn roller while saddling Black with an isolated queen's pawn. However, White is not strong enough to win the pawn immediately and must continue improving the position. Meanwhile Black has useful plans: bringing the knights and the light-squared bishop to the light squares around the d5-pawn, especially the c4 outpost, often after exchanging the bishop on a5 for the knight on c3. This reduces White's pressure on d5 and weakens White's control of e4.
+The Monte Carlo result from this position is 52%, which seems perfectly acceptable for Black.}
+)
+(
+10... Bc7
+{This was played in a recent grandmaster game. It is rather surprising that White did not test the obvious 11.e4, the move that 10...Bb6 is designed to discourage.}
+(
+11. Bb2 O-O 12. Re1 Bg4 13. h3 Bh5 14. Rc1 f5 0-1
+{Hjartarson - Manor, World Senior Team Championship (50+), Rhodes 2019.
+Black was already slightly better.}
+)
+11. e4
+(
+11... dxe4 12. Nxe4 O-O 13. Bb2
+{White intends Rc1, Re1, Ne5, b5 and perhaps d5. Black has many problems to solve.}
+)
+11... O-O 12. Bb2 Bg4 13. Re1 Bb6 14. Na4 Qd7 15. Rc1 Rad8 16. exd5 Nxd5 17. Rxc4 Bh3
+{We reach a familiar structure in which Black has voluntarily abandoned the c4-pawn and seeks counterplay against the isolated d4-pawn and the weakened light squares. Here, however, the engines strongly prefer White because of the possibility of Nc5, which may force ...dxc5, leaving Black with virtually no active play.}
+18. Qc1 Bxg2 19. Kxg2 f6 20. Nc5 Bxc5 21. dxc5
+{The engine gives Black essentially no compensation for the pawn.}
+)
+(
+10... Bb6
+{Against this move the engines recommend a very interesting regrouping instead of the still perfectly reasonable 11.e4.}
+(
+11. Na4 Bc7 12. Bb2 f6 13. Re1 O-O 14. Rc1 Re8 15. Nd2 Bg4 16. f3
+{As in the Lundin-Spielmann game, neutralising the bishop on g2 also neutralises White's position. The evaluation swings dramatically from better for White to almost clearly better for Black.}
+16... Bh5 17. e4 dxe4 18. Nxe4 b5 19. Nac5 Nd5 20. Qd2 a5 21. Nc3 axb4 22. Nxd5 Qxd5 23. f4 Bf3 24. axb4 Rxe1+ 25. Rxe1 Bxg2 0-1
+{Karlen - Stoltz, Kinna Consultation Game, 1934.}
+)
+(
+11. e4 O-O 12. Bb2 Bg4
+{The engines believe White can preserve a small edge after}
+13. Nxd5 Nxd5 14. exd5 Qxd5 15. Ne5 Qxg2+ 16. Kxg2 Bxd1 17. Rfxd1 Nxe5 18. dxe5 Rfd8 19. Bc3
+{This should not be particularly frightening for Black. If White later tries Rd6, Black has the useful resource ...Bc7, driving the rook away from the outpost.}
+)
+(
+11. Ra2 O-O 12. Rd2 Bg4 13. Re1
+{This is an interesting position with many playable continuations. One example is}
+13... Rc8 14. h3 Bh5
+(
+15. g4 Bg6 16. Nh4 f5 17. e3
+)
+(
+15. e4 dxe4 16. Nxe4 Nd5 17. Bb2 Bg6 18. Nc3 Nce7
+)
+{Both continuations are evaluated by the engines at approximately +0.20.
+White's Monte Carlo score against 10...Bb6 is slightly higher than after 10...cxb3 but still perfectly acceptable for Black.}
+)
+)
+{The alternative to 9.a3 is the principal continuation 9.e4, which is also the engine's first choice. Black has two major approaches.}
+(
+9. e4
+{This is the main line and the engine's first choice. Black has two principal approaches.}
+(
+9... O-O
+{This is strategically very similar to 9...dxe4. It has always seemed to me, however, that Black can occasionally hope for winning chances after 9...dxe4, whereas after the immediate castling Black's ambitions are usually more modest. The Monte Carlo score is 59%, which is perfectly acceptable for Black.}
+10. exd5 Nxd5
+(
+11. Nxd5 Qxd5
+(
+12. Ne5
+(
+12... Qxd4 13. Nxc6 Qxd1 14. Rxd1 bxc6 15. Bxc6 Rb8 16. Bf4 Rb6 17. Bd5 Be7 18. Rd2 Be6 19. Bxe6 Rxe6 20. Rc1 Rc8 21. Be3 a6 22. Rd5 h6 23. Rc2
+{This is the engine's preferred continuation. Black has essentially no winning chances here, but accurate defence should be sufficient for equality.}
+)
+(
+12... Qb5 13. Nxc6 bxc6 14. Qf3
+{When I prepared this line professionally during the 1990s I was never completely convinced that White's edge posed serious practical problems. The engines agree, evaluating the position at approximately +0.36.}
+14... Bb7 15. b3 Rad8 16. bxc4 Qxc4 17. Be3 Ba5 18. Rfc1 Qe6 1/2-1/2
+{Donner - Stahlberg, Beverwijk 1958.}
+)
+)
+12. Be3 Qh5 13. Ne5 Qxd1 14. Rfxd1 Nxe5 15. dxe5 c3 16. bxc3 Bxc3 17. Rab1 Bxe5 18. Bc5 Re8 19. Re1 Bf5 20. Rxb7 Bc7 21. Rxe8+ Rxe8 22. Rxa7 Re1+ 23. Bf1 h5 24. Kg2 Be5 25. Bc4 Be4+ 26. f3 Bg6
+{This is the engine's main line. It is not especially enjoyable for Black, but it appears defensible with precise play. The evaluation is around +0.66.}
+)
+(
+11. Bg5 Qa5 12. Nxd5 Qxd5 13. Rc1 Be6 14. a3 Ba5 15. Be3 Qh5 16. Ng5 Bg4 17. Bf3 Bxf3 18. Qxf3 Qxf3 19. Nxf3 Bb6 20. Rxc4 Rfd8
+{The engines evaluate this position around +0.48. White is a pawn ahead, but converting it will not be simple. Black's plan of doubling rooks on the d-file, playing ...f6 and ...Kf7, followed by kingside expansion or patient defence, is straightforward and practical.}
+)
+)
+(
+9... dxe4 10. Nxe4
+{Black now has three principal continuations.}
+(
+10... Bf5
+{This was first tried by Stoltz against Winter in 1933. Black attempts to disturb White's coordination before committing the king. Nimzowitsch introduced an improvement in Stockholm 1934, based on an analysis by the Danish analyst Dr. Krause according to Stahlberg's book *Chess and Chessmasters*. It remains one of White's strongest continuations.}
+11. Ne5
+)
+)
+)
+(
+10... Bf5
+{This continuation was first employed by Stoltz against Winter in 1933. Rather than castling immediately, Black tries to interfere with White's coordination at once. Nimzowitsch demonstrated an important improvement the following year in Stockholm 1934, adopting an idea suggested by the Danish analyst Dr. Krause (according to Stahlberg's book *Chess and Chessmasters*). It remains one of White's strongest continuations.}
+11. Ne5
+(
+11. Nc5 Bxc5 12. dxc5 Qa5 13. Nd4 O-O-O 14. Nxc6 Nxc6 15. Qf3 Be6 16. Be3 Rd7 17. Rfd1 Rhd8 18. Rxd7 Rxd7 19. Qh5 Qa4 20. Qe2 Nd4 21. Bxd4 Rxd4 22. h4 Qb4 23. c6 bxc6 24. b3 Qd6 25. bxc4 Bxc4 0-1
+{Foltys - Stoltz, Munich 1941.}
+)
+(
+11... Be6
+{This was presumably the preparation of Stoltz and Lundin for Munich 1941. The bishop retreats in order to maintain the c4-pawn, hoping that White's knight on e5 has weakened the d4-square sufficiently to force White to slow down. The engines disagree.}
+12. Qa4
+{This immediately creates serious problems for Black.}
+(
+12. Nxc6 bxc6 13. Bd2 Bxd2 14. Qxd2 O-O 15. Nc5 Bd5 1/2-1/2
+{Nielsen - Lundin, Munich 1941.}
+)
+(
+12... Qa5 13. Qxa5 Nxa5 14. a3
+{The bishop can no longer continue protecting the d6-square. White will eventually recover the c4-pawn.}
+)
+(
+12... Bd5 13. Bg5 Qa5 14. Qxa5 Nxa5 15. a3 Bxe4 16. Bxe4 Bd6 17. Rad1
+{White simply intends Bd2, winning the c4-pawn.}
+)
+12... O-O 13. Nxc6 Nxc6 14. d5
+{White wins by force.}
+(
+14... Qxd5 15. Nf6+
+)
+14... Bxd5 15. Rd1
+{The pin on the d-file is extremely unpleasant for Black.}
+)
+(
+11... Qxd4 12. Qxd4 Nxd4 13. a3 13... Bxe4 14. Bxe4
+(
+14... Bc5 15. Bxb7 Rb8 16. Ba6 Ne2+ 17. Kg2 Bd4 18. Nxf7
+{A beautiful tactical idea noted by G. Stahlberg, ensuring White's advantage.}
+18... Nxc1 19. Nxh8 Nb3 20. Rad1 g6 21. Nf7 Kxf7 22. Bxc4+ Kf8 23. Bxb3 Bxb2 24. Rd3 Bxa3 25. Rf3+ Kg7 26. Ra1 Bc5 27. Rf7+ Kh6 28. Ra5 Bb6 29. Ra4 Nf5 30. Be6 Nd4 31. Bd7 1-0
+{Nimzowitsch - Stoltz, Stockholm 1934.}
+)
+14... Nb3 15. Be3 Nxa1 16. Rxa1 Ba5 17. Nxc4 Bb6 18. Nxb6 axb6 19. Bxb6 O-O 20. b4 Nc6 21. b5 Na5 22. Rc1
+{The engines consider White's exchange, pawn and bishop pair to provide a significant advantage over Black's misplaced knight, although the position is not yet technically winning.}
+)
+)
+(
+10... Bg4
+{This move is also mentioned by Stahlberg, but modern engines are not impressed. The pin on the knight at f3 is much less significant than the pressure created by attacking the knight on e4. White therefore obtains several energetic possibilities while Black's king is still in the centre.}
+11. a3 Ba5
+(
+12. d5
+{This immediate advance could easily surprise an unprepared Black player.}
+(
+12... Qxd5 13. Nd6+ Kf8 14. Qxd5 Nxd5 15. Ng5
+{Black is hit from every direction.}
+15... Be6 16. Rd1 h6 17. Ngxf7 Bxf7 18. Nxf7 Kxf7 19. Bxd5+ Ke7 20. Bxc4
+{White has a clear extra pawn together with the bishop pair.}
+)
+(
+12... Nxd5 13. h3 Bc8
+(
+13... Bf5 14. Nc5
+{The b7-pawn immediately becomes a serious weakness.}
+)
+14. Qc2 O-O 15. Rd1 Nce7 16. Nd4 Bd7 17. Qxc4
+{Black's position is highly unpleasant.}
+)
+)
+12. h3
+(
+12... Bf5 13. Nc5
+{Again Black finds it very difficult to solve the problems created by the pressure on the queenside.}
+)
+12... Bxf3 13. Qxf3 Nxd4 14. Qg4 O-O
+{A complicated tactical sequence now secures White a dangerous initiative.}
+15. Nf6+ Kh8 16. Bg5
+{Very dangerous for Black.}
+16... h6 17. Nd7
+{Attacking both the rook on f8 and the knight on d4.}
+17... Nb3 18. Nxf8 hxg5 19. Nd7 Nxa1 20. Bxb7
+{The rook is trapped.}
+20... Nb3 21. Ne5 Qc7 22. Nxf7+ Kg8 23. Bxa8 Kxf7 24. Qxg5
+{White enjoys a large advantage thanks to Black's exposed king and weak pawn structure, having rook and two pawns for the two knights.}
+(
+11. Nh4 Bxe4 12. Bxe4 Qxd4 13. Qc2 Qf6 14. Be3
+{This is an equivalent engine recommendation and is likewise unpleasant for Black.}
+)
+)
+(
+10... O-O
+{By far the safest continuation.}
+11. Qc2
+{White's principal continuation. Black has two major choices.}
+(
+11... Bf5
+{This pins the knight to the queen and temporarily prevents Qxc4. The principal line liquidates the central pawns and leaves White with a small but persistent initiative.}
+12. Nh4
+{More or less the only critical move.}
+(
+12. a3 Qd5
+{A useful zwischenzug.}
+13. Nh4 Nxd4 14. Nf6+ gxf6 15. Qxf5 Qxg2+ 16. Kxg2 Nexf5 17. Nxf5 Bc5 18. Be3 Nxf5 19. Bxc5 Rfc8
+{Black is completely fine.}
+)
+12... Bxe4 13. Bxe4 Nxd4 14. Qxc4 Nec6 15. Be3 Qf6 16. Rad1 Rad8 17. Bxd4 Rxd4 18. Rxd4 Qxd4 19. Rc1 Qb6 20. Nf3 Be7 21. Bxc6 bxc6 22. b3 c5
+{This is by no means a disaster for Black, but it offers very little hope of playing for a win. The Monte Carlo statistics reflect this: approximately 62% for White with a very low Black winning percentage.}
+)
+(
+11... h6
+{Black deliberately abandons the c4-pawn, trusting that pressure against White's isolated d4-pawn and control of the light squares will provide sufficient compensation. With engine assistance this practical idea can even be elevated into a main-line recommendation.
+The Monte Carlo score is slightly better than after 11...Bf5: approximately 61%, with marginally more winning chances for Black.} 12. a3
+{The engines like this useful waiting move. It gives the queen additional flexibility and permanently secures the c5-square for White's knight.}
+12... Ba5 13. Qxc4 Be6
+{This is the position that the engines evaluate between +0.30 and +0.40. White has won a pawn, but must constantly defend the isolated d4-pawn while Black gains tempi against the exposed white queen. The following main lines have been distilled after extensive engine analysis.}
+(
+14. Qd3 Bb6 15. Be3 Qd5
+{The black queen immediately occupies the important light squares and simultaneously frees d8 for the rook.}
+16. Nc3 Qh5 17. Na4 Rad8 18. Nxb6 axb6
+{White has secured the bishop pair and doubled Black's b-pawns while still retaining the isolated d4-pawn. Nevertheless, Black's pressure against d4 and the light squares continues to increase, so White will most likely have to return the pawn eventually and then attempt to exploit the bishop pair together with Black's weakened queenside.}
+19. Rfe1 Nf5 20. Qe4 Nd6 21. Qh4 Qxh4 22. Nxh4 Nc4 23. b3 Nxe3 24. fxe3 Bxb3 25. Rab1 Na5 26. Nf3 Rfe8 27. Nd2 Bd5 28. Bxd5 Rxd5 29. a4 Rd6
+{This is entirely typical of the resulting positions. Black regains the pawn, and although the engines still show a small edge for White (around +0.12), the backward b6-pawn remains a long-term weakness that White can continue to target.}
+)
+14. Qb5 Bb6 15. Be3 Nf5 16. Rad1 Qe8
+{A remarkably subtle move.}
+17. Nc3
+(
+17. d5 Nxe3 18. fxe3 Bd7
+{This is the tactical point.}
+19. dxc6 Bxc6
+{Black regains the piece.}
+20. Nf6+ gxf6 21. Qf5 Bxe3+ 22. Kh1 Rd8
+{Despite the weakened kingside, Black is completely satisfactory.}
+)
+17... Na5
+{The knight heads for the c4-outpost.}
+18. Qd3 Rd8
+(
+18... Bc4 19. Qxf5
+{This tactical resource also deserves attention, although the engines still consider White slightly better.}
+)
+19. Rfe1 Qd7 20. Ne5 Qc8 21. Ne2 Nc6 22. Nxc6 bxc6 23. Rc1 Bd5 24. Bxd5 Rxd5 25. Qc4 Nxe3 26. fxe3 Rd6
+{The engines evaluate the final position at approximately +0.39. White retains a small but tangible advantage, although it is far from decisive. The Monte Carlo score is only about 52%, indicating that the engines have considerable confidence in Black's practical chances despite the static weaknesses.}
+)
+)
+*
+  </pgn-study>
+
+    <script src="../dist/ChessPublica.all.min.js"></script>
+    <script type="module" src="../script.js"></script>
+    
+    <script type="module">
+        /* <pgn-study> holds the PGN text exactly once. Split it into a real
+           <pgn-player> (left) and a real <pgn clickable-moves> (right) —
+           the same two elements this page always used, just built from
+           one shared source instead of two hand-kept-in-sync copies of
+           the PGN. Runs synchronously (not on DOMContentLoaded) so both
+           elements exist in time for ChessPublica's own DOMContentLoaded
+           init pass to pick up the new <pgn> tag exactly like any other
+           on the page — nothing about how <pgn>/<pgn-player> themselves
+           work is touched, only this page's markup.
+
+           innerHTML (not textContent) both ways: <pgn-study>'s content was
+           parsed as real HTML by the browser like any element, so this
+           preserves inline HTML inside comments (<br>, <em>, …) exactly
+           as the original two separate blocks did — <pgn-player> reads
+           it back via .textContent (tags collapse away, same as before),
+           <pgn> via .innerHTML (tags survive, same as before). */
+        const studyEl = document.querySelector('pgn-study');
+        const pgnHTML = studyEl.innerHTML;
+
+        const playerEl = document.createElement('pgn-player');
+        playerEl.innerHTML = pgnHTML;
+
+        const pgnEl = document.createElement('pgn');
+        pgnEl.setAttribute('clickable-moves', '');
+        pgnEl.innerHTML = pgnHTML;
+
+        const resizerEl = document.createElement('div');
+        resizerEl.className = 'pgn-study-resizer';
+        resizerEl.setAttribute('role', 'separator');
+        resizerEl.setAttribute('aria-orientation', 'vertical');
+        resizerEl.setAttribute('aria-label', 'Resize columns');
+        const resizerHandle = document.createElement('span');
+        resizerHandle.className = 'pgn-study-resizer-handle';
+        const resizerHandleIcon = document.createElement('span');
+        resizerHandleIcon.className = 'lucide-icon';
+        resizerHandleIcon.style.setProperty('--icon', window.ChessPublica.lucideIconUrl('grip-vertical'));
+        resizerHandle.appendChild(resizerHandleIcon);
+        resizerEl.appendChild(resizerHandle);
+
+        studyEl.replaceChildren(playerEl, resizerEl, pgnEl);
+        studyEl.prepend(document.querySelector('.pgn-study-ribbon'));
+        // The close button starts as a page-level sibling before
+        // <pgn-study> (see its own CSS comment) — move it into the
+        // ribbon's right-hand group now that the ribbon itself exists
+        // inside pgn-study, alongside the settings (cog) button.
+        document.querySelector('.pgn-study-ribbon-right').appendChild(document.getElementById('pgnStudyClose'));
+
+        /* Drag-to-resize the board/reading-list columns (desktop grid
+           layout only — the resizer is display:none in the stacked
+           mobile layout, and pointerdown never fires on a hidden
+           element). Only --left-col-width is ever written: the right
+           column's own --right-col-width stays at its 2fr default the
+           whole time, so it keeps automatically filling whatever the
+           left column (and the fixed 6px resizer track) don't use —
+           see the "min-width: 900px" rule above. The board inside
+           pgn-player picks up the new column width on its own via the
+           container-query --board-size rule just above (which is why
+           it visibly resizes live as the reader drags, not just once
+           they let go), and the reading column's text reflows for
+           free — neither needs any resize-specific code here. */
+        (function setupColumnResizer() {
+            let dragStartX = null;
+            let dragStartWidth = null;
+
+            /* One-way resize: dragging left (shrinking the board) is
+               allowed down to a 20% floor. Dragging right can actually
+               grow the board — up to the point where it hits its own
+               cap (500px, see "pgn-study pgn-player { --board-size:
+               min(calc(400px * 1.25), 94cqw) }" above): past that column
+               width, the board can't grow any further, so widening the
+               column more would only add empty padding around an
+               already-maxed-out board — the drag stops right there
+               instead of continuing to grow the gap. A 85%-of-total
+               ceiling on top of that is just a sanity floor for the
+               reading column, in case an unusually narrow desktop
+               viewport would otherwise let the board-cap width swallow
+               nearly all of it. */
+            const clampLeftWidth = (px) => {
+                const totalWidth = studyEl.getBoundingClientRect().width
+                    - (parseFloat(getComputedStyle(studyEl).paddingLeft) || 0)
+                    - (parseFloat(getComputedStyle(studyEl).paddingRight) || 0)
+                    - 6; // the resizer track itself
+                const min = totalWidth * 0.2;
+                const boardCapWidth = 500 / 0.94;
+                const max = Math.min(boardCapWidth, totalWidth * 0.85);
+                return Math.min(Math.max(px, min), max);
+            };
+
+            resizerEl.addEventListener('pointerdown', (e) => {
+                dragStartX = e.clientX;
+                dragStartWidth = playerEl.getBoundingClientRect().width;
+                resizerEl.classList.add('dragging');
+                resizerEl.setPointerCapture(e.pointerId);
+                e.preventDefault();
+            });
+            resizerEl.addEventListener('pointermove', (e) => {
+                if (dragStartX === null) return;
+                const newWidth = clampLeftWidth(dragStartWidth + (e.clientX - dragStartX));
+                studyEl.style.setProperty('--left-col-width', newWidth + 'px');
+                studyEl.style.setProperty('--right-col-width', '1fr');
+            });
+            const endDrag = (e) => {
+                if (dragStartX === null) return;
+                dragStartX = null;
+                resizerEl.classList.remove('dragging');
+                if (e && resizerEl.hasPointerCapture(e.pointerId)) resizerEl.releasePointerCapture(e.pointerId);
+            };
+            resizerEl.addEventListener('pointerup', endDrag);
+            resizerEl.addEventListener('pointercancel', endDrag);
+        })();
+
+        /* Ribbon icons, read straight off <pgn-player>'s own (hidden)
+           lucide icons rather than hardcoding a duplicate icon URL here
+           — same trick the move picker below already uses for its own
+           "play" icon. Safe to do this immediately, unlike the button
+           click-forwarding further down: connectedCallback builds
+           <pgn-player>'s whole template (including these icons'
+           already-set --icon custom properties) synchronously, before
+           its actual engine — which the buttons need — finishes
+           constructing. */
+        const ribbonIconMap = {
+            pgnStudyDownloadIcon: '.settings-btn[data-action="download"] .lucide-icon',
+            pgnStudyFlipIcon:     '.settings-btn[data-action="flip"] .lucide-icon',
+            pgnStudySpeedIcon:    '.settings-btn[data-action="speed"] .lucide-icon',
+        };
+        Object.entries(ribbonIconMap).forEach(([id, selector]) => {
+            const iconUrl = playerEl.querySelector(selector)?.style.getPropertyValue('--icon');
+            if (iconUrl) document.getElementById(id).style.setProperty('--icon', iconUrl);
+        });
+
+        // The close button, play/pause button, and TOC button have no
+        // single already-rendered icon anywhere in <pgn-player> to borrow
+        // from (unlike the three above — the on-board overlay button only
+        // ever shows the "play" glyph, never "pause", and the ribbon's
+        // play/pause button needs to swap between both), so these go
+        // straight through ChessPublica's own public lucideIconUrl()
+        // instead — see assets/icons.js / assets/ChessPublica.js. The
+        // play/pause icon starts as "play"; syncPlayPauseButton() below
+        // swaps it to "pause" (and back) as playback state changes.
+        document.getElementById('pgnStudyCloseIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('x'));
+        document.getElementById('pgnStudyPlayPauseIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('play'));
+        document.getElementById('pgnStudyTocIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('list'));
+        document.getElementById('pgnStudySettingsIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('settings'));
+
+        // Closing doesn't depend on the engine, or even on loading having
+        // finished — hide whichever of the loading placeholder or the real
+        // <pgn-study> is currently showing (?.remove()/[none] no-op safely
+        // either way) and reveal the bare body behind them, but leave a way
+        // back in via the reopen button. The close button itself is now a
+        // <pgn-study> descendant (moved into the ribbon above), so hiding
+        // pgn-study already hides it too — no separate style.display
+        // needed for it here anymore.
+        const reopenBtn = document.getElementById('pgnStudyReopen');
+        document.getElementById('pgnStudyClose').addEventListener('click', () => {
+            document.getElementById('pgnStudyLoading')?.remove();
+            studyEl.style.display = 'none';
+            reopenBtn.classList.add('visible');
+        });
+
+        /* The page loads with the study closed — nothing is fetched or
+           parsed any differently in the background (see the
+           DOMContentLoaded listener below), only the *reveal* is gated
+           behind this button instead of happening the instant loading
+           finishes. studyReady/readyEngine capture that background
+           work's result whenever it lands; openRequested records that
+           the reader already asked to see it before that happened, so
+           revealStudy() (called from wherever loading actually finishes)
+           knows to show it immediately instead of leaving them stuck
+           looking at a button that does nothing. */
+        let studyReady = false;
+        let openRequested = false;
+        let readyEngine = null;
+
+        function revealStudy() {
+            document.getElementById('pgnStudyLoading')?.classList.remove('visible');
+            document.getElementById('pgnStudyLoading')?.remove();
+            studyEl.classList.add('cp-ready');
+            reopenBtn.classList.remove('visible');
+            // Same reasoning as before: force the board's layout to
+            // compute now, synchronously, the instant it actually has one
+            // (this reveal) — not back when the engine first became
+            // ready, quite possibly while still hidden behind this very
+            // button.
+            if (readyEngine && readyEngine.board && typeof readyEngine.board.resize === "function") {
+                readyEngine.board.resize();
+            }
+        }
+
+        function markStudyReady(engine) {
+            studyReady = true;
+            readyEngine = engine || null;
+            if (openRequested) revealStudy();
+        }
+
+        reopenBtn.addEventListener('click', () => {
+            // Already been open at least once (cp-ready is permanent —
+            // see markStudyReady()/revealStudy() below) and is just
+            // currently hidden by pgn-study's own inline display:none
+            // (which the close button, now inside it, inherits) —
+            // restore that directly instead of re-running first-open.
+            if (studyEl.classList.contains('cp-ready')) {
+                studyEl.style.display = '';
+                reopenBtn.classList.remove('visible');
+                return;
+            }
+            if (studyReady) {
+                revealStudy();
+            } else {
+                // First open, but loading (still running in the
+                // background regardless of this button) hasn't finished
+                // yet — show the same loading placeholder markStudyReady()
+                // would otherwise have skipped straight past, and let it
+                // reveal the real thing the moment it does.
+                openRequested = true;
+                document.getElementById('pgnStudyLoading')?.classList.add('visible');
+                reopenBtn.classList.remove('visible');
+            }
+        });
+
+        /* Chessbase-style reading sync between the <pgn-player> on the left
+           and the static <pgn> column on the right:
+             - player shows a mainline move -> highlight + scroll to it on
+               the right (matched via the shared 0-based ply index —
+               pgn-player.js's "cp-move" event detail / pgn.js's
+               .pgn-move[data-ply] spans)
+             - reader clicks a mainline move on the right -> player jumps
+               to it (engine.goTo(), which re-fires "cp-move" and keeps
+               everything above in sync)
+             - reader clicks a variation/sub-variation move, or any
+               diagram, on the right -> the player just shows that
+               position directly (engine.showVariationPosition() — the
+               same primitive <pgn-player> uses to preview a variation
+               move from its own comment box — since neither has a
+               mainline ply index to hand to goTo())
+           The left column itself stays put via the sticky CSS above. */
+        document.addEventListener('DOMContentLoaded', async () => {
+            // <pgn> only becomes `.pgn-container` (see init.js) once
+            // ChessPublica's own DOMContentLoaded listener has run — it
+            // was registered before this one, so that's already true by
+            // the time this fires.
+            const movesRoot = studyEl.querySelector('.pgn-container .pgn-moves');
+            if (!movesRoot) {
+                // Nothing to sync, but still a reason not to leave the
+                // reader stuck on a loading placeholder forever if they've
+                // already asked to open it — reveal whatever <pgn-study>
+                // did render.
+                markStudyReady(null);
+                return;
+            }
+
+            /* Mobile layout has no room for a full second column, so it
+               drops the reading column's move text entirely (see the
+               "max-width: 899px" rule above) — but the game's title/
+               byline (pgn.js's own ".pgn-title", distinct from
+               <pgn-player>'s identical-looking one, which stays hidden
+               there) is worth keeping, just moved up above the board
+               instead of buried at the top of a now-hidden column. A
+               clone (not a move) keeps the original in place for the
+               desktop reading column, which still wants it right where
+               it's always been — .pgn-study-mobile-title's own CSS is
+               what actually decides which of the two is ever visible at
+               a given width, not this. */
+            const originalTitle = studyEl.querySelector('.pgn-container .pgn-title');
+            if (originalTitle) {
+                const mobileTitle = originalTitle.cloneNode(true);
+                mobileTitle.classList.add('pgn-study-mobile-title');
+                studyEl.insertBefore(mobileTitle, playerEl);
+            }
+
+            let activeEl = null;
+            function setActiveMove(el) {
+                if (activeEl) activeEl.classList.remove('pgn-move-active');
+                activeEl = el || null;
+                if (activeEl) activeEl.classList.add('pgn-move-active');
+            }
+
+            // Aligns a reading-column move with the *top* of the main
+            // board, not scrollIntoView()'s own block:'center' (which
+            // buries it mid-viewport). scrollIntoView() has no "align
+            // with this other element" option, so this scrolls by the gap
+            // between the move and a target line instead — the board's
+            // own CSS sticky `top` (1.5rem, ≥900px — see the CSS above),
+            // 0 otherwise (mobile stacks the columns, no sticky board to
+            // line up with; scrolling this move flush to the viewport top
+            // is the closest sane equivalent). Deliberately NOT
+            // playerEl.getBoundingClientRect().top: that's only pinned to
+            // this same offset once the page has already scrolled past
+            // it — read at the moment of a click from further up the
+            // page, it's still sitting at its taller unscrolled position,
+            // undershooting the scroll by the difference every time.
+            function scrollMoveToBoardTop(el) {
+                const stickyTop = parseFloat(getComputedStyle(playerEl).top);
+                const targetLine = Number.isFinite(stickyTop) ? stickyTop : 0;
+                const delta = el.getBoundingClientRect().top - targetLine;
+                window.scrollBy({ top: delta, behavior: 'smooth' });
+            }
+
+            // Scrolling the page WHILE chessboard.js is mid-slide for the
+            // move that triggered it visibly breaks the animation: its
+            // piece-drag overlay is positioned in *document* coordinates,
+            // computed once at the start of the slide, but the board
+            // itself sits in a `position: sticky` column — once stuck, its
+            // on-screen position no longer moves with the page the way an
+            // ordinary document-flow element would, so as the page keeps
+            // scrolling underneath it, the sliding piece drifts away from
+            // the (visually stationary) squares instead of tracking them,
+            // and appears to "jump" once the real piece reappears at the
+            // end. Deferring the scroll to the board's own "cp-animation-end"
+            // event (see pgn-player.js's onMoveEnd hook) instead of firing
+            // it immediately lets the slide finish first, so the two
+            // animations never overlap. pendingScrollTarget always holds
+            // the *latest* target — during autoplay, several cp-move
+            // events can land before the first slide even finishes, and
+            // only the current position's row is ever worth scrolling to.
+            // The timer is a fallback for the rare case chessboard.js
+            // doesn't actually animate anything (e.g. re-rendering an
+            // unchanged position), which never fires "cp-animation-end" at
+            // all — 250ms comfortably clears pgn-player.js's own 200ms
+            // moveSpeed on the normal path without adding a perceptible
+            // delay of its own.
+            let pendingScrollTarget = null;
+            let pendingScrollTimer = null;
+            function scheduleScroll(el) {
+                pendingScrollTarget = el;
+                clearTimeout(pendingScrollTimer);
+                pendingScrollTimer = setTimeout(runPendingScroll, 250);
+            }
+            function runPendingScroll() {
+                clearTimeout(pendingScrollTimer);
+                if (!pendingScrollTarget) return;
+                scrollMoveToBoardTop(pendingScrollTarget);
+                pendingScrollTarget = null;
+            }
+            playerEl.addEventListener('cp-animation-end', runPendingScroll);
+
+            playerEl.addEventListener('cp-move', (e) => {
+                const moveIndex = e.detail.moveIndex;
+                if (moveIndex == null || moveIndex < 0) { setActiveMove(null); return; }
+
+                const target = movesRoot.querySelector(`.pgn-move[data-ply="${moveIndex}"]`);
+                if (!target) { setActiveMove(null); return; }
+
+                setActiveMove(target);
+                scheduleScroll(target);
+            });
+
+            // Counterpart to "cp-move" above, but for a variation position
+            // (arrow-key stepping, the spacebar auto-play tick loop, or a
+            // fresh variation/diagram click — see pgn-player.js's
+            // showVariationPosition()). There's no mainline ply index to
+            // match on here, so key off the FEN instead — every
+            // data-fen-carrying element in the reading column (mainline
+            // spans never carry one) is a candidate.
+            playerEl.addEventListener('cp-variation-move', (e) => {
+                const fen = e.detail.fen;
+                const target = fen ? movesRoot.querySelector(`[data-fen="${fen}"]`) : null;
+                if (!target) { setActiveMove(null); return; }
+
+                setActiveMove(target);
+                scheduleScroll(target);
+            });
+
+            // The reading column's own diagrams (createBoard() calls
+            // inside pgn.js's renderFullPGN — one per [D]/[#] marker,
+            // NAG-glyph position, etc.) each build their own <img> piece
+            // elements. Most point at the same ~12 shared theme URLs, so
+            // the browser only fetches each once, but that first fetch
+            // can still take a visible moment — without waiting for it,
+            // the loading placeholder disappears (see cp-ready below)
+            // before those images have actually arrived, so the reading
+            // column pops its diagrams in piece-by-piece right in front
+            // of the reader instead of appearing whole.
+            //
+            // createBoard() defers each diagram's actual construction
+            // (and thus its <img> tags) by one requestAnimationFrame —
+            // since every diagram here was scheduled during the same
+            // synchronous render pass, they all land in the very next
+            // frame; awaiting two rAFs is a small safety margin before
+            // collecting <img> elements below, so none still pending get
+            // missed.
+            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+            const readingColumnEl = movesRoot.closest('.pgn-container');
+            const diagramImages = readingColumnEl ? Array.from(readingColumnEl.querySelectorAll('img')) : [];
+            const diagramImagesReady = Promise.all(diagramImages.map(img => img.complete ? Promise.resolve() : new Promise(resolve => {
+                img.addEventListener('load', resolve, { once: true });
+                img.addEventListener('error', resolve, { once: true }); // a broken image shouldn't hang the loading screen forever
+            })));
+
+            // Player isn't ready to accept goTo()/showVariationPosition()
+            // calls until its PGN has been parsed and the board built —
+            // see helpers.js's createReadyGate.
+            const [engine] = await Promise.all([
+                playerEl.ready.catch(() => null),
+                diagramImagesReady,
+            ]);
+
+            // <pgn-player> has now finished loading, on success or
+            // failure alike (a load error shouldn't leave the reader
+            // stuck looking at a loading placeholder forever once they've
+            // asked to see it) — mark it ready. If the reader already
+            // clicked "Open PGN Study" while this was still in flight,
+            // this reveals it immediately; otherwise it just remembers
+            // the result (see markStudyReady()/revealStudy() above) until
+            // they do. Either way, engine.board.resize() (inside
+            // revealStudy()) is what forces the board's layout to
+            // actually compute for the first time, right as it becomes
+            // visible — not here, since it's likely still display:none
+            // behind that button at this exact point.
+            markStudyReady(engine);
+
+            if (!engine) return;
+
+            /* Ribbon buttons forward to <pgn-player>'s own (hidden)
+               settings buttons — same three actions (download/flip/
+               speed) and same underlying logic, just always-visible
+               app-style chrome instead of tucked behind a gear-icon
+               toggle. Only wired up now, not any earlier: those
+               buttons' own click handlers aren't attached until the
+               engine itself has finished constructing (see
+               VideoEngine's constructor in pgn-player.js), same
+               reason the buttons start out disabled in the markup. */
+            // Speed badge lives on the speed button itself now (it used
+            // to sit on the play/pause button, but the speed button is
+            // the one this multiplier is actually about) — resynced
+            // straight from its own click handler below.
+            const speedBadge = document.getElementById('pgnStudySpeedBadge');
+            const syncSpeedBadge = () => { speedBadge.textContent = engine.state.speed + 'x'; };
+            syncSpeedBadge();
+
+            document.querySelectorAll('.pgn-study-ribbon-btn').forEach(btn => {
+                const action = btn.dataset.ribbonAction;
+                const target = playerEl.querySelector(`.settings-btn[data-action="${action}"]`);
+                if (!target) return;
+
+                btn.disabled = false;
+                btn.addEventListener('click', () => {
+                    target.click();
+                    // Icon-only button, so the current multiplier (the one
+                    // piece of state an icon alone can't show) lives in the
+                    // tooltip instead of on-screen text — resync it from the
+                    // engine's actual state after every click.
+                    if (action === 'speed') {
+                        const label = `Playback speed (${engine.state.speed}x)`;
+                        btn.title = label;
+                        btn.setAttribute('aria-label', label);
+                        syncSpeedBadge();
+                    }
+                });
+            });
+
+            /* Play/Pause ribbon button drives the engine directly —
+               unlike download/flip/speed above, there's no hidden
+               .settings-btn counterpart to forward to (the on-board
+               overlay button only ever shows/hides itself, it doesn't
+               expose a separate "pause" control). One button toggles
+               both the action and its own icon/title, kept in sync via
+               both "cp-move" (goTo() — mainline play ticks, pauses, and
+               manual navigation) and "cp-variation-move"
+               (showVariationPosition() — the same for a variation's own
+               autoplay/spacebar loop). Both are needed: togglePlay()
+               tracks variation playback in engine._variation.playing
+               instead of engine.state.playing (which it forces false
+               whenever a variation is active), so checking only the
+               latter left this button stuck on "Play" — silently wrong,
+               not just unsynced — the entire time a variation was
+               actually auto-playing. */
+            const playPauseBtn = document.querySelector('.pgn-study-ribbon-btn[data-ribbon-action="toggle-play"]');
+            const playPauseIcon = document.getElementById('pgnStudyPlayPauseIcon');
+            const syncPlayPauseButton = () => {
+                const playing = engine.state.playing || !!(engine._variation && engine._variation.playing);
+                playPauseIcon.style.setProperty('--icon', window.ChessPublica.lucideIconUrl(playing ? 'pause' : 'play'));
+                playPauseBtn.title = playing ? 'Pause' : 'Play';
+                playPauseBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
+            };
+            playPauseBtn.disabled = false;
+            playPauseBtn.addEventListener('click', () => engine.togglePlay());
+            syncPlayPauseButton();
+            playerEl.addEventListener('cp-move', syncPlayPauseButton);
+            playerEl.addEventListener('cp-variation-move', syncPlayPauseButton);
+
+            /* TOC ribbon button — expands/collapses the accordion built
+               into the ribbon itself (see the markup above) rather than
+               scrolling to the .pgn-study-toc at the bottom of the
+               reading column. Looked up at click time rather than cached
+               here since buildOpeningToc() below still needs to fetch
+               and render it first — toggling just expands/collapses an
+               empty shell either way until then. */
+            const tocBtn = document.querySelector('.pgn-study-ribbon-btn[data-ribbon-action="toc"]');
+            const tocAccordion = document.getElementById('pgnStudyTocAccordion');
+            tocBtn.disabled = false;
+            tocBtn.addEventListener('click', () => {
+                tocAccordion.classList.toggle('open');
+            });
+
+            /* Settings ribbon button — shows/hides the flip/speed/download
+               group inline in the ribbon's right-hand side (see the
+               markup above and .pgn-study-settings-inline's CSS). */
+            const settingsBtn = document.querySelector('.pgn-study-ribbon-btn[data-ribbon-action="settings"]');
+            const settingsInline = document.getElementById('pgnStudySettingsInline');
+            settingsBtn.disabled = false;
+            settingsBtn.addEventListener('click', () => {
+                settingsInline.classList.toggle('open');
+            });
+
+            /* Move picker — replaces <pgn-player>'s own comment/variation
+               box (hidden in the CSS above) with just the mainline move
+               and each alternative's opening move, one line each, so the
+               reader can see the choices at a branch point and click one
+               instead of reading the full variation text again (already
+               available in the column on the right). Built straight from
+               <pgn-player>'s own engine.state — variations[moveIdx] are
+               the PGN "(...)" alternatives to state.moves[moveIdx], and
+               cache[moveIdx] is the FEN they all branch from — rather
+               than re-parsing anything. */
+            const pickerEl = document.createElement('div');
+            pickerEl.className = 'pgn-study-move-picker';
+            playerEl.querySelector('.player-wrapper').appendChild(pickerEl);
+
+            // Reuse the site's actual "play" icon (same lucide glyph as
+            // the board's own play button / variation play-icons)
+            // instead of a plain "▶" character — read straight off the
+            // board's own (hidden) play button so this stays in sync
+            // with whatever icon the rest of the site uses, rather than
+            // hardcoding a duplicate icon URL here. .pgn-study-picker-icon
+            // below is `.lucide-icon` (shared mask-image technique) and
+            // inherits this custom property from its ancestor.
+            const playIconUrl = playerEl.querySelector('.play .lucide-icon')?.style.getPropertyValue('--icon');
+            if (playIconUrl) pickerEl.style.setProperty('--icon', playIconUrl);
+
+            const toFigurine = window.ChessPublica.toFigurine;
+            const formatLabel = (san, fullNum, isBlack) =>
+                `${fullNum}${isBlack ? '…' : '.'} ${toFigurine(san)}`;
+
+            // A move's color/number, read straight from the FEN *before*
+            // it was played (side-to-move + fullmove-number fields) —
+            // works identically for a mainline move (engine.state.cache
+            // entries) and a variation move (a _variation.fens entry),
+            // so both picker modes below can share it instead of each
+            // needing their own branch-tracking arithmetic.
+            function fenMoveContext(fen) {
+                const parts = fen.split(' ');
+                return { isBlack: parts[1] === 'b', fullMoveNum: parseInt(parts[5], 10) || 1 };
+            }
+
+            const setActiveRow = (row) => {
+                pickerEl.querySelectorAll('.pgn-study-picker-row').forEach(r => r.classList.remove('active'));
+                row.classList.add('active');
+            };
+
+            // Keyboard picker navigation (see the capture-phase keydown
+            // listener below): ArrowUp/ArrowDown move this cursor between
+            // rows — reusing the same .active highlight setActiveRow()
+            // already uses, so the "candidate" the reader is considering
+            // and the eventual "confirmed" row look identical — without
+            // touching the board; Space commits whichever row it's on
+            // (same as clicking it). Re-synced to match the picker's own
+            // default-active row every time it's (re)built, whatever
+            // triggered that — a fresh branch point, or a plain mouse
+            // click on a row.
+            let pickerFocusIndex = -1;
+            const pickerRows = () => Array.from(pickerEl.querySelectorAll('.pgn-study-picker-row'));
+            function syncPickerFocus() {
+                const rows = pickerRows();
+                const activeIdx = rows.findIndex(r => r.classList.contains('active'));
+                pickerFocusIndex = activeIdx >= 0 ? activeIdx : (rows.length ? 0 : -1);
+            }
+
+            const makeRow = (label, isMainline, onClick) => {
+                const row = document.createElement('div');
+                row.className = 'pgn-study-picker-row' + (isMainline ? ' mainline' : '');
+                row.innerHTML = '<span class="pgn-study-picker-icon lucide-icon"></span><span></span>';
+                row.lastElementChild.textContent = label;
+                row.onclick = () => { setActiveRow(row); onClick(); };
+                pickerEl.appendChild(row);
+                return row;
+            };
+
+            /* Replays a move list from a branch FEN into a fens/verbose
+               sequence — the shape engine.enterVariation() needs — same
+               idea as pgn.js's collectVariationSequence() but starting
+               from a SAN list (a parsed variation/child object) rather
+               than an already-built node chain. Shared by both picker
+               modes below (a top-level alternative and a nested child
+               are the same shape: { moves, moveAnnotations, … }). */
+            function replayMoves(branchFEN, sans) {
+                const chess = new Chess(branchFEN);
+                const fens = [branchFEN];
+                const verbose = [];
+                for (const san of sans) {
+                    const move = chess.move(san, { sloppy: true });
+                    if (!move) break; // stop at the first unparseable move, keep what came before it
+                    fens.push(chess.fen());
+                    verbose.push({ from: move.from, to: move.to });
+                }
+                return { fens, verbose };
+            }
+
+            /* Enters a freshly-picked variation/child (top-level
+               alternative or nested sub-variation — same shape either
+               way) at its first move, and keeps going: plays through the
+               rest of it automatically, the same tick loop spacebar
+               drives, instead of leaving the reader to press Space again
+               just to get it moving. "Pick an option" and "continue
+               playing it" used to be two separate steps; this collapses
+               them into one, matching the mainline "continue" row, which
+               already auto-plays forward the moment it's picked.
+
+               playing is set *before* showVariationPosition() rather
+               than after, on purpose: that call fires "cp-variation-move"
+               synchronously, which is what updatePicker() uses to detect
+               a sub-variation branch right at this first move and pause
+               there (see renderSubPicker() above) — it can only do that
+               by flipping _variation.playing back off, so playing has to
+               already be on for that to have anything to undo. Checking
+               it again afterward is what tells us whether that happened:
+               still true means no immediate branch, so the tick loop
+               actually starts; false means renderSubPicker() already
+               paused it and is showing its own picker, and starting the
+               loop here would just plow straight through that pause. */
+            function enterAndPlayVariation(fens, moveAnnotations, verbose, variationObj) {
+                engine.enterVariation(fens, moveAnnotations, 1, null, verbose, variationObj);
+                const v = engine._variation;
+                v.maxIndex = v.fens.length - 1;
+                v.playing = true;
+                engine.showVariationPosition(fens[1], null, verbose[0], null);
+                if (v.playing) engine._variationPlayTick(v, null);
+            }
+
+            // Mainline branch point: state.moves[moveIdx] was just played
+            // and has recorded PGN "(...)" alternatives (state.variations
+            // [moveIdx]) — one row per alternative, plus a bold row for
+            // the move actually played ("continue reading" — resumes
+            // normal playback).
+            function renderMainlinePicker(moveIdx) {
+                const alternatives = moveIdx >= 0 ? engine.state.variations[moveIdx] : null;
+                if (!alternatives || !alternatives.length) return;
+
+                const branchFEN = engine.state.cache[moveIdx];
+                const ctx = fenMoveContext(branchFEN);
+
+                const mainlineRow = makeRow(
+                    formatLabel(engine.state.moves[moveIdx], ctx.fullMoveNum, ctx.isBlack),
+                    true,
+                    () => engine.play(),
+                );
+                setActiveRow(mainlineRow); // board is already showing this move
+
+                alternatives.forEach((variation) => {
+                    if (!variation.moves || !variation.moves.length) return;
+                    const { fens, verbose } = replayMoves(branchFEN, variation.moves);
+                    if (verbose.length === 0) return; // even the first move failed
+
+                    // No engine.pause() here — the engine is already
+                    // paused by the time this picker has any rows (goTo()
+                    // auto-pauses on a move with variations; calling it
+                    // again would fire a redundant "cp-move" for no
+                    // reason, though the guard in updatePicker() below
+                    // would no-op it harmlessly either way).
+                    makeRow(formatLabel(variation.moves[0], ctx.fullMoveNum, ctx.isBlack), false, () => {
+                        enterAndPlayVariation(fens, variation.moveAnnotations, verbose, variation);
+                    });
+                });
+            }
+
+            // Sub-variation branch point: variationObj.moves[index - 1]
+            // (a move *inside* the variation currently being viewed) was
+            // just played and itself has recorded nested alternatives
+            // (variationObj.childrenByMove[index - 1]) — same idea as
+            // renderMainlinePicker() above, one nesting level deeper, and
+            // recurses to any depth the same way (each child clicked
+            // becomes the new engine._variation.variationObj, so this
+            // function runs again against *its* childrenByMove next).
+            function renderSubPicker(variationObj, index) {
+                if (index <= 0) return; // the branch point itself, before any move of this variation — nothing played yet to attach a picker to
+                const children = variationObj.childrenByMove && variationObj.childrenByMove[index - 1];
+                if (!children || !children.length) return;
+
+                // A branch point was reached mid-playback — stop right
+                // here instead of continuing past it, mirroring goTo()'s
+                // own pause-on-variation behavior for the mainline. A
+                // no-op when we arrived via single-step (arrow keys)
+                // rather than the spacebar/auto-play tick loop.
+                if (engine._variation && engine._variation.playing) {
+                    engine._pauseVariationPlay();
+                }
+
+                const branchFEN = engine._variation.fens[index - 1];
+                const ctx = fenMoveContext(branchFEN);
+
+                // "Continue" — resume *this* variation's own playback
+                // forward (the same tick loop spacebar drives), not the
+                // mainline. Omitted at the variation's last move — there
+                // is nothing further in it to continue into.
+                if (index < variationObj.moves.length) {
+                    const continueRow = makeRow(
+                        formatLabel(variationObj.moves[index - 1], ctx.fullMoveNum, ctx.isBlack),
+                        true,
+                        () => {
+                            const v = engine._variation;
+                            if (!v) return;
+                            v.maxIndex = v.fens.length - 1;
+                            v.playing = true;
+                            engine._variationPlayTick(v, null);
+                        },
+                    );
+                    setActiveRow(continueRow);
+                }
+
+                children.forEach((child) => {
+                    if (!child.moves || !child.moves.length) return;
+                    const { fens, verbose } = replayMoves(branchFEN, child.moves);
+                    if (verbose.length === 0) return;
+
+                    makeRow(formatLabel(child.moves[0], ctx.fullMoveNum, ctx.isBlack), false, () => {
+                        enterAndPlayVariation(fens, child.moveAnnotations, verbose, child);
+                    });
+                });
+            }
+
+            // Dispatches to whichever picker mode matches where the
+            // player currently is, and — this is what makes the picker
+            // disappear the moment a row is clicked, not just when a
+            // *different* mainline move is reached — always clears and
+            // rebuilds from scratch on a real position change, whether
+            // that's a fresh mainline move ("cp-move") or a fresh
+            // variation move ("cp-variation-move"). Guarded against
+            // rebuilding for a *redundant* event carrying the exact same
+            // position (e.g. engine.pause() re-firing "cp-move" at an
+            // unchanged state.index) — without that, such an event would
+            // wipe the picker and reset which row looks .active a moment
+            // after a click handler had just set it correctly.
+            let lastPicker = null;
+            function picksSame(a, b) {
+                if (!a || !b || a.kind !== b.kind) return false;
+                if (a.kind === 'main') return a.moveIdx === b.moveIdx;
+                if (a.kind === 'sub') return a.variationObj === b.variationObj && a.index === b.index;
+                return true;
+            }
+
+            function updatePicker() {
+                let next;
+                if (!engine._variation) {
+                    next = { kind: 'main', moveIdx: engine.state.index - 1 };
+                } else if (engine._variation.variationObj) {
+                    next = { kind: 'sub', variationObj: engine._variation.variationObj, index: engine._variation.index };
+                } else {
+                    // A variation entered without a variationObj (the
+                    // reading column's own variation-move clicks don't
+                    // have one — pgn.js and pgn-player.js parse the PGN
+                    // independently into incompatible shapes, so there's
+                    // no childrenByMove to look up sub-branches from
+                    // here). Nothing to show, but still a real position
+                    // change, so fall through to clear any stale picker.
+                    next = { kind: 'none' };
+                }
+
+                if (picksSame(lastPicker, next)) return;
+                lastPicker = next;
+
+                pickerEl.replaceChildren();
+                if (next.kind === 'main') renderMainlinePicker(next.moveIdx);
+                else if (next.kind === 'sub') renderSubPicker(next.variationObj, next.index);
+                syncPickerFocus();
+            }
+
+            updatePicker();
+            playerEl.addEventListener('cp-move', updatePicker);
+            playerEl.addEventListener('cp-variation-move', updatePicker);
+
+            /* ArrowUp/ArrowDown move the picker's keyboard focus; Space
+               commits whichever row it's on (same as clicking it) —
+               *only* while the picker actually has rows to navigate.
+               Registered on the capture phase specifically so it runs
+               BEFORE pgn-player.js's own bubble-phase Space handler
+               (togglePlay(), attached to document same as this): with
+               nothing to pick from, we don't touch the event at all and
+               that handler runs exactly as it always has (mainline
+               play/pause, or "continue playing a variation" once one's
+               been entered — see below); with a picker showing, we
+               consume the keypress ourselves so Space never
+               double-fires both a picker selection AND a play/pause
+               toggle for the same press.
+
+               This is also *why* the second Space in "select an option,
+               then hit spacebar to continue" just works without any
+               special-casing: selecting a row normally leaves the picker
+               empty right after (see updatePicker() above), so that next
+               Space press finds no rows here, isn't touched, and falls
+               straight through to togglePlay() — which finds
+               engine._variation now set and plays through it, same as
+               any other variation entered by hand. */
+            document.addEventListener('keydown', (e) => {
+                if (e.code !== 'ArrowDown' && e.code !== 'ArrowUp' && e.code !== 'Space') return;
+
+                const rows = pickerRows();
+                if (!rows.length) return;
+
+                const activeTag = document.activeElement && document.activeElement.tagName;
+                if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT') return;
+
+                const rect = playerEl.getBoundingClientRect();
+                if (!(rect.top < window.innerHeight && rect.bottom > 0)) return;
+
+                e.preventDefault();
+                e.stopPropagation();
+
+                if (e.code === 'Space') {
+                    rows[pickerFocusIndex]?.click();
+                    return;
+                }
+
+                const delta = e.code === 'ArrowDown' ? 1 : -1;
+                pickerFocusIndex = Math.max(0, Math.min(rows.length - 1, pickerFocusIndex + delta));
+                setActiveRow(rows[pickerFocusIndex]);
+            }, { capture: true });
+
+            // Matches a chain of .pgn-variation wrappers (outermost first,
+            // see the click handler below) to their real counterparts in
+            // engine.state's own parsed variation tree — pgn.js and
+            // pgn-player.js parse the same PGN independently into
+            // incompatible shapes, but both walk it in the same source
+            // order, so the same (branch move, position among siblings
+            // branching from it) address — cpBranchIndex/cpAltIndex, set
+            // by pgn.js on each wrapper — identifies the same variation in
+            // either tree. Returns one entry per chain level, null for any
+            // level that couldn't be matched (shouldn't normally happen
+            // for a real PGN variation move, but callers should treat a
+            // null as "no extra data available", not throw).
+            function resolveRealVariationChain(chain) {
+                const real = [];
+                let candidates = engine.state.variations[chain[0].cpBranchIndex];
+                let obj = candidates ? candidates[chain[0].cpAltIndex] : null;
+                real.push(obj || null);
+                for (let i = 1; i < chain.length; i++) {
+                    const parentObj = real[i - 1];
+                    const kids = parentObj && parentObj.childrenByMove
+                        ? parentObj.childrenByMove[chain[i].cpBranchIndex]
+                        : null;
+                    obj = kids ? kids[chain[i].cpAltIndex] : null;
+                    real.push(obj || null);
+                }
+                return real;
+            }
+
+            movesRoot.addEventListener('click', (e) => {
+                // .pgn-move: mainline (data-ply) or variation (data-fen) move text.
+                // .pgn-clickable-diagram: an inline [D]/[#] board — always data-fen.
+                const moveEl = e.target.closest('.pgn-move, .pgn-clickable-diagram');
+                if (!moveEl) return;
+
+                engine.pause();
+
+                if (moveEl.dataset.ply !== undefined) {
+                    const moveIndex = parseInt(moveEl.dataset.ply, 10);
+                    if (Number.isNaN(moveIndex)) return;
+                    engine.goTo(moveIndex + 1); // goTo() takes a position index (ply + 1), not a move index; fires "cp-move" above
+                    return;
+                }
+
+                const fen = moveEl.dataset.fen;
+                if (!fen) return;
+                const move = moveEl.dataset.from && moveEl.dataset.to
+                    ? { from: moveEl.dataset.from, to: moveEl.dataset.to }
+                    : null;
+
+                // A variation move carries data-vindex — its 0-based index
+                // into the fens/verbose sequence pgn.js stashed on the
+                // enclosing .pgn-variation (see collectVariationSequence()
+                // there). A diagram inside a variation carries no such
+                // index (it isn't itself one of the sequence's moves), so
+                // find it by matching its FEN in that same sequence
+                // instead. Either way, handing the whole sequence to
+                // enterVariation(), not just this one FEN, is what makes
+                // arrow keys/spacebar step through the REST of the
+                // variation from here afterward, instead of falling back
+                // to mainline playback (which is all showVariationPosition()
+                // alone gives you — a static preview with no position of
+                // its own to resume from).
+                //
+                // A click can land inside a sub-...-sub-variation, nested
+                // arbitrarily deep — walk outward from it collecting every
+                // enclosing .pgn-variation, outermost first, then replay
+                // that whole chain through enterVariation() one level at a
+                // time (mirrors how entering a variation from *inside*
+                // another one already works — see enterVariation()'s own
+                // doc comment in pgn-player.js). Each call but the last
+                // enters its level at exactly the move the *next* level
+                // down branches from (cpBranchIndex, stashed per wrapper
+                // by pgn.js) — the position <pgn-player>'s own
+                // exitToParentVariation() needs waiting on its stack to
+                // correctly resume there later, once ArrowRight/ArrowLeft
+                // walks back out past this variation's own last move,
+                // instead of always dropping straight back to the very
+                // start of the game (state.index defaults to 0 when the
+                // main line was never actually played through to get
+                // here). The final call in the chain enters at the
+                // move actually clicked.
+                //
+                // Each level is also matched, via cpBranchIndex/cpAltIndex,
+                // to the corresponding REAL variation object in
+                // <pgn-player>'s own (separately parsed) tree — see
+                // resolveRealVariationChain() — rather than handing
+                // enterVariation() a bare shim: only the real object has
+                // commentsByMove/diagramByMove (so the comment box shows
+                // this variation's own prose, not nothing) *and*
+                // childrenByMove (so the move picker can find this
+                // variation's own sub-branches and offer them, exactly
+                // like clicking through the picker itself already does —
+                // without it, updatePicker() has no way to know a branch
+                // point reached this way has any alternatives at all).
+                const chain = [];
+                for (let w = moveEl.closest('.pgn-variation'); w; w = w.parentElement.closest('.pgn-variation')) {
+                    chain.unshift(w);
+                }
+
+                if (chain.length) {
+                    engine.exitVariation(); // clean slate, don't stack onto whatever was active before this click
+
+                    // Positions the main line's own pointer at the exact
+                    // move this outermost variation branches from, so
+                    // enterVariation()'s mainStateIndex capture (just
+                    // `state.index` at call time) is correct even though
+                    // the main line itself was never actually played
+                    // through to get here.
+                    if (Number.isFinite(chain[0].cpBranchIndex)) {
+                        engine.state.index = chain[0].cpBranchIndex + 1;
+                    }
+
+                    const realChain = resolveRealVariationChain(chain);
+
+                    chain.forEach((w, i) => {
+                        const isInnermost = i === chain.length - 1;
+                        let index;
+                        if (isInnermost) {
+                            const vIndex = moveEl.dataset.vindex;
+                            index = vIndex !== undefined
+                                ? parseInt(vIndex, 10) + 1
+                                : w.cpFens.indexOf(fen);
+                        } else {
+                            index = chain[i + 1].cpBranchIndex + 1;
+                        }
+                        if (index < 0) return; // shouldn't happen, but don't enter at a bogus position
+
+                        const real = realChain[i];
+                        engine.enterVariation(w.cpFens, real ? real.moveAnnotations : null, index, null, w.cpVerbose, real);
+                    });
+                }
+
+                engine.showVariationPosition(fen, null, move, null);
+                setActiveMove(moveEl);
+            });
+
+            buildOpeningToc();
+
+            /* ===========================================================
+               OPENING TABLE OF CONTENTS
+               ===========================================================
+               An index of every named opening/variation reached anywhere
+               in the game — main line or any variation, however deep —
+               each entry linking straight to the move where it first
+               diverges from whatever was named before it. Sourced from
+               assets/eco-openings.json: a { "<space-joined SAN moves>":
+               "<name>" } map built from lichess-org/chess-openings (CC0),
+               keyed the same way "1. d4 Nf6 2. c4 e6 3. Nf3 d5 4. Nc3
+               Bb4" appears there, minus the move numbers.
+
+               Naming a position: per that project's own convention
+               ("play moves backwards until a named position is found"),
+               nameForSans() checks the full move list first, then one
+               move shorter, and so on — not every ply has its own exact
+               entry (most don't; opening names only cover so much
+               depth), so this is what lets a position inherit its
+               nearest ancestor's name instead of coming up empty. */
+            async function buildOpeningToc() {
+                const container = movesRoot.closest('.pgn-container');
+                const mainlineCount = engine.state.moves.length;
+                if (!container || !mainlineCount) return;
+
+                let openings;
+                try {
+                    openings = await fetch('../assets/eco-openings.json').then(r => r.json());
+                } catch (e) {
+                    return; // no network/asset — just skip the TOC rather than break the page
+                }
+
+                function nameForSans(sans) {
+                    for (let len = sans.length; len > 0; len--) {
+                        const name = openings[sans.slice(0, len).join(' ')];
+                        if (name) return name;
+                    }
+                    return null;
+                }
+
+                /* One entry per (name, first move it's reached at).
+                   `enter` jumps the board straight there — a plain
+                   goTo() for a main-line entry, or the same
+                   chain-of-enterVariation() replay the reading column's
+                   own click handler above uses for a variation one, since
+                   walk() below already resolved each entry's real
+                   variationObj/fens/verbose/ancestor chain directly from
+                   engine.state (no DOM round-trip needed here). */
+                const toc = [];
+
+                function walk(variationObj, startColumn, branchFEN, sansPrefix, depth, parentChain, inheritedName) {
+                    const { fens, verbose } = replayMoves(branchFEN, variationObj.moves || []);
+                    const chain = parentChain.concat([{ variationObj, fens, verbose, startColumn }]);
+
+                    const sans = sansPrefix.slice();
+                    let prevName = inheritedName;
+                    (variationObj.moves || []).forEach((san, mi) => {
+                        sans.push(san);
+                        const name = nameForSans(sans);
+                        if (name && name !== prevName) {
+                            const ctx = fenMoveContext(fens[mi]);
+                            toc.push({
+                                name,
+                                depth,
+                                label: formatLabel(san, ctx.fullMoveNum, ctx.isBlack),
+                                enter: () => enterOpeningChain(chain, mi + 1),
+                            });
+                        }
+                        prevName = name;
+
+                        const kids = variationObj.childrenByMove && variationObj.childrenByMove[mi];
+                        if (kids) kids.forEach(kid => walk(kid, startColumn + mi, fens[mi], sans.slice(), depth + 1, chain, name));
+                    });
+                }
+
+                const mainlineSans = [];
+                let prevName = null;
+                for (let p = 0; p < mainlineCount; p++) {
+                    const nameBeforePly = prevName;
+                    mainlineSans.push(engine.state.moves[p]);
+                    const name = nameForSans(mainlineSans);
+                    if (name && name !== prevName) {
+                        const ctx = engine._moveContext(p);
+                        toc.push({
+                            name,
+                            depth: 0,
+                            label: formatLabel(engine.state.moves[p], ctx.fullMoveNum, ctx.isBlack),
+                            enter: () => { engine.pause(); engine.goTo(p + 1); },
+                        });
+                    }
+                    prevName = name;
+
+                    const alts = engine.state.variations[p];
+                    if (alts) alts.forEach(alt => walk(alt, p, engine.state.cache[p], mainlineSans.slice(0, p), 1, [], nameBeforePly));
+                }
+
+                if (!toc.length) return; // nothing in this PGN matched a named opening
+
+                /* Renders the same `toc` array into any container — only
+                   the ribbon's accordion uses this now, but kept as its
+                   own function (rather than inlined below) since it used
+                   to also render an always-in-the-page copy at the
+                   bottom of the reading column, and splitting the "walk
+                   the game and build the `toc` array" step above from
+                   "render `toc` somewhere" made that a one-line change to
+                   remove instead of a rewrite. */
+                function renderTocEntries(listEl, onCollapse) {
+                    toc.forEach(entry => {
+                        const row = document.createElement('div');
+                        row.className = 'pgn-study-toc-entry';
+                        row.style.marginLeft = (entry.depth * 1.25) + 'rem';
+                        const name = document.createElement('span');
+                        name.className = 'pgn-study-toc-name';
+                        name.textContent = entry.name;
+                        const move = document.createElement('span');
+                        move.className = 'pgn-study-toc-move';
+                        move.textContent = entry.label;
+                        row.appendChild(name);
+                        row.appendChild(move);
+                        row.addEventListener('click', () => {
+                            entry.enter();
+                            if (onCollapse) onCollapse();
+                        });
+                        listEl.appendChild(row);
+                    });
+                }
+
+                const accordion = document.getElementById('pgnStudyTocAccordion');
+                const accordionHeading = document.createElement('h3');
+                accordionHeading.className = 'pgn-study-toc-heading';
+                accordionHeading.textContent = 'Table of Contents';
+                accordion.appendChild(accordionHeading);
+                const accordionListEl = document.createElement('div');
+                accordionListEl.className = 'pgn-study-toc-list';
+                accordion.appendChild(accordionListEl);
+                renderTocEntries(accordionListEl, () => accordion.classList.remove('open'));
+            }
+
+            /* Replays a TOC entry's own ancestor chain through
+               enterVariation() one level at a time — same idea as the
+               reading column's own click handler above (see its "A click
+               can land inside a sub-...-sub-variation" comment), except
+               every chain link here already carries its real, fully-
+               parsed variationObj (walk() above sourced it directly from
+               engine.state, no DOM round-trip needed) and its own
+               precomputed fens/verbose. */
+            function enterOpeningChain(chain, clickedIndex) {
+                engine.pause();
+                engine.exitVariation();
+                engine.state.index = chain[0].startColumn + 1;
+
+                chain.forEach((entry, i) => {
+                    const isInnermost = i === chain.length - 1;
+                    const index = isInnermost ? clickedIndex : (chain[i + 1].startColumn - entry.startColumn + 1);
+                    engine.enterVariation(entry.fens, entry.variationObj.moveAnnotations, index, null, entry.verbose, entry.variationObj);
+                });
+
+                const innermost = chain[chain.length - 1];
+                const move = clickedIndex > 0 ? innermost.verbose[clickedIndex - 1] : null;
+                engine.showVariationPosition(innermost.fens[clickedIndex], null, move, null);
+            }
+        });
+    </script>
+</body>
+</html>
