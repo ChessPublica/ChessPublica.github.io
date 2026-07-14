@@ -140,6 +140,21 @@
             .pgn-study-mobile-title {
                 display: flex;
             }
+
+            /* ARTICLE VIEW — toggled by the mobile-only Article ribbon
+               button (see .pgn-study-article-btn below): swaps the board
+               out for the reading column, still one column, still filling
+               the same space. Higher specificity than the plain rules
+               above (an extra class each), not source order, is what
+               makes these win. */
+            pgn-study.mobile-article-view > pgn-player,
+            pgn-study.mobile-article-view > .pgn-study-mobile-title {
+                display: none;
+            }
+            pgn-study.mobile-article-view > .pgn-container {
+                display: block;
+                flex: 1 1 0;
+            }
         }
         @media (min-width: 900px) {
             pgn-study {
@@ -388,6 +403,29 @@
         .pgn-study-ribbon-btn .lucide-icon {
             width: 2rem;
             height: 2rem;
+        }
+
+        /* ARTICLE BUTTON — desktop already has the reading column as its
+           own permanent second column, so this only ever shows up in the
+           stacked mobile layout, re-enabled by the "max-width: 899px"
+           rule just below. Both rules share the same specificity (an
+           extra class each, on top of .pgn-study-ribbon-btn's own
+           display: flex) — with a tie, source order decides, so the
+           mobile override has to come *after* this one, not before.
+           Highlighted while article view is showing (toggled alongside
+           aria-pressed — see the DOMContentLoaded listener below) so the
+           button itself reflects which of the two mobile views is
+           currently on screen. */
+        .pgn-study-ribbon-btn.pgn-study-article-btn {
+            display: none;
+        }
+        @media (max-width: 899px) {
+            .pgn-study-ribbon-btn.pgn-study-article-btn {
+                display: flex;
+            }
+        }
+        .pgn-study-article-btn.active {
+            background: #e4e4e7;
         }
 
         /* SPEED BADGE — sits on the speed button itself (icon-only, so
@@ -683,6 +721,15 @@
                 </button>
                 <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="toc" title="Table of contents" aria-label="Table of contents" disabled>
                     <span class="lucide-icon" id="pgnStudyTocIcon"></span>
+                </button>
+                <!-- Mobile-only — see .pgn-study-article-btn's own CSS
+                     below. Desktop already shows the article text as its
+                     own column; this button exists purely to give the
+                     stacked mobile layout (which otherwise drops the
+                     reading column entirely — see the "max-width: 899px"
+                     rule above) a way to reach it. -->
+                <button class="pgn-study-ribbon-btn pgn-study-article-btn" type="button" data-ribbon-action="article" title="Article text" aria-label="Article text" aria-pressed="false" disabled>
+                    <span class="lucide-icon" id="pgnStudyArticleIcon"></span>
                 </button>
             </div>
             <div class="pgn-study-ribbon-group pgn-study-ribbon-right">
@@ -1161,6 +1208,25 @@ White's Monte Carlo score against 10...Bb6 is slightly higher than after 10...cx
         document.getElementById('pgnStudyPlayPauseIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('play'));
         document.getElementById('pgnStudyTocIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('list'));
         document.getElementById('pgnStudySettingsIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('settings'));
+        // Same "A≡" glyph pgn.js/pgn-player.js already use for a game's own
+        // title byline (.video-title-emoji) — already the site's existing
+        // shorthand for "article text", so reused here rather than adding
+        // a new icon to assets/icons.js's curated set.
+        document.getElementById('pgnStudyArticleIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('text-initial'));
+
+        /* ARTICLE ribbon button (mobile only — see its own CSS) — a plain
+           layout toggle with no engine/board dependency at all, so it's
+           wired up here rather than alongside TOC/settings below (which
+           wait on the engine to finish loading first): a reader should
+           still be able to read the article text even if the interactive
+           board somehow fails to come up. */
+        const articleBtn = document.querySelector('.pgn-study-ribbon-btn[data-ribbon-action="article"]');
+        articleBtn.disabled = false;
+        articleBtn.addEventListener('click', () => {
+            const active = studyEl.classList.toggle('mobile-article-view');
+            articleBtn.classList.toggle('active', active);
+            articleBtn.setAttribute('aria-pressed', String(active));
+        });
 
         // Closing doesn't depend on the engine, or even on loading having
         // finished — hide whichever of the loading placeholder or the real
