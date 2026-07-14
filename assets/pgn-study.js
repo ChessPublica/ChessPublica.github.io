@@ -266,10 +266,10 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
             collapseToggle.setAttribute('aria-pressed', String(collapsed));
             collapseIcon.style.setProperty('--icon', window.ChessPublica.lucideIconUrl(collapsed ? 'maximize-2' : 'x'));
         }
-        collapseToggle.addEventListener('click', () => {
+        function setCollapsed(collapsed) {
+            if (studyEl.classList.contains('pgn-study-collapsed') === collapsed) return;
             document.getElementById('pgnStudyLoading')?.remove();
-            const collapsing = !studyEl.classList.contains('pgn-study-collapsed');
-            studyEl.classList.toggle('pgn-study-collapsed');
+            studyEl.classList.toggle('pgn-study-collapsed', collapsed);
             syncCollapseToggle();
             /* Un-collapsing hands pgn-player's board back its real size in
                one step (display: none -> flex), but chessboard.js only
@@ -282,11 +282,29 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
                the same resize() revealStudy() already does on first load
                here too skips straight to the settled size instead of
                waiting on that observer. */
-            if (!collapsing && readyEngine && readyEngine.board && typeof readyEngine.board.resize === "function") {
+            if (!collapsed && readyEngine && readyEngine.board && typeof readyEngine.board.resize === "function") {
                 readyEngine.board.resize();
             }
+        }
+        collapseToggle.addEventListener('click', (e) => {
+            // Stops this from also reaching the whole-frame listener just
+            // below, which would otherwise immediately re-run setCollapsed()
+            // with the state this click just left (a no-op given the guard
+            // above, but only by luck of ordering - stopping it here keeps
+            // that from being load-bearing).
+            e.stopPropagation();
+            setCollapsed(!studyEl.classList.contains('pgn-study-collapsed'));
         });
         syncCollapseToggle();
+
+        /* Once collapsed, the ribbon *is* the whole frame (everything else
+           is display: none - see .pgn-study-collapsed's own CSS above), so
+           the entire thing acts as one big "expand" button rather than
+           just the small toggle icon in the corner. A no-op while expanded
+           (setCollapsed() only acts on state changes), so this is safe to
+           leave listening on <pgn-study> at all times rather than
+           attaching/detaching it as the state flips. */
+        studyEl.addEventListener('click', () => setCollapsed(false));
 
         /* The page loads with the study already opening — the loading
            placeholder starts visible in the markup (see .pgn-study-loading
