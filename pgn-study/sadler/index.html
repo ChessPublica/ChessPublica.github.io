@@ -249,6 +249,49 @@
             }
         }
 
+        /* COLLAPSED VIEW — toggled by the ribbon's collapse/expand button
+           (see .pgn-study-collapse-toggle below), on either layout: hides
+           every direct child of <pgn-study> except the ribbon itself, and
+           lets the frame's own fixed height (normally 90vh) shrink down to
+           just that ribbon's natural height instead. Each selector here
+           targets an element some *other* rule elsewhere also sets
+           display on (mobile-article-view's own toggle among them) — an
+           extra class on top of the plain "pgn-study > X" / ".X" selectors
+           those use is what wins on specificity, and this block is placed
+           after all of them so a tie (same specificity, different states)
+           still resolves in the collapsed view's favor. */
+        pgn-study.pgn-study-collapsed {
+            height: auto;
+        }
+        pgn-study.pgn-study-collapsed > pgn-player,
+        pgn-study.pgn-study-collapsed > .pgn-study-resizer,
+        pgn-study.pgn-study-collapsed > .pgn-container,
+        pgn-study.pgn-study-collapsed > .pgn-study-mobile-title {
+            display: none;
+        }
+        pgn-study.pgn-study-collapsed > .pgn-study-ribbon {
+            /* Cancels the ribbon's own trailing margin-bottom (see its
+               main rule below) — otherwise collapsing would still leave a
+               gap below it sized for content that's no longer there. */
+            margin-bottom: 0;
+        }
+        /* Play/TOC/article/settings all act on the board or reading
+           column — pointless controls once both are hidden, and on a
+           narrow mobile ribbon they'd otherwise crowd the title down to a
+           sliver (barely a couple of characters before ellipsizing).
+           Hiding them leaves just the title on the left and the toggle on
+           the right, which is what "collapsed" should look like anyway. */
+        pgn-study.pgn-study-collapsed > .pgn-study-ribbon .pgn-study-ribbon-left,
+        pgn-study.pgn-study-collapsed > .pgn-study-ribbon [data-ribbon-action="settings"],
+        pgn-study.pgn-study-collapsed > .pgn-study-ribbon .pgn-study-settings-inline {
+            display: none;
+        }
+        pgn-study.pgn-study-collapsed .pgn-study-toc-accordion.open {
+            /* A reader could collapse mid-TOC-browse — force it shut so
+               the "collapsed" frame doesn't still show a tall accordion. */
+            max-height: 0;
+        }
+
         /* <pgn-study> starts out holding its PGN as raw, unstyled text (see
            the module script below) — hidden here so it never flashes on
            screen before that script swaps it for the real <pgn-player>/
@@ -447,20 +490,54 @@
             pointer-events: none;
         }
 
-        /* CLOSE BUTTON — a real ribbon child now (right group, alongside
-           settings — see the DOMContentLoaded listener below for where
-           it actually gets moved there), styled as a plain
+        /* COLLAPSE/EXPAND TOGGLE — a real ribbon child now (right group,
+           alongside settings — see the DOMContentLoaded listener below for
+           where it actually gets moved there), styled as a plain
            .pgn-study-ribbon-btn from that point on. Until that move
            happens it's still sitting at its original spot, a page-level
            sibling before <pgn-study> — hidden by default here (same
            reasoning the ribbon's own default display:none has) so it
            doesn't flash there first; the override only re-shows it once
            it's an actual descendant of the (by then visible) ribbon. */
-        .pgn-study-close {
+        .pgn-study-collapse-toggle {
             display: none;
         }
-        pgn-study.cp-ready > .pgn-study-ribbon .pgn-study-close {
+        pgn-study.cp-ready > .pgn-study-ribbon .pgn-study-collapse-toggle {
             display: flex;
+        }
+
+        /* RIBBON TITLE — the icon + game title shown in the ribbon in
+           place of the button row's own middle gap once collapsed (see
+           .pgn-study-collapsed above); built once from a clone of the
+           reading column's own .pgn-title (see the DOMContentLoaded
+           listener below), same idea as .pgn-study-mobile-title's own
+           clone just above it. Hidden the rest of the time — nothing
+           useful to show in the space between the two button groups on
+           the expanded ribbon. min-width: 0 is what lets the text actually
+           shrink/ellipsize inside a flex row instead of forcing the row
+           wider than the ribbon. */
+        .pgn-study-ribbon-title {
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+            min-width: 0;
+            overflow: hidden;
+            font-weight: 600;
+            color: #18181b;
+        }
+        pgn-study.pgn-study-collapsed > .pgn-study-ribbon .pgn-study-ribbon-title {
+            display: flex;
+        }
+        .pgn-study-ribbon-title .lucide-icon {
+            flex-shrink: 0;
+            width: 1.5rem;
+            height: 1.5rem;
+            color: #52525b;
+        }
+        .pgn-study-ribbon-title-text {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         pgn-study pgn-player .video-title,
@@ -732,6 +809,14 @@
                     <span class="lucide-icon" id="pgnStudyArticleIcon"></span>
                 </button>
             </div>
+            <!-- Shown only while collapsed (see .pgn-study-ribbon-title's
+                 own CSS above) — filled in once at load from a clone of
+                 the reading column's own title, same as
+                 .pgn-study-mobile-title below. -->
+            <div class="pgn-study-ribbon-title" id="pgnStudyRibbonTitle">
+                <span class="lucide-icon" id="pgnStudyRibbonTitleIcon"></span>
+                <span class="pgn-study-ribbon-title-text" id="pgnStudyRibbonTitleText"></span>
+            </div>
             <div class="pgn-study-ribbon-group pgn-study-ribbon-right">
                 <span class="pgn-study-settings-inline" id="pgnStudySettingsInline">
                     <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="download" title="Download PGN" aria-label="Download PGN" disabled>
@@ -748,20 +833,20 @@
                 <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="settings" title="Settings" aria-label="Settings" disabled>
                     <span class="lucide-icon" id="pgnStudySettingsIcon"></span>
                 </button>
-                <!-- The close button (#pgnStudyClose) is moved in here at
-                     runtime — see the DOMContentLoaded listener below — from
-                     its original spot as a page-level sibling before
-                     <pgn-study> — after the settings (cog) button, so it
-                     stays the rightmost button whether or not the inline
-                     group is showing. -->
+                <!-- The collapse/expand toggle (#pgnStudyCollapseToggle) is
+                     moved in here at runtime — see the DOMContentLoaded
+                     listener below — from its original spot as a
+                     page-level sibling before <pgn-study> — after the
+                     settings (cog) button, so it stays the rightmost
+                     button whether or not the inline group is showing. -->
             </div>
         </div>
 
         <div class="pgn-study-toc-accordion" id="pgnStudyTocAccordion"></div>
     </header>
 
-    <button class="pgn-study-ribbon-btn pgn-study-close" type="button" id="pgnStudyClose" title="Close" aria-label="Close">
-        <span class="lucide-icon" id="pgnStudyCloseIcon"></span>
+    <button class="pgn-study-ribbon-btn pgn-study-collapse-toggle" type="button" id="pgnStudyCollapseToggle" data-ribbon-action="collapse" title="Collapse" aria-label="Collapse" aria-pressed="false">
+        <span class="lucide-icon" id="pgnStudyCollapseIcon"></span>
     </button>
 
     <div class="pgn-study-loading visible" id="pgnStudyLoading">
@@ -1106,11 +1191,11 @@ White's Monte Carlo score against 10...Bb6 is slightly higher than after 10...cx
 
         studyEl.replaceChildren(playerEl, resizerEl, pgnEl);
         studyEl.prepend(document.querySelector('.pgn-study-ribbon'));
-        // The close button starts as a page-level sibling before
+        // The collapse/expand toggle starts as a page-level sibling before
         // <pgn-study> (see its own CSS comment) — move it into the
         // ribbon's right-hand group now that the ribbon itself exists
         // inside pgn-study, alongside the settings (cog) button.
-        document.querySelector('.pgn-study-ribbon-right').appendChild(document.getElementById('pgnStudyClose'));
+        document.querySelector('.pgn-study-ribbon-right').appendChild(document.getElementById('pgnStudyCollapseToggle'));
 
         /* Drag-to-resize the board/reading-list columns (desktop grid
            layout only — the resizer is display:none in the stacked
@@ -1195,7 +1280,7 @@ White's Monte Carlo score against 10...Bb6 is slightly higher than after 10...cx
             if (iconUrl) document.getElementById(id).style.setProperty('--icon', iconUrl);
         });
 
-        // The close button, play/pause button, and TOC button have no
+        // The collapse toggle, play/pause button, and TOC button have no
         // single already-rendered icon anywhere in <pgn-player> to borrow
         // from (unlike the three above — the on-board overlay button only
         // ever shows the "play" glyph, never "pause", and the ribbon's
@@ -1203,8 +1288,11 @@ White's Monte Carlo score against 10...Bb6 is slightly higher than after 10...cx
         // straight through ChessPublica's own public lucideIconUrl()
         // instead — see assets/icons.js / assets/ChessPublica.js. The
         // play/pause icon starts as "play"; syncPlayPauseButton() below
-        // swaps it to "pause" (and back) as playback state changes.
-        document.getElementById('pgnStudyCloseIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('x'));
+        // swaps it to "pause" (and back) as playback state changes. The
+        // collapse toggle's own icon never swaps — a single up/down arrow
+        // reads as "toggle this open or shut" in either direction, so
+        // unlike play/pause there's no second glyph to switch to.
+        document.getElementById('pgnStudyCollapseIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('arrow-up-down'));
         document.getElementById('pgnStudyPlayPauseIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('play'));
         document.getElementById('pgnStudyTocIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('list'));
         document.getElementById('pgnStudySettingsIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('settings'));
@@ -1228,16 +1316,25 @@ White's Monte Carlo score against 10...Bb6 is slightly higher than after 10...cx
             articleBtn.setAttribute('aria-pressed', String(active));
         });
 
-        // Closing doesn't depend on the engine, or even on loading having
-        // finished — hide whichever of the loading placeholder or the real
-        // <pgn-study> is currently showing (?.remove()/[none] no-op safely
-        // either way) and reveal the bare body behind them. The close
-        // button itself is now a <pgn-study> descendant (moved into the
-        // ribbon above), so hiding pgn-study already hides it too — no
-        // separate style.display needed for it here anymore.
-        document.getElementById('pgnStudyClose').addEventListener('click', () => {
+        // Collapsing doesn't depend on the engine, or even on loading
+        // having finished — clear whichever loading placeholder might
+        // still be showing (?.remove() no-ops safely if it's already
+        // gone) and toggle the collapsed class, which is what
+        // .pgn-study-collapsed's own CSS (above) acts on to hide every
+        // other direct child of <pgn-study> and shrink the frame down to
+        // just the ribbon.
+        const collapseToggle = document.getElementById('pgnStudyCollapseToggle');
+        function syncCollapseToggle() {
+            const collapsed = studyEl.classList.contains('pgn-study-collapsed');
+            const label = collapsed ? 'Expand' : 'Collapse';
+            collapseToggle.title = label;
+            collapseToggle.setAttribute('aria-label', label);
+            collapseToggle.setAttribute('aria-pressed', String(collapsed));
+        }
+        collapseToggle.addEventListener('click', () => {
             document.getElementById('pgnStudyLoading')?.remove();
-            studyEl.style.display = 'none';
+            studyEl.classList.toggle('pgn-study-collapsed');
+            syncCollapseToggle();
         });
 
         /* The page loads with the study already opening — the loading
@@ -1311,6 +1408,20 @@ White's Monte Carlo score against 10...Bb6 is slightly higher than after 10...cx
                 const mobileTitle = originalTitle.cloneNode(true);
                 mobileTitle.classList.add('pgn-study-mobile-title');
                 studyEl.insertBefore(mobileTitle, playerEl);
+
+                // Same idea, third spot: the ribbon's own compact title
+                // (see .pgn-study-ribbon-title's CSS above), shown only
+                // once collapsed. Just the players line plus its icon —
+                // not a full clone like mobileTitle above — since the
+                // ribbon is one line, not a block, and has no room for
+                // the event/date line underneath it too.
+                const ribbonTitleIcon = document.getElementById('pgnStudyRibbonTitleIcon');
+                const ribbonTitleText = document.getElementById('pgnStudyRibbonTitleText');
+                const titleIconUrl = originalTitle.querySelector('.video-title-emoji')?.style.getPropertyValue('--icon');
+                if (titleIconUrl) ribbonTitleIcon.style.setProperty('--icon', titleIconUrl);
+                ribbonTitleText.textContent =
+                    originalTitle.querySelector('.video-title-players')?.textContent
+                    || originalTitle.textContent;
             }
 
             let activeEl = null;
