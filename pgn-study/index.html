@@ -712,27 +712,27 @@
                 </button>
             </div>
             <div class="pgn-study-ribbon-group pgn-study-ribbon-right">
-                <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="settings" title="Settings" aria-label="Settings" disabled>
-                    <span class="lucide-icon" id="pgnStudySettingsIcon"></span>
-                </button>
                 <span class="pgn-study-settings-inline" id="pgnStudySettingsInline">
-                    <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="flip" title="Flip board" aria-label="Flip board" disabled>
-                        <span class="lucide-icon" id="pgnStudyFlipIcon"></span>
+                    <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="download" title="Download PGN" aria-label="Download PGN" disabled>
+                        <span class="lucide-icon" id="pgnStudyDownloadIcon"></span>
                     </button>
                     <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="speed" title="Playback speed (1x)" aria-label="Playback speed" disabled>
                         <span class="lucide-icon" id="pgnStudySpeedIcon"></span>
                         <span class="pgn-study-speed-badge" id="pgnStudySpeedBadge">1x</span>
                     </button>
-                    <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="download" title="Download PGN" aria-label="Download PGN" disabled>
-                        <span class="lucide-icon" id="pgnStudyDownloadIcon"></span>
+                    <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="flip" title="Flip board" aria-label="Flip board" disabled>
+                        <span class="lucide-icon" id="pgnStudyFlipIcon"></span>
                     </button>
                 </span>
+                <button class="pgn-study-ribbon-btn" type="button" data-ribbon-action="settings" title="Settings" aria-label="Settings" disabled>
+                    <span class="lucide-icon" id="pgnStudySettingsIcon"></span>
+                </button>
                 <!-- The close button (#pgnStudyClose) is moved in here at
                      runtime — see the DOMContentLoaded listener below — from
                      its original spot as a page-level sibling before
-                     <pgn-study> — after pgn-study-settings-inline, so it
-                     stays the rightmost button whether or not that group
-                     is showing. -->
+                     <pgn-study> — after the settings (cog) button, so it
+                     stays the rightmost button whether or not the inline
+                     group is showing. -->
             </div>
         </div>
 
