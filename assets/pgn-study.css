@@ -490,15 +490,11 @@ pgn-study.cp-ready > .pgn-study-ribbon {
     pointer-events: none;
 }
 
-/* COLLAPSE/EXPAND TOGGLE — a real ribbon child now (right group,
-   alongside settings — see the DOMContentLoaded listener below for
-   where it actually gets moved there), styled as a plain
-   .pgn-study-ribbon-btn from that point on. Until that move
-   happens it's still sitting at its original spot, a page-level
-   sibling before <pgn-study> — hidden by default here (same
-   reasoning the ribbon's own default display:none has) so it
-   doesn't flash there first; the override only re-shows it once
-   it's an actual descendant of the (by then visible) ribbon. */
+/* COLLAPSE/EXPAND TOGGLE — right group, alongside settings (see
+   pgn-study.js's RIBBON_HTML). A plain .pgn-study-ribbon-btn otherwise;
+   hidden by default here (same reasoning the ribbon's own default
+   display:none has) so it doesn't flash on screen before the ribbon
+   itself does. */
 .pgn-study-collapse-toggle {
     display: none;
 }
@@ -506,24 +502,34 @@ pgn-study.cp-ready > .pgn-study-ribbon .pgn-study-collapse-toggle {
     display: flex;
 }
 
-/* RIBBON TITLE — the icon + game title shown in the ribbon in
-   place of the button row's own middle gap once collapsed (see
-   .pgn-study-collapsed above); built once from a clone of the
-   reading column's own .pgn-title (see the DOMContentLoaded
-   listener below), same idea as .pgn-study-mobile-title's own
-   clone just above it. Hidden the rest of the time — nothing
-   useful to show in the space between the two button groups on
-   the expanded ribbon. min-width: 0 is what lets the text actually
-   shrink/ellipsize inside a flex row instead of forcing the row
-   wider than the ribbon. */
+/* RIBBON TITLE — the icon + game title shown, pill-style, in the ribbon
+   in place of the button row's own middle gap once collapsed (see
+   .pgn-study-collapsed above); built once from the reading column's own
+   .pgn-title (see the DOMContentLoaded listener below), same source as
+   .pgn-study-mobile-title's own clone just above it. Hidden the rest of
+   the time — nothing useful to show in the space between the two button
+   groups on the expanded ribbon.
+
+   flex: 0 1 auto (rather than the row's other items' implicit 0 1 auto
+   too, but spelled out here since it matters) is what keeps the pill
+   sized to its own content instead of stretching to fill the row's
+   middle gap — max-width caps it at the *available* content width so a
+   long title still ellipsizes rather than overflowing the ribbon, and
+   min-width: 0 is what lets that shrinking actually reach the text
+   inside a flex layout (both the pill itself and the two-line stack
+   below need it — a flex item's default min-width is auto, which floors
+   shrinking at the content's own natural width otherwise). */
 .pgn-study-ribbon-title {
     display: none;
+    flex: 0 1 auto;
     align-items: center;
     gap: 0.5rem;
+    max-width: 100%;
     min-width: 0;
     overflow: hidden;
-    font-weight: 600;
-    color: #18181b;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    background: #f4f4f5;
 }
 pgn-study.pgn-study-collapsed > .pgn-study-ribbon .pgn-study-ribbon-title {
     display: flex;
@@ -534,10 +540,31 @@ pgn-study.pgn-study-collapsed > .pgn-study-ribbon .pgn-study-ribbon-title {
     height: 1.5rem;
     color: #52525b;
 }
-.pgn-study-ribbon-title-text {
+/* The two text lines stack tightly inside the pill — same players/event
+   split .video-title-text uses for the real title (assets/ChessPublica.css),
+   just condensed to ribbon size. */
+.pgn-study-ribbon-title-lines {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.25;
+}
+.pgn-study-ribbon-title-text,
+.pgn-study-ribbon-title-subtext {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+.pgn-study-ribbon-title-text {
+    font-weight: 600;
+    color: #18181b;
+}
+.pgn-study-ribbon-title-subtext {
+    font-size: 0.8em;
+    color: #777;
+}
+.pgn-study-ribbon-title-subtext:empty {
+    display: none;
 }
 
 pgn-study pgn-player .video-title,

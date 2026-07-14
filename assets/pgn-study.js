@@ -42,12 +42,15 @@ const RIBBON_HTML = `
                 </button>
             </div>
             <!-- Shown only while collapsed (see .pgn-study-ribbon-title's
-                 own CSS above) — filled in once at load from a clone of
-                 the reading column's own title, same as
-                 .pgn-study-mobile-title below. -->
+                 own CSS above) — filled in once at load from the reading
+                 column's own title, same source as .pgn-study-mobile-title
+                 below. -->
             <div class="pgn-study-ribbon-title" id="pgnStudyRibbonTitle">
                 <span class="lucide-icon" id="pgnStudyRibbonTitleIcon"></span>
-                <span class="pgn-study-ribbon-title-text" id="pgnStudyRibbonTitleText"></span>
+                <span class="pgn-study-ribbon-title-lines">
+                    <span class="pgn-study-ribbon-title-text" id="pgnStudyRibbonTitleText"></span>
+                    <span class="pgn-study-ribbon-title-subtext" id="pgnStudyRibbonTitleSubtext"></span>
+                </span>
             </div>
             <div class="pgn-study-ribbon-group pgn-study-ribbon-right">
                 <span class="pgn-study-settings-inline" id="pgnStudySettingsInline">
@@ -220,10 +223,9 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
         // instead — see assets/icons.js / assets/ChessPublica.js. The
         // play/pause icon starts as "play"; syncPlayPauseButton() below
         // swaps it to "pause" (and back) as playback state changes. The
-        // collapse toggle's own icon never swaps — a single up/down arrow
-        // reads as "toggle this open or shut" in either direction, so
-        // unlike play/pause there's no second glyph to switch to.
-        document.getElementById('pgnStudyCollapseIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('arrow-up-down'));
+        // collapse toggle's own icon starts as "x" (expanded — click to
+        // collapse); syncCollapseToggle() below swaps it to "arrow-up-down"
+        // (collapsed — click to expand) and back.
         document.getElementById('pgnStudyPlayPauseIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('play'));
         document.getElementById('pgnStudyTocIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('list'));
         document.getElementById('pgnStudySettingsIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('settings'));
@@ -255,18 +257,21 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
         // other direct child of <pgn-study> and shrink the frame down to
         // just the ribbon.
         const collapseToggle = document.getElementById('pgnStudyCollapseToggle');
+        const collapseIcon = document.getElementById('pgnStudyCollapseIcon');
         function syncCollapseToggle() {
             const collapsed = studyEl.classList.contains('pgn-study-collapsed');
             const label = collapsed ? 'Expand' : 'Collapse';
             collapseToggle.title = label;
             collapseToggle.setAttribute('aria-label', label);
             collapseToggle.setAttribute('aria-pressed', String(collapsed));
+            collapseIcon.style.setProperty('--icon', window.ChessPublica.lucideIconUrl(collapsed ? 'arrow-up-down' : 'x'));
         }
         collapseToggle.addEventListener('click', () => {
             document.getElementById('pgnStudyLoading')?.remove();
             studyEl.classList.toggle('pgn-study-collapsed');
             syncCollapseToggle();
         });
+        syncCollapseToggle();
 
         /* The page loads with the study already opening — the loading
            placeholder starts visible in the markup (see .pgn-study-loading
@@ -342,17 +347,21 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
 
                 // Same idea, third spot: the ribbon's own compact title
                 // (see .pgn-study-ribbon-title's CSS above), shown only
-                // once collapsed. Just the players line plus its icon —
-                // not a full clone like mobileTitle above — since the
-                // ribbon is one line, not a block, and has no room for
-                // the event/date line underneath it too.
+                // once collapsed — icon plus both text lines (players,
+                // event/date), same content as mobileTitle above, just
+                // pulled into its own pill instead of cloning the whole
+                // block (which carries its own unwanted block-level
+                // layout/spacing built for a full column, not a ribbon).
                 const ribbonTitleIcon = document.getElementById('pgnStudyRibbonTitleIcon');
                 const ribbonTitleText = document.getElementById('pgnStudyRibbonTitleText');
+                const ribbonTitleSubtext = document.getElementById('pgnStudyRibbonTitleSubtext');
                 const titleIconUrl = originalTitle.querySelector('.video-title-emoji')?.style.getPropertyValue('--icon');
                 if (titleIconUrl) ribbonTitleIcon.style.setProperty('--icon', titleIconUrl);
                 ribbonTitleText.textContent =
                     originalTitle.querySelector('.video-title-players')?.textContent
                     || originalTitle.textContent;
+                ribbonTitleSubtext.textContent =
+                    originalTitle.querySelector('.video-title-event')?.textContent || '';
             }
 
             let activeEl = null;
