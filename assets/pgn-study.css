@@ -252,15 +252,30 @@ pgn-study pgn-player {
 /* COLLAPSED VIEW — toggled by the ribbon's collapse/expand button
    (see .pgn-study-collapse-toggle below), on either layout: hides
    every direct child of <pgn-study> except the ribbon itself, and
-   lets the frame's own fixed height (normally 90vh) shrink down to
-   just that ribbon's natural height instead. Each selector here
+   lets the frame's own fixed size (normally 90vw x 90vh) shrink down
+   to just that ribbon's natural size instead. Each selector here
    targets an element some *other* rule elsewhere also sets
    display on (mobile-article-view's own toggle among them) — an
    extra class on top of the plain "pgn-study > X" / ".X" selectors
    those use is what wins on specificity, and this block is placed
    after all of them so a tie (same specificity, different states)
-   still resolves in the collapsed view's favor. */
+   still resolves in the collapsed view's favor.
+
+   display: block (overriding flex on mobile / grid on desktop — see
+   the ">= 900px" rule above, whose own plain "pgn-study" selector this
+   beats on specificity regardless of source order) drops the frame
+   out of either layout mode entirely once collapsed: with only the
+   ribbon left visible, there's nothing left to lay out as flex/grid
+   items, and width: fit-content needs a block-level box to shrink-wrap
+   against — grid in particular resolves its fr-unit column tracks
+   against the *available* width, which would keep the frame at 90vw
+   even with nothing in most of those tracks. max-width caps the
+   shrink-wrap at the viewport so an unusually wide title still wraps
+   /ellipsizes (see .pgn-study-ribbon-title) instead of overflowing it. */
 pgn-study.pgn-study-collapsed {
+    display: block;
+    width: fit-content;
+    max-width: 90vw;
     height: auto;
 }
 pgn-study.pgn-study-collapsed > pgn-player,
@@ -286,10 +301,17 @@ pgn-study.pgn-study-collapsed > .pgn-study-ribbon [data-ribbon-action="settings"
 pgn-study.pgn-study-collapsed > .pgn-study-ribbon .pgn-study-settings-inline {
     display: none;
 }
-pgn-study.pgn-study-collapsed .pgn-study-toc-accordion.open {
-    /* A reader could collapse mid-TOC-browse — force it shut so
-       the "collapsed" frame doesn't still show a tall accordion. */
-    max-height: 0;
+pgn-study.pgn-study-collapsed .pgn-study-toc-accordion {
+    /* A reader could collapse mid-TOC-browse — force it shut (whether
+       or not .open) so the collapsed frame doesn't still show a tall
+       accordion. display: none, not just max-height: 0 — the accordion
+       is filled in once at load regardless of whether it's ever opened
+       (see buildOpeningToc()), so its own (vertically clipped but still
+       fully laid out) content was still contributing its full natural
+       width to .pgn-study-collapsed's own width: fit-content above,
+       keeping the "collapsed" frame far wider than the ribbon actually
+       needs. */
+    display: none;
 }
 
 /* <pgn-study> starts out holding its PGN as raw, unstyled text (see
@@ -502,23 +524,25 @@ pgn-study.cp-ready > .pgn-study-ribbon .pgn-study-collapse-toggle {
     display: flex;
 }
 
-/* RIBBON TITLE — the icon + game title shown, pill-style, in the ribbon
-   in place of the button row's own middle gap once collapsed (see
-   .pgn-study-collapsed above); built once from the reading column's own
-   .pgn-title (see the DOMContentLoaded listener below), same source as
-   .pgn-study-mobile-title's own clone just above it. Hidden the rest of
-   the time — nothing useful to show in the space between the two button
-   groups on the expanded ribbon.
+/* RIBBON TITLE — the icon + game title shown in the ribbon in place of
+   the button row's own middle gap once collapsed (see .pgn-study-collapsed
+   above); built once from the reading column's own .pgn-title (see the
+   DOMContentLoaded listener below), same source as .pgn-study-mobile-title's
+   own clone just above it. Hidden the rest of the time — nothing useful to
+   show in the space between the two button groups on the expanded ribbon.
 
    flex: 0 1 auto (rather than the row's other items' implicit 0 1 auto
-   too, but spelled out here since it matters) is what keeps the pill
-   sized to its own content instead of stretching to fill the row's
-   middle gap — max-width caps it at the *available* content width so a
-   long title still ellipsizes rather than overflowing the ribbon, and
-   min-width: 0 is what lets that shrinking actually reach the text
-   inside a flex layout (both the pill itself and the two-line stack
-   below need it — a flex item's default min-width is auto, which floors
-   shrinking at the content's own natural width otherwise). */
+   too, but spelled out here since it matters) keeps this sized to its
+   own content instead of stretching to fill the row's middle gap —
+   max-width caps it at the *available* content width so a long title
+   still ellipsizes rather than overflowing the ribbon, and min-width: 0
+   is what lets that shrinking actually reach the text inside a flex
+   layout (both this and the two-line stack below need it — a flex
+   item's default min-width is auto, which floors shrinking at the
+   content's own natural width otherwise). No background/padding of its
+   own — .pgn-study-collapsed (above) already shrinks the whole frame
+   down to fit the ribbon's content, so there's nothing left to visually
+   set this apart from the rest of the row. */
 .pgn-study-ribbon-title {
     display: none;
     flex: 0 1 auto;
@@ -527,9 +551,6 @@ pgn-study.cp-ready > .pgn-study-ribbon .pgn-study-collapse-toggle {
     max-width: 100%;
     min-width: 0;
     overflow: hidden;
-    padding: 0.35rem 0.75rem;
-    border-radius: 999px;
-    background: #f4f4f5;
 }
 pgn-study.pgn-study-collapsed > .pgn-study-ribbon .pgn-study-ribbon-title {
     display: flex;
@@ -540,8 +561,8 @@ pgn-study.pgn-study-collapsed > .pgn-study-ribbon .pgn-study-ribbon-title {
     height: 1.5rem;
     color: #52525b;
 }
-/* The two text lines stack tightly inside the pill — same players/event
-   split .video-title-text uses for the real title (assets/ChessPublica.css),
+/* The two text lines stack tightly — same players/event split
+   .video-title-text uses for the real title (assets/ChessPublica.css),
    just condensed to ribbon size. */
 .pgn-study-ribbon-title-lines {
     display: flex;
