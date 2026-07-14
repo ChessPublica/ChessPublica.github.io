@@ -144,7 +144,7 @@ export function buildMoveTree(pgnText) {
      full-size; hasDiagramFromComment tracks separately whether a comment
      marker also asked for one, which — being a diagram inside a comment —
      renders at 75% instead (see startDiagram.fromComment below). */
-  var root = { next: null, fen: chess.fen(), hasDiagram: !!fenLoaded, hasDiagramFromComment: false };
+  var root = { next: null, fen: chess.fen(), hasDiagram: !!fenLoaded, hasDiagramFromComment: false, variations: [] };
   parseSequence(tokens, chess, root, pgnText);
   if (root.preComments && root.next) {
     root.next.preComments = root.preComments;
@@ -298,7 +298,7 @@ function parseSequence(tokens, chess, parentNode, originalPgn) {
     if (token.type === "variation") {
       var branchFen = determineBranchFen(token.value, current, parentNode);
       var snapshot = new Chess(branchFen);
-      var variationRoot = { next: null, fen: branchFen };
+      var variationRoot = { next: null, fen: branchFen, variations: [] };
 
       parseSequence(token.value, snapshot, variationRoot, originalPgn);
 
@@ -361,7 +361,7 @@ export function renderInlinePgnReferences(commentText, current, parentNode, orig
 
       var branchFen = determineBranchFen(variationTokens, current, parentNode);
       var snapshot = new Chess(branchFen);
-      var variationRoot = { next: null, fen: branchFen };
+      var variationRoot = { next: null, fen: branchFen, variations: [] };
       parseSequence(variationTokens, snapshot, variationRoot, originalPgn || "");
 
       return variationRoot.next ? renderInlineVariationText(variationRoot.next) : "";
