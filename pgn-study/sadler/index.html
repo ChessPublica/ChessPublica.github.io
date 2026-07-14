@@ -22,113 +22,285 @@
 
 { As promised, I will dedicate an article to a deep-dive on the main lines of the Swedish variation of The Tarrasch Defence which we saw in the game Carlsson-Stoltz, Stockholm 1938. The variation starts as follows: }
 1.d4 d5 2.c4 e6 3.Nc3 c5 4.cxd5 exd5 5.Nf3 Nc6 6.g3 c4
-[#]
+{[#]}
 7.Bg2
-is the main line by far, but Stoltz also faced the rigorous 7.e4 dxe4 and now 8.Ng5 a few times in his career.
-[#]
-8…Qxd4 (The clever idea is that 8…Be7 is met by 9.Bxc4 Bxg5 10.Qh5 regaining the piece) 9.Bf4 and now 9…Nf6 10.Qxd4 Nxd4 11.0–0–0 Ne6 is fine for Black as 12.Nb5 Nxf4 13.gxf4 (13.Nc7+ Ke7 14.Nxa8 Ne6 15.Nxe6 fxe6 16.Nc7 Ng4 17.Rd2 g6 threatening …Bh6, activating the rook on h8 is surprisingly awkward for White. The knight on c7 is also not out by the way as …Bd7 will cut its retreat to b5) 13…h6
-[#]
-14.Nc7+ Ke7 15.Nxf7 Kxf7 16.Bxc4+ Kg6 17.Rhg1+ Kh7 18.Nxa8 Bc5 Threatening …Bg4 19.Nc7 Bxf2 is very good compensation for Black
-7…Bb4 8.0–0 Nge7
-Here once again, there are two important choices (also the top-two engine moves!)
-1) 9.a3
-[#]
-is the engine second-best move and Stoltz also faced it a few times.
-a) 9…Bxc3 10.bxc3 0–0
-[#]
-is logical for this system and worked well for Black in a game of Rudolf Spielmann (who spent a lot of time in Sweden – playing matches against Stahlberg and Stoltz – and thus knew their opening innovations well) 11.a4 Re8 12.Nd2 Bf5
-[#]
-It’s quite interesting what happens from now on. At this moment, White stands much better but within 3 moves he is slightly worse!
+(
+{is the main line by far, but Stoltz also faced the rigorous 7.e4 dxe4 and now 8.Ng5 a few times in his career.}
+{[#]}
+7.e4 dxe4 8.Ng5
+8...Qxd4
+{(The clever idea is that 8…Be7 is met by 9.Bxc4 Bxg5 10.Qh5 regaining the piece)}
+9.Bf4
+{and now}
+9...Nf6 10.Qxd4 Nxd4 11.O-O-O Ne6
+{is fine for Black as}
+12.Nb5 Nxf4 13.gxf4
+(
+13.Nc7+ Ke7 14.Nxa8 Ne6 15.Nxe6 fxe6 16.Nc7 Ng4 17.Rd2 g6
+{threatening …Bh6, activating the rook on h8 is surprisingly awkward for White. The knight on c7 is also not out by the way as …Bd7 will cut its retreat to b5}
+)
+13...h6
+{[#]}
+14.Nc7+ Ke7 15.Nxf7 Kxf7 16.Bxc4+ Kg6 17.Rhg1+ Kh7 18.Nxa8 Bc5
+{Threatening …Bg4}
+19.Nc7 Bxf2
+{is very good compensation for Black}
+)
+7...Bb4 8.O-O Nge7
+{Here once again, there are two important choices (also the top-two engine moves!)}
+{2}
+9.e4
+(
+{1}
+9.a3
+{[#]}
+{is the engine second-best move and Stoltz also faced it a few times.}
+{a}
+9...Bxc3
+(
+{b}
+9...Ba5 10.b4
+{10.e4 is also possible but transposes back more or less to 9.e4 lines. 10.b4 is the main independent continuation. White attempts to exploit the exposed black bishop to gain queenside space with tempo and force Black to decide whether to renounce completely the queenside space or whether to accept an isolated queen’s pawn with 10…cxb3 in order to break up White’s queenside front and fight for control of the squares exposed like c4.}
+(
+{a}
+10...cxb3 11.Qxb3
+{In principle, this feels like a victory for White, having kicked Black’s ambitions to create a queenside pawn roller into touch and saddled Black with an isolated queen’s pawn. However, White isn’t strong enough to win the pawn so he will need to build up again in the next few moves. And meanwhile, Black has some things he can do, most notably trying to bring his pieces – knights and light-squared bishop – to the light squares around the d5–pawn, most notably the c4–outpost which is poorly covered by White, probably after swapping off his not-very-useful bishop on a5 for the knight on c3 to dilute White’s pressure on d5 and White’s control of e4.}
+{[#]}
+{The Monte Carlo result is 52% from this position which seems pretty OK for Black!}
+)
+(
+{b}
+10...Bc7
+{was played quite recently in a modern grandmaster game when it’s surprising that White did not venture 11.e4 (the move that 10…Bb6 tries to restrain)}
+{[#]}
+11.e4
+(
+11.Bb2 O-O 12.Re1 Bg4 13.h3 Bh5 14.Rc1 f5
+{was already a little better for Black 0–1 Hjartarson,J (2520)-Manor,I (2461) WchT Seniors 50 Rhodes 2019 (9.3)}
+)
+11...O-O
+(
+11...dxe4 12.Nxe4 O-O 13.Bb2
+{with Rc1, Re1, Ne5, b5, maybe d5 to come – Black has a lot to worry about!}
+)
+12.Bb2 Bg4 13.Re1 Bb6 14.Na4 Qd7 15.Rc1 Rad8 16.exd5 Nxd5 17.Rxc4 Bh3
+{and we have reached a similar type of situation where Black has jettisoned the c4–pawn and is looking to find counterplay against the isolated d4–pawn and the light squares. Here however the engines like White a lot because of the possibility of Nc5 which might well force Black to play …dxc5 after which there is nothing for Black to play for anymore.}
+18.Qc1 Bxg2 19.Kxg2 f6 20.Nc5 Bxc5 21.dxc5
+{was the engine main line with no compensation whatsoever for Black.}
+)
+(
+{c}
+10...Bb6
+{[#]}
+{Against this line, the engines propose a pretty cool regrouping instead of the still reasonable 11.e4}
+{a}
+11.Na4
+(
+{b}
+11.e4 O-O 12.Bb2 Bg4
+{is pretty decent for Black. The engines think that White can secure a small edge with}
+13.Nxd5 Nxd5 14.exd5 Qxd5 15.Ne5 Qxg2+ 16.Kxg2 Bxd1 17.Rfxd1 Nxe5 18.dxe5 Rfd8 19.Bc3
+{but it shouldn’t be too scary. Rd6 from White is met by …Bc7 kicking the rook out of the outpost.}
+)
+(
+{c}
+11.Ra2
+{[#]}
+11...O-O 12.Rd2
+{[#]}
+12...Bg4 13.Re1
+{In this interesting position, there are many ways to play, for example}
+13...Rc8 14.h3 Bh5 15.g4
+(
+{or}
+15.e4 dxe4 16.Nxe4 Nd5 17.Bb2 Bg6 18.Nc3 Nce7
+)
+15...Bg6 16.Nh4 f5 17.e3
+{[#]}
+{with both assessed between 0.19 and 0.21. White’s Monte Carlo result against this line is slightly higher than 10…cxb3 but still acceptable for Black}
+)
+Bc7 12.Bb2 f6 13.Re1 O-O 14.Rc1 Re8 15.Nd2 Bg4 16.f3
+{Once again, as in the Lundin-Spielmann game, killing the white bishop on g2 means killing the white position! From better to almost clearly worse!}
+16...Bh5 17.e4 dxe4 18.Nxe4 b5 19.Nac5 Nd5 20.Qd2 a5 21.Nc3 axb4 22.Nxd5 Qxd5 23.f4 Bf3 24.axb4 Rxe1+ 25.Rxe1 Bxg2
+{0–1 Karlen,N-Stoltz,G Kinna consult 1934;}
+)
+)
+10.bxc3 O-O
+{[#]}
+{is logical for this system and worked well for Black in a game of Rudolf Spielmann (who spent a lot of time in Sweden – playing matches against Stahlberg and Stoltz – and thus knew their opening innovations well)}
+11.a4 Re8 12.Nd2 Bf5
+{[#]}
+{It’s quite interesting what happens from now on. At this moment, White stands much better but within 3 moves he is slightly worse!}
 13.f3 Bg6 14.Re1 a6 15.Bb2 b5 16.e4 b4
-[#]
-17.Qc1 Nxd4 18.cxb4 Nec6 19.Qc3 dxe4 20.fxe4 Rb8 21.Nxc4 Rxb4 22.Ra3 Qe7 23.Ne3 Bxe4 24.Bxe4 Qxe4 25.Nc2 Qxe1+ 26.Nxe1 Ne2+ 27.Kf2 Nxc3 28.Bxc3 Rbe4 29.Ra2 Nb4 30.Rb2 Nd5 31.Bd4 0–1 Landau,S-Spielmann,R Match Spielmann-Landau +4–0=4 Amsterdam 1936 (2))
-In essence, by playing f3 so early, White removed a lot of the force of the e4 break and thus allowed Black to focus on activating his queenside majority with …a6 and …b5. The passive position of the bishop on b2 (rather than a3) is also a contributory factor. It would have been better to start with
+{[#]}
+17.Qc1 Nxd4 18.cxb4 Nec6 19.Qc3 dxe4 20.fxe4 Rb8 21.Nxc4 Rxb4 22.Ra3 Qe7 23.Ne3 Bxe4 24.Bxe4 Qxe4 25.Nc2 Qxe1+ 26.Nxe1 Ne2+ 27.Kf2 Nxc3 28.Bxc3 Rbe4 29.Ra2 Nb4 30.Rb2 Nd5 31.Bd4
+{0–1 Landau,S-Spielmann,R Match Spielmann-Landau +4–0=4 Amsterdam 1936 (2)}
+{In essence, by playing f3 so early, White removed a lot of the force of the e4 break and thus allowed Black to focus on activating his queenside majority with …a6 and …b5. The passive position of the bishop on b2 (rather than a3) is also a contributory factor. It would have been better to start with
 13.Re1 followed by Ba3, keeping a quick e4 as a possibility. Black must hurry to get his pieces developed and cannot focus on his own positive plan (queenside expansion) for now. For example, 13…a6 14.Ba3 b5 15.e4 dxe4 16.Nxe4 with possible ideas of Nd6 and Qf3 is very unpleasant for Black.
-If Black does play cautiously with 13…Qc7 14.Ba3 Rad8
-[#]
-then White can consider 15.f3 here (although even here 15.e4 is pretty good) when after 15…f6 16.e4 Bg6 17.Rb1 White has a very pleasant position with two bishops and a strong centre while Black’s queenside counterplay hasn’t got started yet.
-b) 9…Ba5 10.b4
-10.e4 is also possible but transposes back more or less to 9.e4 lines.
-10.b4 is the main independent continuation. White attempts to exploit the exposed black bishop to gain queenside space with tempo and force Black to decide whether to renounce completely the queenside space or whether to accept an isolated queen’s pawn with 10…cxb3 in order to break up White’s queenside front and fight for control of the squares exposed like c4.
-a) 10…cxb3 11.Qxb3 In principle, this feels like a victory for White, having kicked Black’s ambitions to create a queenside pawn roller into touch and saddled Black with an isolated queen’s pawn. However, White isn’t strong enough to win the pawn so he will need to build up again in the next few moves. And meanwhile, Black has some things he can do, most notably trying to bring his pieces – knights and light-squared bishop – to the light squares around the d5–pawn, most notably the c4–outpost which is poorly covered by White, probably after swapping off his not-very-useful bishop on a5 for the knight on c3 to dilute White’s pressure on d5 and White’s control of e4.
-[#]
-The Monte Carlo result is 52% from this position which seems pretty OK for Black!
-b) 10…Bc7 was played quite recently in a modern grandmaster game when it’s surprising that White did not venture 11.e4 (the move that 10…Bb6 tries to restrain)
-[#]
-(11.Bb2 0–0 12.Re1 Bg4 13.h3 Bh5 14.Rc1 f5 was already a little better for Black 0–1 Hjartarson,J (2520)-Manor,I (2461) WchT Seniors 50 Rhodes 2019 (9.3))
-11…0–0 (11…dxe4 12.Nxe4 0–0 13.Bb2 with Rc1, Re1, Ne5, b5, maybe d5 to come – Black has a lot to worry about!) 12.Bb2 Bg4 13.Re1 Bb6 14.Na4 Qd7 15.Rc1 Rad8 16.exd5 Nxd5 17.Rxc4 Bh3 and we have reached a similar type of situation where Black has jettisoned the c4–pawn and is looking to find counterplay against the isolated d4–pawn and the light squares. Here however the engines like White a lot because of the possibility of Nc5 which might well force Black to play …dxc5 after which there is nothing for Black to play for anymore. 18.Qc1 Bxg2 19.Kxg2 f6 20.Nc5 Bxc5 21.dxc5 was the engine main line with no compensation whatsoever for Black.
-c) 10…Bb6
-[#]
-Against this line, the engines propose a pretty cool regrouping instead of the still reasonable 11.e4
-a) 11.Na4 Bc7 12.Bb2 f6 13.Re1 0–0 14.Rc1 Re8 15.Nd2 Bg4 16.f3 Once again, as in the Lundin-Spielmann game, killing the white bishop on g2 means killing the white position! From better to almost clearly worse! 16…Bh5 17.e4 dxe4 18.Nxe4 b5 19.Nac5 Nd5 20.Qd2 a5 21.Nc3 axb4 22.Nxd5 Qxd5 23.f4 Bf3 24.axb4 Rxe1+ 25.Rxe1 Bxg2 0–1 Karlen,N-Stoltz,G Kinna consult 1934);
-b) 11.e4 0–0 12.Bb2 Bg4 is pretty decent for Black. The engines think that White can secure a small edge with 13.Nxd5 Nxd5 14.exd5 Qxd5 15.Ne5 Qxg2+ 16.Kxg2 Bxd1 17.Rfxd1 Nxe5 18.dxe5 Rfd8 19.Bc3 but it shouldn’t be too scary. Rd6 from White is met by …Bc7 kicking the rook out of the outpost.)
-c) 11.Ra2
-[#]
-11…0–0 12.Rd2
-[#]
-12…Bg4 13.Re1 In this interesting position, there are many ways to play, for example 13…Rc8 14.h3 Bh5 15.g4 (or 15.e4 dxe4 16.Nxe4 Nd5 17.Bb2 Bg6 18.Nc3 Nce7) 15…Bg6 16.Nh4 f5 17.e3
-[#]
-with both assessed between 0.19 and 0.21.
-White’s Monte Carlo result against this line is slightly higher than 10…cxb3 but still acceptable for Black
-2) 9.e4 is the main line and engine top move, Black has 2 approaches
-a) 9…0–0 is more or less equivalent to 9…dxe4. It always seems to me however that Black may dream of a win in the lines after 9…dxe4 whereas I’m not sure that’s really the case here. The Monte Carlo result is 59% which is Ok for a Black line!
-[#]
-10.exd5 Nxd5
-i) 11.Nxd5 Qxd5 12.Be3 (12.Ne5 Qxd4 (12…Qb5 13.Nxc6 bxc6 14.Qf3 should be a slight advantage for White, but I was never 100% happy about this line when I had it in my preparation as a professional in the 1990s – I didn’t think it was too serious for Black. (0.36 from the engines) 14…Bb7 15.b3 Rad8 16.bxc4 Qxc4 17.Be3 Ba5 18.Rfc1 Qe6½–½ Donner,J-Stahlberg,G Hoogovens Beverwijk 1958 (6)) 13.Nxc6 Qxd1 14.Rxd1 bxc6 15.Bxc6 Rb8 16.Bf4 Rb6 17.Bd5 Be7 18.Rd2 Be6 19.Bxe6 Rxe6 20.Rc1 Rc8 21.Be3 a6 22.Rd5 h6 23.Rc2
-[#]
-is the engine line. Again, no chances for Black whatsoever to dream for a win in such lines, but strong defence would earn you a draw.) 12…Qh5 13.Ne5 Qxd1 14.Rfxd1 Nxe5 15.dxe5 c3 16.bxc3 Bxc3 17.Rab1 Bxe5 18.Bc5 Re8 19.Re1 Bf5 20.Rxb7 Bc7 21.Rxe8+ Rxe8 22.Rxa7 Re1+ 23.Bf1 h5 24.Kg2 Be5 25.Bc4 Be4+ 26.f3 Bg6
-[#]
-is the engine main line. Once again, not a bundle of fun for Black but could be holdable with good defence (0.66 for White))
-ii) 11.Bg5 Qa5 12.Nxd5 Qxd5 13.Rc1 Be6 14.a3 Ba5 15.Be3 Qh5 16.Ng5 Bg4 17.Bf3 Bxf3 18.Qxf3 Qxf3 19.Nxf3 Bb6 20.Rxc4 Rfd8
-[#]
-is another line with an evaluation of 0.48. White is a pawn up but it won’t be an easy pawn to convert whereas Black’s setup – doubled rooks on the d-file, …f6 and …Kf7 followed possibly by pushing the kingside pawns or just waiting is quite easy to imagine!
-b) 9…dxe4 10.Nxe4
-[#]
-There are now 3 attempts for Black
-i) 10…Bf5 was first tried by Stoltz in a game against Winter in 1933. It tries to disrupt White’s position even before putting the black king to safety. However, Nimzowitsch in Stockholm 1934 employed a suggestion of the Danish analyst Dr Krause (according to Stahlberg in his book “Chess and Chessmasters”) which still stands as one of the strongest continuations for White. 11.Ne5
-[#]
-(11.Nc5 Bxc5 12.dxc5 Qa5 13.Nd4 0–0–0 14.Nxc6 Nxc6 15.Qf3 Be6 16.Be3 Rd7 17.Rfd1 Rhd8 18.Rxd7 Rxd7 19.Qh5 Qa4 20.Qe2 Nd4 21.Bxd4 Rxd4 22.h4 Qb4 23.c6 bxc6 24.b3 Qd6 25.bxc4 Bxc4 0–1 Foltys,J-Stoltz,G Europe Tournament Munich 1941 (5)
-ia) 11…Be6 This was presumably what Stoltz and Lundin had prepared for Munich 1941: the bishop retreats to defend the c4–pawn, Black claiming that the weakening of d4 by Ne5 will give White a need to pause. However, 12.Qa4 already sets Black severe problems as (12.Nxc6 bxc6 13.Bd2 Bxd2 14.Qxd2 0–0 15.Nc5 Bd5 (30)½–½ Nielsen,B-Lundin,E Europe Tournament Munich 1941 (13)) 12…0–0 (12…Qa5 13.Qxa5 Nxa5 14.a3 and the bishop can’t keep on protecting d6; 12…Bd5 13.Bg5 Qa5 14.Qxa5 Nxa5 15.a3 Bxe4 16.Bxe4 Bd6 17.Rad1 with the idea of Bd2, simply to pick up the c4–pawn) 13.Nxc6 Nxc6 14.d5 wins for White. 14…Bxd5 (14…Qxd5 15.Nf6+) 15.Rd1 with an excruciating pin!)
-ib) 11…Qxd412.Qxd4 Nxd4 13.a3
-[#]
-13….Bxe4 14.Bxe4 Nb3 (14…Bc5 15.Bxb7 Rb8 16.Ba6 Ne2+ 17.Kg2 Bd4 18.Nxf7 [GS] “A pretty combination that ensures White’s advantage” 18…Nxc1 19.Nxh8 Nb3 20.Rad1 g6 21.Nf7 Kxf7 22.Bxc4+ Kf8 23.Bxb3 Bxb2 24.Rd3 Bxa3 25.Rf3+ Kg7 26.Ra1 Bc5 27.Rf7+ Kh6 28.Ra5 Bb6 29.Ra4 Nf5 30.Be6 Nd4 31.Bd71–0 Nimzowitsch,A-Stoltz,G Stockholms Schackforbund 6 Players 2R 1934) 15.Be3 Nxa1 16.Rxa1 Ba5 17.Nxc4 Bb6 18.Nxb6 axb6 19.Bxb6 0–0 20.b4 Nc6 21.b5 Na5 22.Rc1 And the engines consider this position with the two bishops, a pawn and an offside black knight for the exchange to be significantly in White’s favour (though not winning);
-ii) 10…Bg4 is also mentioned by Stahlberg but the engines don’t like it at all: the pin of the knight on f3 is much less severe than the attack on the knight on e4 and this gives White different promising opportunities to strike while the black king is still uncastled. 11.a3 Ba5 12.h3 (12.d5 could be a shock for the black player! 12…Nxd5 (12…Qxd5 13.Nd6+ Kf8 14.Qxd5 Nxd5 15.Ng5 and Black is getting hit from all angles! 15…Be6 16.Rd1 h6 17.Ngxf7 Bxf7 18.Nxf7 Kxf7 19.Bxd5+ Ke7 20.Bxc4 with a clear extra pawn and two bishops) 13.h3 Bc8 (13…Bf5 14.Nc5 and the b7–pawn has a problem) 14.Qc2 0–0 15.Rd1 Nce7 16.Nd4 Bd7 17.Qxc4 and Black’s position is unenviable) 12…Bxf3 (12…Bf5 13.Nc5 is again very awkward for Black) 13.Qxf3 Nxd4 14.Qg4 0–0 and now a complicated tactical line nails the position for White 15.Nf6+ Kh8 16.Bg5 is very dangerous for Black 16…h6 17.Nd7
-[#]
-Hitting the rook on f8 and the knight on d4 17…Nb3 18.Nxf8 hxg5 19.Nd7 Nxa1 20.Bxb7 Trapping the rook! 20…Nb3 21.Ne5 Qc7 22.Nxf7+ Kg8 23.Bxa8 Kxf7 24.Qxg5 with a big advantage to White due to Black’s open king and vulnerable pawns with White having rook and two pawns for two knights already.
-11.Nh4 Bxe4 12.Bxe4 Qxd4 13.Qc2 Qf6 14.Be3 is an equivalent engine suggestion that is also somewhat unpleasant for Black.)
-iii) 10…0–0 is the safest by far.
+If Black does play cautiously with 13…Qc7 14.Ba3 Rad8 [#] then White can consider 15.f3 here (although even here 15.e4 is pretty good) when after 15…f6 16.e4 Bg6 17.Rb1 White has a very pleasant position with two bishops and a strong centre while Black’s queenside counterplay hasn’t got started yet.}
+)
+{is the main line and engine top move, Black has 2 approaches}
+{a}
+9...O-O
+(
+{b}
+9...dxe4 10.Nxe4
+{[#]}
+{There are now 3 attempts for Black}
+(
+{i}
+10...Bf5
+{was first tried by Stoltz in a game against Winter in 1933. It tries to disrupt White’s position even before putting the black king to safety. However, Nimzowitsch in Stockholm 1934 employed a suggestion of the Danish analyst Dr Krause (according to Stahlberg in his book “Chess and Chessmasters”) which still stands as one of the strongest continuations for White.}
+11.Ne5
+{[#]}
+{(11.Nc5 Bxc5 12.dxc5 Qa5 13.Nd4 O-O-O 14.Nxc6 Nxc6 15.Qf3 Be6 16.Be3 Rd7 17.Rfd1 Rhd8 18.Rxd7 Rxd7 19.Qh5 Qa4 20.Qe2 Nd4 21.Bxd4 Rxd4 22.h4 Qb4 23.c6 bxc6 24.b3 Qd6 25.bxc4 Bxc4 0–1 Foltys,J-Stoltz,G Europe Tournament Munich 1941 (5)
+ia 11…Be6 This was presumably what Stoltz and Lundin had prepared for Munich 1941: the bishop retreats to defend the c4–pawn, Black claiming that the weakening of d4 by Ne5 will give White a need to pause. However, 12.Qa4 already sets Black severe problems as (12.Nxc6 bxc6 13.Bd2 Bxd2 14.Qxd2 O-O 15.Nc5 Bd5 (30)½–½ Nielsen,B-Lundin,E Europe Tournament Munich 1941 (13)) 12…O-O (12…Qa5 13.Qxa5 Nxa5 14.a3 and the bishop can’t keep on protecting d6; 12…Bd5 13.Bg5 Qa5 14.Qxa5 Nxa5 15.a3 Bxe4 16.Bxe4 Bd6 17.Rad1 with the idea of Bd2, simply to pick up the c4–pawn) 13.Nxc6 Nxc6 14.d5 wins for White. 14…Bxd5 (14…Qxd5 15.Nf6+) 15.Rd1 with an excruciating pin!)}
+{ib}
+11...Qxd4 12.Qxd4 Nxd4 13.a3
+{[#]}
+13...Bxe4 14.Bxe4 Nb3
+(
+14...Bc5 15.Bxb7 Rb8 16.Ba6 Ne2+ 17.Kg2 Bd4 18.Nxf7
+{[GS] “A pretty combination that ensures White’s advantage”}
+18...Nxc1 19.Nxh8 Nb3 20.Rad1 g6 21.Nf7 Kxf7 22.Bxc4+ Kf8 23.Bxb3 Bxb2 24.Rd3 Bxa3 25.Rf3+ Kg7 26.Ra1 Bc5 27.Rf7+ Kh6 28.Ra5 Bb6 29.Ra4 Nf5 30.Be6 Nd4 31.Bd7
+{1–0 Nimzowitsch,A-Stoltz,G Stockholms Schackforbund 6 Players 2R 1934}
+)
+15.Be3 Nxa1 16.Rxa1 Ba5 17.Nxc4 Bb6 18.Nxb6 axb6 19.Bxb6 O-O 20.b4 Nc6 21.b5 Na5 22.Rc1
+{And the engines consider this position with the two bishops, a pawn and an offside black knight for the exchange to be significantly in White’s favour (though not winning);}
+)
+(
+{ii}
+10...Bg4
+{is also mentioned by Stahlberg but the engines don’t like it at all: the pin of the knight on f3 is much less severe than the attack on the knight on e4 and this gives White different promising opportunities to strike while the black king is still uncastled.}
+11.a3 Ba5 12.h3
+(
+12.d5
+{could be a shock for the black player!}
+12...Nxd5
+(
+12...Qxd5 13.Nd6+ Kf8 14.Qxd5 Nxd5 15.Ng5
+{and Black is getting hit from all angles!}
+15...Be6 16.Rd1 h6 17.Ngxf7 Bxf7 18.Nxf7 Kxf7 19.Bxd5+ Ke7 20.Bxc4
+{with a clear extra pawn and two bishops}
+)
+13.h3 Bc8
+(
+13...Bf5 14.Nc5
+{and the b7–pawn has a problem}
+)
+14.Qc2 O-O 15.Rd1 Nce7 16.Nd4 Bd7 17.Qxc4
+{and Black’s position is unenviable}
+)
+12...Bxf3
+(
+12...Bf5 13.Nc5
+{is again very awkward for Black}
+)
+13.Qxf3 Nxd4 14.Qg4 O-O
+{and now a complicated tactical line nails the position for White}
+15.Nf6+ Kh8 16.Bg5
+{is very dangerous for Black}
+16...h6 17.Nd7
+{[#]}
+{Hitting the rook on f8 and the knight on d4}
+17...Nb3 18.Nxf8 hxg5 19.Nd7 Nxa1 20.Bxb7
+{Trapping the rook!}
+20...Nb3 21.Ne5 Qc7 22.Nxf7+ Kg8 23.Bxa8 Kxf7 24.Qxg5
+{with a big advantage to White due to Black’s open king and vulnerable pawns with White having rook and two pawns for two knights already.}
+{11.Nh4 Bxe4 12.Bxe4 Qxd4 13.Qc2 Qf6 14.Be3 is an equivalent engine suggestion that is also somewhat unpleasant for Black.}
+)
+{iii}
+10...O-O
+{is the safest by far.}
 11.Qc2
-is White’s main continuation and now Black has two major possibilities.
-a) 11…Bf5
-[#]
-pins the knight to the queen and stops Qxc4 for now. The main line eliminates the c- and d-pawns leaving White with a small initiative. 12.Nh4 More or less the only critical move. (12.a3 Qd5 is a neat intermezzo 13.Nh4 Nxd4 14.Nf6+ gxf6 15.Qxf5 Qxg2+ 16.Kxg2 Nexf5 17.Nxf5 Bc5 18.Be3 Nxf5 19.Bxc5 Rfc8 and Black is fine.) 12…Bxe4 13.Bxe4 Nxd4 14.Qxc4 Nec6 15.Be3 Qf6 16.Rad1 Rad8 17.Bxd4 Rxd4 18.Rxd4 Qxd4 19.Rc1 Qb6 20.Nf3 Be7 21.Bxc6 bxc6 22.b3 c5 Not a disaster by any means for Black, but there would be little to no hope of a win in this line, whereas you might have some hope of that after 11…h6.
-The Monte Carlo result seems to bear this out: 62% for White and a very low winning percentage for Black.
-b) 11…h6
-[#]
-Black abandons the c4–pawn to its fate, trusting that pressure against the isolated d4–pawn and the light-squares around the centre will enable Black to hold the balance. It’s an interesting idea and one that you might come up with (in slight desperation) in a practical game, maybe get away with and then say “Phew, won’t try that opening again!” With engine analysis behind you, you could even turn this into your main line!
-The Monte Carlo results are just a little better than 11…Bf5: 61% and a few more wins for Black!
+{is White’s main continuation and now Black has two major possibilities.}
+{a}
+11...Bf5
+(
+{b}
+11...h6
+{[#]}
+{Black abandons the c4–pawn to its fate, trusting that pressure against the isolated d4–pawn and the light-squares around the centre will enable Black to hold the balance. It’s an interesting idea and one that you might come up with (in slight desperation) in a practical game, maybe get away with and then say “Phew, won’t try that opening again!” With engine analysis behind you, you could even turn this into your main line! The Monte Carlo results are just a little better than 11…Bf5: 61% and a few more wins for Black!}
 12.a3
-The engines like to throw this in. Intuitively, it feels right – it seems to give the white queen a little extra freedom and it also secures the c5–outpost for the knight on e4.
-12…Ba5 13.Qxc4 Be6
-[#]
-This is the position that the engines assess between 0.30 and 0.40. White has an extra pawn, but a weak, isolated d4–pawn to hold while Black gains development tempi against his exposed queen. I will give you some sample main lines which have been distilled after a great deal of long engine analysis.]
+{The engines like to throw this in. Intuitively, it feels right – it seems to give the white queen a little extra freedom and it also secures the c5–outpost for the knight on e4.}
+12...Ba5 13.Qxc4 Be6
+{[#]}
+{This is the position that the engines assess between 0.30 and 0.40. White has an extra pawn, but a weak, isolated d4–pawn to hold while Black gains development tempi against his exposed queen. I will give you some sample main lines which have been distilled after a great deal of long engine analysis.]}
+(
+14.Qd3 Bb6 15.Be3 Qd5
+{The black queen enters into contact with the light squares and frees the d8–square for the black rook.}
+16.Nc3 Qh5 17.Na4 Rad8 18.Nxb6 axb6
+{[#]}
+{White has managed to secure the bishop pair and double Black’s b-pawns while holding on to the d4–pawn. However pressure on the d4–pawn and the light squares is coming so White will most likely have to give up the d4–pawn and then try to realise a position with the two bishops and a weakened black queenside to play with.}
+19.Rfe1 Nf5 20.Qe4 Nd6 21.Qh4 Qxh4 22.Nxh4 Nc4 23.b3 Nxe3 24.fxe3 Bxb3 25.Rab1 Na5 26.Nf3 Rfe8 27.Nd2 Bd5 28.Bxd5 Rxd5 29.a4 Rd6
+{This is quite typical of what you might expect with best play. Black got a pawn back, the engine says just 0.12 for White but there is that b6–pawn to think of for the rest of your natural life!}
+)
 14.Qb5
-14.Qd3 Bb6 15.Be3 Qd5 The black queen enters into contact with the light squares and frees the d8–square for the black rook. 16.Nc3 Qh5 17.Na4 Rad8 18.Nxb6 axb6
-[#]
-White has managed to secure the bishop pair and double Black’s b-pawns while holding on to the d4–pawn. However pressure on the d4–pawn and the light squares is coming so White will most likely have to give up the d4–pawn and then try to realise a position with the two bishops and a weakened black queenside to play with. 19.Rfe1 Nf5 20.Qe4 Nd6 21.Qh4 Qxh4 22.Nxh4 Nc4 23.b3 Nxe3 24.fxe3 Bxb3 25.Rab1 Na5 26.Nf3 Rfe8 27.Nd2 Bd5 28.Bxd5 Rxd5 29.a4 Rd6 This is quite typical of what you might expect with best play. Black got a pawn back, the engine says just 0.12 for White but there is that b6–pawn to think of for the rest of your natural life!
-14…Bb6 15.Be3 Nf5 16.Rad1 Qe8
-[#]
-That’s a pretty subtle move!
+14...Bb6 15.Be3 Nf5 16.Rad1 Qe8
+{[#]}
+{That’s a pretty subtle move!}
 17.Nc3
-17.d5 Nxe3 18.fxe3 Bd7 is the lovely tactical point when 19.dxc6 Bxc6 regains the piece and 20.Nf6+ gxf6 21.Qf5 Bxe3+ 22.Kh1 Rd8 will be just fine for Black despite the weakened kingside.
-17…Na5 targeting the c4–square.
+(
+17.d5 Nxe3 18.fxe3 Bd7
+{is the lovely tactical point when}
+19.dxc6 Bxc6
+{regains the piece and}
+20.Nf6+ gxf6 21.Qf5 Bxe3+ 22.Kh1 Rd8
+{will be just fine for Black despite the weakened kingside.}
+)
+17...Na5
+{targeting the c4–square.}
 18.Qd3 Rd8
-18…Bc4 19.Qxf5
+(
+18...Bc4 19.Qxf5
+)
 19.Rfe1 Qd7
-[#]
+{[#]}
 20.Ne5 Qc8 21.Ne2 Nc6 22.Nxc6 bxc6 23.Rc1 Bd5 24.Bxd5 Rxd5 25.Qc4 Nxe3 26.fxe3 Rd6
-[#]
-and the engines give White 0.39 – a slight advantage but very far from decisive. The Monte Carlo result is just 52% so the engines seem to believe in the black position!
+{[#]}
+{and the engines give White 0.39 – a slight advantage but very far from decisive. The Monte Carlo result is just 52% so the engines seem to believe in the black position!}
+)
+{[#]}
+{pins the knight to the queen and stops Qxc4 for now. The main line eliminates the c- and d-pawns leaving White with a small initiative.}
+12.Nh4
+{More or less the only critical move.}
+(
+12.a3 Qd5
+{is a neat intermezzo}
+13.Nh4 Nxd4 14.Nf6+ gxf6 15.Qxf5 Qxg2+ 16.Kxg2 Nexf5 17.Nxf5 Bc5 18.Be3 Nxf5 19.Bxc5 Rfc8
+{and Black is fine.}
+)
+12...Bxe4 13.Bxe4 Nxd4 14.Qxc4 Nec6 15.Be3 Qf6 16.Rad1 Rad8 17.Bxd4 Rxd4 18.Rxd4 Qxd4 19.Rc1 Qb6 20.Nf3 Be7 21.Bxc6 bxc6 22.b3 c5
+{Not a disaster by any means for Black, but there would be little to no hope of a win in this line, whereas you might have some hope of that after 11…h6. The Monte Carlo result seems to bear this out: 62% for White and a very low winning percentage for Black.}
+)
+{is more or less equivalent to 9…dxe4. It always seems to me however that Black may dream of a win in the lines after 9…dxe4 whereas I’m not sure that’s really the case here. The Monte Carlo result is 59% which is Ok for a Black line!}
+{[#]}
+10.exd5 Nxd5
+{i}
+11.Nxd5
+(
+{ii}
+11.Bg5 Qa5 12.Nxd5 Qxd5 13.Rc1 Be6 14.a3 Ba5 15.Be3 Qh5 16.Ng5 Bg4 17.Bf3 Bxf3 18.Qxf3 Qxf3 19.Nxf3 Bb6 20.Rxc4 Rfd8
+{[#]}
+{is another line with an evaluation of 0.48. White is a pawn up but it won’t be an easy pawn to convert whereas Black’s setup – doubled rooks on the d-file, …f6 and …Kf7 followed possibly by pushing the kingside pawns or just waiting is quite easy to imagine!}
+)
+Qxd5 12.Be3
+(
+12.Ne5 Qxd4
+(
+12...Qb5 13.Nxc6 bxc6 14.Qf3
+{should be a slight advantage for White, but I was never 100% happy about this line when I had it in my preparation as a professional in the 1990s – I didn’t think it was too serious for Black. (0.36 from the engines)}
+14...Bb7 15.b3 Rad8 16.bxc4 Qxc4 17.Be3 Ba5 18.Rfc1 Qe6
+{½–½ Donner,J-Stahlberg,G Hoogovens Beverwijk 1958 (6)}
+)
+13.Nxc6 Qxd1 14.Rxd1 bxc6 15.Bxc6 Rb8 16.Bf4 Rb6 17.Bd5 Be7 18.Rd2 Be6 19.Bxe6 Rxe6 20.Rc1 Rc8 21.Be3 a6 22.Rd5 h6 23.Rc2
+{[#]}
+{is the engine line. Again, no chances for Black whatsoever to dream for a win in such lines, but strong defence would earn you a draw.}
+)
+12...Qh5 13.Ne5 Qxd1 14.Rfxd1 Nxe5 15.dxe5 c3 16.bxc3 Bxc3 17.Rab1 Bxe5 18.Bc5 Re8 19.Re1 Bf5 20.Rxb7 Bc7 21.Rxe8+ Rxe8 22.Rxa7 Re1+ 23.Bf1 h5 24.Kg2 Be5 25.Bc4 Be4+ 26.f3 Bg6
+{[#]}
+{is the engine main line. Once again, not a bundle of fun for Black but could be holdable with good defence (0.66 for White)}
+*
 </pgn-study>
 
     <script src="../../dist/ChessPublica.all.min.js"></script>
