@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>title</title>
     <meta name="description" content="description">
-    <link rel="stylesheet" href="../dist/ChessPublica.all.min.css">
-    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="../../dist/ChessPublica.all.min.css">
+    <link rel="stylesheet" href="../../styles.css">
     <style>
         /* This page is exactly one 90vw x 90vh frame (or its loading-
            placeholder stand-in), each centered with a flat 5vh top/bottom
@@ -249,11 +249,11 @@
 
         /* Same 90vw x 90vh framed footprint as the real <pgn-study> (see
            above) so swapping one for the other doesn't visibly resize
-           the page. Hidden until the reader actually clicks "Open PGN
-           Study" (see the reopen button's own click handler below) —
-           the page loads with the study closed, not mid-load; this only
-           actually appears if loading is still in flight at that click,
-           to stand in until it finishes (see openStudy() below). */
+           the page. Starts visible (see its "visible" class in the
+           markup below) since the study now opens automatically on
+           page load rather than behind a button — this stands in until
+           loading finishes and revealStudy() swaps it for the real
+           thing. */
         .pgn-study-loading:not(.visible) {
             display: none !important;
         }
@@ -423,32 +423,6 @@
         }
         pgn-study.cp-ready > .pgn-study-ribbon .pgn-study-close {
             display: flex;
-        }
-
-        /* REOPEN BUTTON — sits wherever the closed frame used to be (top
-           of the body), hidden until the close button actually hides
-           pgn-study, so the body isn't left with no way back in. */
-        .pgn-study-reopen {
-            display: none;
-            position: fixed;
-            top: calc(5vh + 0.5rem);
-            left: calc(5vw + 0.5rem);
-            z-index: 20;
-            padding: 0.5rem 1rem;
-            background: #18181b;
-            color: #fff;
-            border: none;
-            border-radius: 0.5rem;
-            font-size: 0.9rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background 0.15s;
-        }
-        .pgn-study-reopen:hover {
-            background: #3f3f46;
-        }
-        .pgn-study-reopen.visible {
-            display: block;
         }
 
         pgn-study pgn-player .video-title,
@@ -743,11 +717,7 @@
         <span class="lucide-icon" id="pgnStudyCloseIcon"></span>
     </button>
 
-    <button class="pgn-study-reopen visible" type="button" id="pgnStudyReopen">
-        Open PGN Study
-    </button>
-
-    <div class="pgn-study-loading" id="pgnStudyLoading">
+    <div class="pgn-study-loading visible" id="pgnStudyLoading">
         <div class="pgn-study-loading-board"></div>
         <div class="pgn-study-loading-side">
             <div class="pgn-study-loading-spinner"></div>
@@ -1042,8 +1012,8 @@ The Monte Carlo score is slightly better than after 11...Bf5: approximately 61%,
 *
   </pgn-study>
 
-    <script src="../dist/ChessPublica.all.min.js"></script>
-    <script type="module" src="../script.js"></script>
+    <script src="../../dist/ChessPublica.all.min.js"></script>
+    <script type="module" src="../../script.js"></script>
     
     <script type="module">
         /* <pgn-study> holds the PGN text exactly once. Split it into a real
@@ -1193,77 +1163,37 @@ The Monte Carlo score is slightly better than after 11...Bf5: approximately 61%,
         // Closing doesn't depend on the engine, or even on loading having
         // finished — hide whichever of the loading placeholder or the real
         // <pgn-study> is currently showing (?.remove()/[none] no-op safely
-        // either way) and reveal the bare body behind them, but leave a way
-        // back in via the reopen button. The close button itself is now a
-        // <pgn-study> descendant (moved into the ribbon above), so hiding
-        // pgn-study already hides it too — no separate style.display
-        // needed for it here anymore.
-        const reopenBtn = document.getElementById('pgnStudyReopen');
+        // either way) and reveal the bare body behind them. The close
+        // button itself is now a <pgn-study> descendant (moved into the
+        // ribbon above), so hiding pgn-study already hides it too — no
+        // separate style.display needed for it here anymore.
         document.getElementById('pgnStudyClose').addEventListener('click', () => {
             document.getElementById('pgnStudyLoading')?.remove();
             studyEl.style.display = 'none';
-            reopenBtn.classList.add('visible');
         });
 
-        /* The page loads with the study closed — nothing is fetched or
-           parsed any differently in the background (see the
-           DOMContentLoaded listener below), only the *reveal* is gated
-           behind this button instead of happening the instant loading
-           finishes. studyReady/readyEngine capture that background
-           work's result whenever it lands; openRequested records that
-           the reader already asked to see it before that happened, so
-           revealStudy() (called from wherever loading actually finishes)
-           knows to show it immediately instead of leaving them stuck
-           looking at a button that does nothing. */
-        let studyReady = false;
-        let openRequested = false;
+        /* The page loads with the study already opening — the loading
+           placeholder starts visible in the markup (see .pgn-study-loading
+           above), and revealStudy() below swaps it for the real thing the
+           instant loading finishes (see markStudyReady(), called from the
+           DOMContentLoaded listener below). readyEngine captures that
+           background work's result so revealStudy() can force the board's
+           layout to compute once it actually has one. */
         let readyEngine = null;
 
         function revealStudy() {
             document.getElementById('pgnStudyLoading')?.classList.remove('visible');
             document.getElementById('pgnStudyLoading')?.remove();
             studyEl.classList.add('cp-ready');
-            reopenBtn.classList.remove('visible');
-            // Same reasoning as before: force the board's layout to
-            // compute now, synchronously, the instant it actually has one
-            // (this reveal) — not back when the engine first became
-            // ready, quite possibly while still hidden behind this very
-            // button.
             if (readyEngine && readyEngine.board && typeof readyEngine.board.resize === "function") {
                 readyEngine.board.resize();
             }
         }
 
         function markStudyReady(engine) {
-            studyReady = true;
             readyEngine = engine || null;
-            if (openRequested) revealStudy();
+            revealStudy();
         }
-
-        reopenBtn.addEventListener('click', () => {
-            // Already been open at least once (cp-ready is permanent —
-            // see markStudyReady()/revealStudy() below) and is just
-            // currently hidden by pgn-study's own inline display:none
-            // (which the close button, now inside it, inherits) —
-            // restore that directly instead of re-running first-open.
-            if (studyEl.classList.contains('cp-ready')) {
-                studyEl.style.display = '';
-                reopenBtn.classList.remove('visible');
-                return;
-            }
-            if (studyReady) {
-                revealStudy();
-            } else {
-                // First open, but loading (still running in the
-                // background regardless of this button) hasn't finished
-                // yet — show the same loading placeholder markStudyReady()
-                // would otherwise have skipped straight past, and let it
-                // reveal the real thing the moment it does.
-                openRequested = true;
-                document.getElementById('pgnStudyLoading')?.classList.add('visible');
-                reopenBtn.classList.remove('visible');
-            }
-        });
 
         /* Chessbase-style reading sync between the <pgn-player> on the left
            and the static <pgn> column on the right:
@@ -2026,7 +1956,7 @@ The Monte Carlo score is slightly better than after 11...Bf5: approximately 61%,
 
                 let openings;
                 try {
-                    openings = await fetch('../assets/eco-openings.json').then(r => r.json());
+                    openings = await fetch('../../assets/eco-openings.json').then(r => r.json());
                 } catch (e) {
                     return; // no network/asset — just skip the TOC rather than break the page
                 }
