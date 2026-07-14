@@ -277,6 +277,15 @@ pgn-study.pgn-study-collapsed {
     width: fit-content;
     max-width: 90vw;
     height: auto;
+    /* The expanded frame centers itself with margin: 5vh auto (see the
+       plain "pgn-study" rule above) - collapsing to a much narrower,
+       content-sized pill would otherwise re-center it too, visibly
+       jumping it toward the middle of the page. Pinning the left
+       margin to that same 5vw the expanded frame sits at (with the
+       right margin still auto) keeps the pill flush with the
+       frame's own left edge instead. */
+    margin-left: 5vw;
+    margin-right: auto;
 }
 pgn-study.pgn-study-collapsed > pgn-player,
 pgn-study.pgn-study-collapsed > .pgn-study-resizer,

@@ -224,7 +224,7 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
         // play/pause icon starts as "play"; syncPlayPauseButton() below
         // swaps it to "pause" (and back) as playback state changes. The
         // collapse toggle's own icon starts as "x" (expanded — click to
-        // collapse); syncCollapseToggle() below swaps it to "arrow-up-down"
+        // collapse); syncCollapseToggle() below swaps it to "maximize-2"
         // (collapsed — click to expand) and back.
         document.getElementById('pgnStudyPlayPauseIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('play'));
         document.getElementById('pgnStudyTocIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('list'));
@@ -264,12 +264,27 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
             collapseToggle.title = label;
             collapseToggle.setAttribute('aria-label', label);
             collapseToggle.setAttribute('aria-pressed', String(collapsed));
-            collapseIcon.style.setProperty('--icon', window.ChessPublica.lucideIconUrl(collapsed ? 'arrow-up-down' : 'x'));
+            collapseIcon.style.setProperty('--icon', window.ChessPublica.lucideIconUrl(collapsed ? 'maximize-2' : 'x'));
         }
         collapseToggle.addEventListener('click', () => {
             document.getElementById('pgnStudyLoading')?.remove();
+            const collapsing = !studyEl.classList.contains('pgn-study-collapsed');
             studyEl.classList.toggle('pgn-study-collapsed');
             syncCollapseToggle();
+            /* Un-collapsing hands pgn-player's board back its real size in
+               one step (display: none -> flex), but chessboard.js only
+               redraws at that size once its own ResizeObserver notices and
+               calls widget.resize() (see makeBoardResizable() in
+               board.js) - batched a frame later via requestAnimationFrame.
+               That gap is what reads as the board (and, since its column
+               is sized off the board itself, the divider) starting large
+               and visibly shrinking into place a moment after. Forcing
+               the same resize() revealStudy() already does on first load
+               here too skips straight to the settled size instead of
+               waiting on that observer. */
+            if (!collapsing && readyEngine && readyEngine.board && typeof readyEngine.board.resize === "function") {
+                readyEngine.board.resize();
+            }
         });
         syncCollapseToggle();
 
