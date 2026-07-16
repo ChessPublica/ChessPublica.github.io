@@ -223,9 +223,9 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
         // instead — see assets/icons.js / assets/ChessPublica.js. The
         // play/pause icon starts as "play"; syncPlayPauseButton() below
         // swaps it to "pause" (and back) as playback state changes. The
-        // collapse toggle's own icon starts as "x" (expanded — click to
-        // collapse); syncCollapseToggle() below swaps it to "maximize-2"
-        // (collapsed — click to expand) and back.
+        // collapse toggle's own icon starts as "circle-x" (expanded —
+        // click to collapse); syncCollapseToggle() below swaps it to
+        // "maximize-2" (collapsed — click to expand) and back.
         document.getElementById('pgnStudyPlayPauseIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('play'));
         document.getElementById('pgnStudyTocIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('list'));
         document.getElementById('pgnStudySettingsIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('settings'));
@@ -264,7 +264,7 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
             collapseToggle.title = label;
             collapseToggle.setAttribute('aria-label', label);
             collapseToggle.setAttribute('aria-pressed', String(collapsed));
-            collapseIcon.style.setProperty('--icon', window.ChessPublica.lucideIconUrl(collapsed ? 'maximize-2' : 'x'));
+            collapseIcon.style.setProperty('--icon', window.ChessPublica.lucideIconUrl(collapsed ? 'maximize-2' : 'circle-x'));
         }
         function setCollapsed(collapsed) {
             if (studyEl.classList.contains('pgn-study-collapsed') === collapsed) return;

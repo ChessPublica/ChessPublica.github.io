@@ -307,8 +307,11 @@ pgn-study.pgn-study-collapsed > .pgn-study-ribbon {
    column — pointless controls once both are hidden, and on a
    narrow mobile ribbon they'd otherwise crowd the title down to a
    sliver (barely a couple of characters before ellipsizing).
-   Hiding them leaves just the title on the left and the toggle on
-   the right, which is what "collapsed" should look like anyway. */
+   Hiding them leaves just the title, which is what "collapsed"
+   should look like anyway. The collapse toggle button itself is
+   handled separately, right after its own main rule below — same
+   specificity as the "cp-ready" rule that shows it, so it has to
+   come after that rule in source order to win the tie. */
 pgn-study.pgn-study-collapsed > .pgn-study-ribbon .pgn-study-ribbon-left,
 pgn-study.pgn-study-collapsed > .pgn-study-ribbon [data-ribbon-action="settings"],
 pgn-study.pgn-study-collapsed > .pgn-study-ribbon .pgn-study-settings-inline {
@@ -535,6 +538,16 @@ pgn-study.cp-ready > .pgn-study-ribbon {
 }
 pgn-study.cp-ready > .pgn-study-ribbon .pgn-study-collapse-toggle {
     display: flex;
+}
+/* Collapsed, the ribbon *is* the whole frame, and the whole thing
+   already expands on click (see studyEl's listener in pgn-study.js)
+   — a dedicated "expand" button alongside it would be redundant, so
+   hide it in that state. Same specificity as the "cp-ready" rule
+   just above (one class more each: .pgn-study-collapsed here vs
+   .cp-ready there), so it has to come after to win the tie. Only
+   collapsed hides it — expanded, it still shows (as "X") to collapse. */
+pgn-study.pgn-study-collapsed > .pgn-study-ribbon .pgn-study-collapse-toggle {
+    display: none;
 }
 
 /* RIBBON TITLE — the icon + game title shown in the ribbon in place of
