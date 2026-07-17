@@ -45,7 +45,7 @@ pgn-study {
     margin: 5vh auto;
     padding: var(--frame-pad) var(--frame-pad) var(--frame-pad-bottom) var(--frame-pad);
     border: 1px solid #d4d4d8;
-    border-radius: 0.75rem;
+    border-radius: 0;
     box-sizing: border-box;
     overflow: hidden;
 }
@@ -363,7 +363,7 @@ pgn-study:not(.cp-ready) {
     margin: 5vh auto;
     padding: 1.5rem 1.5rem 0.75rem 1.5rem;
     border: 1px solid #d4d4d8;
-    border-radius: 0.75rem;
+    border-radius: 0;
     box-sizing: border-box;
     overflow: hidden;
 }
