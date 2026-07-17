@@ -599,7 +599,34 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
                 playPauseBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
             };
             playPauseBtn.disabled = false;
-            playPauseBtn.addEventListener('click', () => engine.togglePlay());
+            playPauseBtn.addEventListener('click', () => {
+                // A picker showing (lastPicker, set up below) means the
+                // engine is deliberately paused right at a branch point —
+                // togglePlay() would just call play()/resume the variation
+                // as usual, but the goTo()/variationGoTo() wrapper below
+                // vetoes exactly that step unless allowNextAdvance is set,
+                // so without this the button would silently do nothing.
+                // Confirm the same default choice the picker's own bold
+                // row already offers (mainline continuation, or resuming
+                // this variation) rather than falling through to
+                // togglePlay() and getting vetoed.
+                if (lastPicker && lastPicker.kind === 'main') {
+                    allowNextAdvance = true;
+                    engine.play();
+                    return;
+                }
+                if (lastPicker && lastPicker.kind === 'sub' && lastPicker.index < lastPicker.variationObj.moves.length) {
+                    const v = engine._variation;
+                    if (v) {
+                        allowNextAdvance = true;
+                        v.maxIndex = v.fens.length - 1;
+                        v.playing = true;
+                        engine._variationPlayTick(v, null);
+                        return;
+                    }
+                }
+                engine.togglePlay();
+            });
             syncPlayPauseButton();
             playerEl.addEventListener('cp-move', syncPlayPauseButton);
             playerEl.addEventListener('cp-variation-move', syncPlayPauseButton);
