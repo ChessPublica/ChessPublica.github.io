@@ -1499,7 +1499,7 @@ class VideoComment {
           }
         };
       } else {
-        iconSpan.style.setProperty("--icon", lucideIconUrl("play"));
+        iconSpan.style.setProperty("--icon", lucideIconUrl("circle-play"));
         iconSpan.setAttribute("aria-label", "Play");
         btn.onclick = () => {
           this.el.querySelectorAll(".var-move").forEach(s => s.classList.remove("active"));
@@ -1541,7 +1541,7 @@ class VideoComment {
     icon.setAttribute("role", "button");
     icon.setAttribute("tabindex", "0");
     icon.setAttribute("aria-label", "Play variation");
-    icon.style.setProperty("--icon", lucideIconUrl("play"));
+    icon.style.setProperty("--icon", lucideIconUrl("circle-play"));
 
     const content = document.createElement("div");
     content.className = "variation-content";
@@ -2202,7 +2202,7 @@ class VideoEngine {
   }
 
   _setVariationIcon(iconEl, mode) {
-    iconEl.style.setProperty("--icon", lucideIconUrl(mode === "pause" ? "pause" : "play"));
+    iconEl.style.setProperty("--icon", lucideIconUrl(mode === "pause" ? "pause" : "circle-play"));
     iconEl.setAttribute("aria-label", mode === "pause" ? "Pause variation" : "Play variation");
   }
 
@@ -2809,7 +2809,7 @@ class PgnPlayerElement extends HTMLElement {
             <div class="board-spinner"></div>
           </div>
           <div class="play" aria-label="Play">
-            <span class="lucide-icon" data-lucide="play"></span>
+            <span class="lucide-icon" data-lucide="circle-play"></span>
           </div>
           <div class="puzzle-hint-row">
             <div class="puzzle-hint-prompt">
