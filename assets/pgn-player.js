@@ -2282,6 +2282,25 @@ class VideoEngine {
       if (session.index >= session.maxIndex) {
         session.playing = false;
         if (session.iconEl) this._setVariationIcon(session.iconEl, "play");
+        /* Every other transition that changes what's on the board
+           dispatches "cp-variation-move" (see showVariationPosition()
+           and _pauseVariationPlay()) — stopping here doesn't move the
+           board, so nothing else was dispatching anything, and a host
+           page (e.g. a play/pause button elsewhere in its own UI) had no
+           event to notice playback had actually stopped. variationEnded
+           is only ever true here — reaching the *last* move this session
+           was ever going to play (maxIndex === fens.length - 1, i.e. not
+           just paused short of an unsolved puzzle marker further in) —
+           so a host page can tell "ran out of moves" apart from a plain
+           mid-variation pause without re-deriving it itself. */
+        this.container.dispatchEvent(new CustomEvent("cp-variation-move", {
+          bubbles: true,
+          detail: {
+            fen: session.fens[session.index],
+            headers: this.state.headers,
+            variationEnded: session.maxIndex === session.fens.length - 1,
+          },
+        }));
         return;
       }
 
