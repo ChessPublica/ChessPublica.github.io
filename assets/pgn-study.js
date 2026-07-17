@@ -404,6 +404,25 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
                 if (activeEl) activeEl.classList.add('pgn-move-active');
             }
 
+            /* <pgn-player>'s own comment box under the board is hidden
+               entirely for pgn-study (see the CSS above) — showing a
+               move's comment there AND in the reading column right next
+               to it was the same information twice. Highlighting the
+               reading column's own copy instead (rather than just
+               leaving it be) is what makes losing the under-board copy
+               not a regression: the engine still pauses on a commented
+               move exactly as before (see the goTo()/
+               _updateVariationCommentBox() pause logic elsewhere in this
+               file and in pgn-player.js), and now that's the reader's
+               cue to look right at the highlighted paragraph/span
+               instead of down at the board. */
+            let activeCommentEl = null;
+            function setActiveComment(el) {
+                if (activeCommentEl) activeCommentEl.classList.remove('pgn-comment-active');
+                activeCommentEl = el || null;
+                if (activeCommentEl) activeCommentEl.classList.add('pgn-comment-active');
+            }
+
             // Aligns a reading-column move with the *top* of its own
             // column. Unlike a normal in-page <pgn>/<pgn-player> pair,
             // this frame layout never scrolls the window itself (html/body
@@ -461,13 +480,14 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
 
             playerEl.addEventListener('cp-move', (e) => {
                 const moveIndex = e.detail.moveIndex;
-                if (moveIndex == null || moveIndex < 0) { setActiveMove(null); return; }
+                if (moveIndex == null || moveIndex < 0) { setActiveMove(null); setActiveComment(null); return; }
 
                 const target = movesRoot.querySelector(`.pgn-move[data-ply="${moveIndex}"]`);
-                if (!target) { setActiveMove(null); return; }
+                if (!target) { setActiveMove(null); setActiveComment(null); return; }
 
                 setActiveMove(target);
                 scheduleScroll(target);
+                setActiveComment(movesRoot.querySelector(`.pgn-comment[data-ply="${moveIndex}"]`));
             });
 
             // Counterpart to "cp-move" above, but for a variation position
@@ -476,14 +496,21 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
             // showVariationPosition()). There's no mainline ply index to
             // match on here, so key off the FEN instead — every
             // data-fen-carrying element in the reading column (mainline
-            // spans never carry one) is a candidate.
+            // spans never carry one) is a candidate. Scoped to
+            // .pgn-move/.pgn-clickable-diagram specifically, not a bare
+            // "[data-fen=...]" — .pgn-comment-inline right below carries
+            // the exact same FEN as the move it's attached to (there's no
+            // other value to key an inline comment on), so an unscoped
+            // selector could just as easily land on the comment instead
+            // of the move/diagram this one actually needs.
             playerEl.addEventListener('cp-variation-move', (e) => {
                 const fen = e.detail.fen;
-                const target = fen ? movesRoot.querySelector(`[data-fen="${fen}"]`) : null;
-                if (!target) { setActiveMove(null); return; }
+                const target = fen ? movesRoot.querySelector(`.pgn-move[data-fen="${fen}"], .pgn-clickable-diagram[data-fen="${fen}"]`) : null;
+                if (!target) { setActiveMove(null); setActiveComment(null); return; }
 
                 setActiveMove(target);
                 scheduleScroll(target);
+                setActiveComment(movesRoot.querySelector(`.pgn-comment-inline[data-fen="${fen}"]`));
             });
 
             // The reading column's own diagrams (createBoard() calls
