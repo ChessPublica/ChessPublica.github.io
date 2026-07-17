@@ -591,6 +591,13 @@ export function renderMoveTree(rootNode, container, headers, options) {
     for (var pc = 0; pc < rootNode.preComments.length; pc++) {
       var preP = document.createElement("p");
       preP.className = "pgn-comment";
+      /* Same opt-in/convention as markDiagramClickable()'s own -1 for
+         the starting diagram just above — moveIndex -1 is "before the
+         first move" throughout <pgn-player>'s own events (goTo(0)'s
+         cp-move fires with moveIndex: -1 at the starting position), so
+         a host page's cp-move listener can find and highlight this
+         comment there the same way it already does for any move's. */
+      if (options && options.clickableMoves) preP.dataset.ply = "-1";
       preP.innerHTML = formatComment(rootNode.preComments[pc]);
       movesDiv.appendChild(preP);
     }
