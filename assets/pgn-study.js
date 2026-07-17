@@ -1105,24 +1105,34 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
             playerEl.addEventListener('cp-move', updatePicker);
             playerEl.addEventListener('cp-variation-move', updatePicker);
 
-            /* Once a (sub-)variation the reader picked has played all the
-               way to its own last move — variationEnded on the event
-               detail, set only by _variationPlayTick() in pgn-player.js
-               reaching the true end, never by a plain mid-variation pause
-               — there's nothing further to show from here on its own, so
-               pick back up wherever it branched from: the parent
-               variation if this was nested inside one (resuming *its*
-               playback, not just repositioning to it), the main line
-               otherwise. allowNextAdvance is set first exactly like the
-               picker's own mainline/continue rows do, since resuming
-               past this exact branch again is precisely what those rows
-               mean too — without it, the goTo()/variationGoTo() veto
-               above would just re-show the same branch we already
-               explored. */
-            playerEl.addEventListener('cp-variation-move', (e) => {
-                if (!e.detail || !e.detail.variationEnded) return;
+            /* Once a (sub-)variation has played all the way to its own
+               last move (the same condition _variationPlayTick() in
+               pgn-player.js dispatches "variationEnded" for — see
+               syncPlayPauseButton above, which is what actually notices
+               that and re-syncs the ribbon button to "Play"), there's
+               nothing further to show from here on its own — but
+               picking back up wherever it branched from only happens
+               once the reader actually asks to, by hitting Play or
+               Space, not automatically the instant it ends. Reaching
+               the end is exactly the same kind of stopping point a
+               comment or a fresh branch already is everywhere else in
+               this picker; the reader gets exactly as much of a pause
+               to notice "that's the end of this line" before moving on,
+               instead of it sweeping straight into an unrelated
+               continuation they didn't ask for yet.
+
+               Wrapping togglePlay() (rather than adding another
+               "variationEnded" listener, the way this used to work)
+               covers both ways the reader can actually ask: the ribbon
+               button's own click handler above already falls through to
+               engine.togglePlay() once neither picker case applies, and
+               Space — whenever the picker itself has nothing to consume
+               it (see the capture-phase keydown listener below) — calls
+               togglePlay() directly, the same as it always has. */
+            function resumeAfterVariationEnd() {
                 const v = engine._variation;
-                if (!v) return;
+                if (!v || v.playing) return false;
+                if (v.maxIndex !== v.fens.length - 1 || v.index < v.maxIndex) return false;
 
                 if (engine.exitToParentVariation()) {
                     const parent = engine._variation;
@@ -1141,7 +1151,13 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
                     allowNextAdvance = true;
                     engine.play();
                 }
-            });
+                return true;
+            }
+            const originalTogglePlay = engine.togglePlay.bind(engine);
+            engine.togglePlay = function (showIcon) {
+                if (resumeAfterVariationEnd()) return;
+                return originalTogglePlay(showIcon);
+            };
 
             /* ArrowUp/ArrowDown move the picker's keyboard focus; Space
                commits whichever row it's on (same as clicking it) —
