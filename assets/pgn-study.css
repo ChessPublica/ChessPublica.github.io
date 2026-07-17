@@ -19,10 +19,14 @@
    frame itself scrolls with the page like normal content — the
    two visibly drift apart the moment that scroll is possible.
    Killing body/html scroll entirely removes the drift along with
-   the scrollbar, and costs nothing: nothing on this page is
-   meant to need it (the frame's own columns already scroll
-   independently — see the overflow-y rules below). */
-html, body {
+   the scrollbar, and costs nothing on *this* page: nothing here
+   is meant to need it (the frame's own columns already scroll
+   independently — see the overflow-y rules below). But this file
+   ships inside the shared bundle now, loaded by every page on the
+   site, not just ones with a <pgn-study> frame — an unscoped
+   html/body selector was killing scroll everywhere. Gate it on
+   the frame's actual presence instead. */
+html:has(pgn-study), body:has(pgn-study) {
     height: 100%;
     overflow: hidden;
 }
