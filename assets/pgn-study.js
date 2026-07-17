@@ -144,7 +144,7 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
            it visibly resizes live as the reader drags, not just once
            they let go), and the reading column's text reflows for
            free — neither needs any resize-specific code here. */
-        (function setupColumnResizer() {
+        const columnResizer = (function setupColumnResizer() {
             let dragStartX = null;
             let dragStartWidth = null;
 
@@ -193,6 +193,21 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
             };
             resizerEl.addEventListener('pointerup', endDrag);
             resizerEl.addEventListener('pointercancel', endDrag);
+
+            /* Exposed so revealStudy() can start the reader at the same
+               fully-dragged-right position a manual drag would end up
+               at, instead of the CSS default 1fr:2fr split — clampLeftWidth
+               reads studyEl's own rendered width, which is only real
+               once .cp-ready lifts the "display: none" it starts with
+               (see the "pgn-study:not(.cp-ready)" rule above), so this
+               can't just run here at setup time alongside everything
+               else in this IIFE. */
+            function setToMaxWidth() {
+                studyEl.style.setProperty('--left-col-width', clampLeftWidth(Infinity) + 'px');
+                studyEl.style.setProperty('--right-col-width', '1fr');
+            }
+
+            return { setToMaxWidth };
         })();
 
         /* Ribbon icons, read straight off <pgn-player>'s own (hidden)
@@ -319,6 +334,7 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
             document.getElementById('pgnStudyLoading')?.classList.remove('visible');
             document.getElementById('pgnStudyLoading')?.remove();
             studyEl.classList.add('cp-ready');
+            columnResizer.setToMaxWidth();
             if (readyEngine && readyEngine.board && typeof readyEngine.board.resize === "function") {
                 readyEngine.board.resize();
             }

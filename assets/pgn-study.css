@@ -368,9 +368,16 @@ pgn-study:not(.cp-ready) {
     overflow: hidden;
 }
 @media (min-width: 900px) {
+    /* Column ratio matches the real column layout starting fully
+       dragged right (see columnResizer.setToMaxWidth(), called from
+       revealStudy() below) rather than the 1fr:2fr default the real
+       columns *used* to start at — this placeholder disappears the
+       instant loading finishes, so it should already look like the
+       real thing is about to, not resize out from under the reader a
+       moment later. */
     .pgn-study-loading {
         display: grid;
-        grid-template-columns: 1fr 2fr;
+        grid-template-columns: 2fr 3fr;
         align-items: start;
         padding: 2.5rem 2.5rem 1.25rem 2.5rem;
     }
@@ -385,7 +392,11 @@ pgn-study:not(.cp-ready) {
     background-size: 25% 25%;
 }
 @media (min-width: 900px) {
-    .pgn-study-loading-board { width: 500px; }
+    /* Matches the real board's own current max size (400px * 1.5, see
+       "pgn-study pgn-player { --board-size: min(calc(400px * 1.5),
+       94cqw) }" above) now that the page starts already scrolled all
+       the way to it. */
+    .pgn-study-loading-board { width: 600px; }
 }
 .pgn-study-loading-side {
     display: flex;
