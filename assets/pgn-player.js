@@ -367,9 +367,41 @@ function loadPGN(pgn) {
            to move index 0 too, rather than needing a separate slot. */
         const mi = Math.max(0, currentVar.moves.length - 1);
         if (cleaned) {
-          currentVar.commentsByMove[mi] = currentVar.commentsByMove[mi]
-            ? currentVar.commentsByMove[mi] + " " + cleaned
-            : cleaned;
+          if (currentVar.moves.length === 0) {
+            /* This comment sits before the variation has played even its
+               own first move — e.g. "7.Bg2 ( {is the main line by far,
+               but Stoltz also faced the rigorous 7.e4 ...} 7.e4 ...)" —
+               so it's really explaining the branch relative to the move
+               the "(" follows (7.Bg2 here), not describing this
+               variation's own move, which hasn't happened yet. Walk
+               outward through any enclosing variations to the nearest
+               move that's actually been played (the main line's last
+               move if this is a top-level variation, since moveIndex —
+               frozen the moment parsing entered a variation — already
+               points right at it) instead of stealing slot 0 from
+               whatever this variation's first move turns out to be. */
+            let attached = false;
+            for (let d = varStack.length - 2; d >= 0; d--) {
+              const outer = varStack[d].varObj;
+              if (outer.moves.length > 0) {
+                const outerMi = outer.moves.length - 1;
+                outer.commentsByMove[outerMi] = outer.commentsByMove[outerMi]
+                  ? outer.commentsByMove[outerMi] + " " + cleaned
+                  : cleaned;
+                attached = true;
+                break;
+              }
+            }
+            if (!attached && moveIndex >= 0) {
+              comments[moveIndex] = comments[moveIndex] ? comments[moveIndex] + " " + cleaned : cleaned;
+              attached = true;
+            }
+            if (!attached) currentVar.commentsByMove[mi] = cleaned;
+          } else {
+            currentVar.commentsByMove[mi] = currentVar.commentsByMove[mi]
+              ? currentVar.commentsByMove[mi] + " " + cleaned
+              : cleaned;
+          }
         }
         if (cal.length || csl.length) {
           if (!currentVar.moveAnnotations) currentVar.moveAnnotations = [];
