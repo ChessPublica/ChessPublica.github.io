@@ -46,12 +46,20 @@
 
 /* CHESSBOARD — Board wrapper + SVG overlay */
 
-.cp-board-wrapper {position:relative;display:block;margin:1rem 0;width:100%;max-width:var(--board-size);box-sizing:content-box!important;}
+/* --diagram-max-width holds whatever max-width actually resolves to
+   below (the plain --board-size, or --small's 75% of it) as its own
+   readable property, not just a literal on the max-width declaration —
+   so a consumer that needs to know a diagram's real effective size
+   (e.g. pgn-study.css centering it against a column its own immediate
+   parent doesn't span, see .pgn-container .cp-board-wrapper there) can
+   read the exact same value back via var() instead of guessing which
+   multiplier applies and risking it drifting out of sync here. */
+.cp-board-wrapper {position:relative;display:block;margin:1rem 0;width:100%;--diagram-max-width:var(--board-size);max-width:var(--diagram-max-width);box-sizing:content-box!important;}
 
 /* Diagram inside a comment (from a [D]/[#] marker, board annotations, or
    a puzzle marker) — rendered at 75% of the page's regular board size,
    relative to whatever --board-size is in scope. */
-.cp-board-wrapper--small {max-width:calc(var(--board-size) * 0.75);}
+.cp-board-wrapper--small {--diagram-max-width:calc(var(--board-size) * 0.75);}
 .cp-board {display:block;width:100%;max-width:var(--board-size);margin:1rem 0;break-inside:avoid;}
 .cp-board *,.cp-board *::before,.cp-board *::after,
 .board-wrapper{box-sizing:content-box!important;}
