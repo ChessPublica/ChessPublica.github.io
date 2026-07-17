@@ -1021,6 +1021,44 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
             playerEl.addEventListener('cp-move', updatePicker);
             playerEl.addEventListener('cp-variation-move', updatePicker);
 
+            /* Once a (sub-)variation the reader picked has played all the
+               way to its own last move — variationEnded on the event
+               detail, set only by _variationPlayTick() in pgn-player.js
+               reaching the true end, never by a plain mid-variation pause
+               — there's nothing further to show from here on its own, so
+               pick back up wherever it branched from: the parent
+               variation if this was nested inside one (resuming *its*
+               playback, not just repositioning to it), the main line
+               otherwise. allowNextAdvance is set first exactly like the
+               picker's own mainline/continue rows do, since resuming
+               past this exact branch again is precisely what those rows
+               mean too — without it, the goTo()/variationGoTo() veto
+               above would just re-show the same branch we already
+               explored. */
+            playerEl.addEventListener('cp-variation-move', (e) => {
+                if (!e.detail || !e.detail.variationEnded) return;
+                const v = engine._variation;
+                if (!v) return;
+
+                if (engine.exitToParentVariation()) {
+                    const parent = engine._variation;
+                    allowNextAdvance = true;
+                    parent.maxIndex = parent.fens.length - 1;
+                    parent.playing = true;
+                    engine._variationPlayTick(parent, null);
+                } else {
+                    // engine.state.index is still sitting at the branch
+                    // point itself (mainStateIndex) — nothing touches it
+                    // while a variation is active — so play() alone (its
+                    // own state.index++ then goTo()) is exactly the same
+                    // single step the mainline picker row's own handler
+                    // takes, no separate goTo() needed first.
+                    engine.exitVariation();
+                    allowNextAdvance = true;
+                    engine.play();
+                }
+            });
+
             /* ArrowUp/ArrowDown move the picker's keyboard focus; Space
                commits whichever row it's on (same as clicking it) —
                *only* while the picker actually has rows to navigate.
