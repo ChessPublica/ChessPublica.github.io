@@ -226,7 +226,7 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
         // collapse toggle's own icon starts as "circle-x" (expanded —
         // click to collapse); syncCollapseToggle() below swaps it to
         // "maximize-2" (collapsed — click to expand) and back.
-        document.getElementById('pgnStudyPlayPauseIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('play'));
+        document.getElementById('pgnStudyPlayPauseIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('circle-play'));
         document.getElementById('pgnStudyTocIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('list'));
         document.getElementById('pgnStudySettingsIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('settings'));
         // Same "A≡" glyph pgn.js/pgn-player.js already use for a game's own
@@ -594,7 +594,7 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
             const playPauseIcon = document.getElementById('pgnStudyPlayPauseIcon');
             const syncPlayPauseButton = () => {
                 const playing = engine.state.playing || !!(engine._variation && engine._variation.playing);
-                playPauseIcon.style.setProperty('--icon', window.ChessPublica.lucideIconUrl(playing ? 'pause' : 'play'));
+                playPauseIcon.style.setProperty('--icon', window.ChessPublica.lucideIconUrl(playing ? 'pause' : 'circle-play'));
                 playPauseBtn.title = playing ? 'Pause' : 'Play';
                 playPauseBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
             };

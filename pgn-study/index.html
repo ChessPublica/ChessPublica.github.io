@@ -931,7 +931,7 @@
         // play/pause icon starts as "play"; syncPlayPauseButton() below
         // swaps it to "pause" (and back) as playback state changes.
         document.getElementById('pgnStudyCloseIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('x'));
-        document.getElementById('pgnStudyPlayPauseIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('play'));
+        document.getElementById('pgnStudyPlayPauseIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('circle-play'));
         document.getElementById('pgnStudyTocIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('list'));
         document.getElementById('pgnStudySettingsIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('settings'));
 
@@ -1261,7 +1261,7 @@
             const playPauseIcon = document.getElementById('pgnStudyPlayPauseIcon');
             const syncPlayPauseButton = () => {
                 const playing = engine.state.playing || !!(engine._variation && engine._variation.playing);
-                playPauseIcon.style.setProperty('--icon', window.ChessPublica.lucideIconUrl(playing ? 'pause' : 'play'));
+                playPauseIcon.style.setProperty('--icon', window.ChessPublica.lucideIconUrl(playing ? 'pause' : 'circle-play'));
                 playPauseBtn.title = playing ? 'Pause' : 'Play';
                 playPauseBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
             };
