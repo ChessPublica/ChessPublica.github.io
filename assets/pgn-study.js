@@ -16,6 +16,18 @@ import { initPgnElements } from "./init.js";
 import { lucideIconUrl } from "./icons.js";
 import { toFigurine, fetchText } from "./helpers.js";
 
+/* Where the ChessPublica bundle itself was loaded from — captured here,
+   at top-level module scope, because it's only available synchronously
+   while this <script> is the one currently executing (document
+   .currentScript is null again by the time any later callback, e.g.
+   buildOpeningToc()'s async work below, runs). Used to resolve
+   eco-openings.json against the bundle's own origin/path instead of the
+   embedding page's — see buildOpeningToc() for why that distinction
+   matters. */
+const SCRIPT_URL = (typeof document !== "undefined" && document.currentScript)
+    ? document.currentScript.src
+    : null;
+
 /* This page's <body> is nothing but a single <pgn-study> element holding
    the raw PGN text as its content — the ribbon, the loading placeholder,
    and the board/reading-column split are all built here instead of being
@@ -1438,12 +1450,19 @@ initPgnElements();
 
                 let openings;
                 try {
-                    // Root-relative, not page-relative — this file ships
-                    // as part of the shared bundle now, so it can't
-                    // assume anything about how deep the page embedding
-                    // <pgn-study> lives (see index.html's own use of
-                    // root-relative asset paths for the same reason).
-                    openings = await fetch('/assets/eco-openings.json').then(r => r.json());
+                    // Resolved against the bundle script's own URL, not
+                    // page-relative and not root-relative — this file
+                    // ships as part of the shared bundle, loaded by pages
+                    // on other origins/repos entirely (e.g. via jsDelivr),
+                    // so a path resolved against the embedding page's own
+                    // origin can point at an asset that was never served
+                    // there. eco-openings.json always sits one level up
+                    // from dist/ (see build.js), alongside it, wherever
+                    // the bundle itself came from.
+                    const openingsUrl = SCRIPT_URL
+                        ? new URL('../assets/eco-openings.json', SCRIPT_URL).href
+                        : '/assets/eco-openings.json';
+                    openings = await fetch(openingsUrl).then(r => r.json());
                 } catch (e) {
                     return; // no network/asset — just skip the TOC rather than break the page
                 }
