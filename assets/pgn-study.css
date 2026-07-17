@@ -775,8 +775,35 @@ pgn-study .pgn-container .pgn-moves {
     column-count: 1;
 }
 
+/* Plain margin: auto centers a diagram within its own *immediate*
+   parent — fine for a mainline diagram (parent is .pgn-moves, the full
+   column width), but each .pgn-variation nesting level narrows and
+   right-shifts that parent (margin-left + border-left + padding-left,
+   ~2rem worth, compounding one level deeper each time — see the
+   .pgn-variation rules above), while a diagram's own --board-size
+   shrinks at a completely different rate (the 0.88/0.774/… ladder
+   above). Centering each diagram in its own ever-narrower, ever-more-
+   offset parent under those two independent, mismatched scales is
+   exactly what leaves diagrams at different depths visibly out of
+   line with each other instead of sharing one common center.
+
+   --diagram-indent carries that per-level offset — one declaration per
+   nesting depth, same ladder (and same reason) as --board-size's own
+   six-deep list above, rather than a single self-incrementing rule:
+   var(--diagram-indent) used inside --diagram-indent's own declaration
+   on the very same selector isn't the parent's already-computed value,
+   it's a genuine self-reference — CSS treats that as a cycle and the
+   property ends up invalid, not accumulating — so each depth needs its
+   own explicit total here, exactly as each depth already gets its own
+   explicit --board-size multiplier. */
+pgn-study .pgn-container .pgn-variation { --diagram-indent: calc(2rem + 2px); }
+pgn-study .pgn-container .pgn-variation .pgn-variation { --diagram-indent: calc(4rem + 4px); }
+pgn-study .pgn-container .pgn-variation .pgn-variation .pgn-variation { --diagram-indent: calc(6rem + 6px); }
+pgn-study .pgn-container .pgn-variation .pgn-variation .pgn-variation .pgn-variation { --diagram-indent: calc(8rem + 8px); }
+pgn-study .pgn-container .pgn-variation .pgn-variation .pgn-variation .pgn-variation .pgn-variation { --diagram-indent: calc(10rem + 10px); }
+pgn-study .pgn-container .pgn-variation .pgn-variation .pgn-variation .pgn-variation .pgn-variation .pgn-variation { --diagram-indent: calc(12rem + 12px); }
 pgn-study .pgn-container .cp-board-wrapper {
-    margin-left: auto;
+    margin-left: calc((100% - var(--diagram-max-width)) / 2 - (var(--diagram-indent, 0px) / 2));
     margin-right: auto;
 }
 
