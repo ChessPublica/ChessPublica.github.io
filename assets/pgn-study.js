@@ -812,14 +812,51 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
                still true means no immediate branch, so the tick loop
                actually starts; false means renderSubPicker() already
                paused it and is showing its own picker, and starting the
-               loop here would just plow straight through that pause. */
+               loop here would just plow straight through that pause.
+
+               engine.state.playing = false is what actually stops the
+               *mainline*'s own autoplay tick loop right here, not just
+               eventually: the picker (and this row) render the instant
+               engine.state.index reaches a branch — one tick before the
+               veto in goTo() below would actually fire and pause it —
+               so if the reader picks this row in that same window, the
+               main line's loop is still ticking. Its own next scheduled
+               tick lands on the vetoed step, and the veto's own
+               engine.pause() calls goTo() to re-render — which
+               unconditionally clears _variation (see pgn-player.js),
+               wiping out the variation just entered here out from under
+               the reader for no reason they could see. Setting this
+               false first means that stale tick's own
+               "if (!this.state.playing) return;" guard catches it
+               before any of that runs. */
             function enterAndPlayVariation(fens, moveAnnotations, verbose, variationObj) {
+                engine.state.playing = false;
                 engine.enterVariation(fens, moveAnnotations, 1, null, verbose, variationObj);
                 const v = engine._variation;
                 v.maxIndex = v.fens.length - 1;
                 v.playing = true;
                 engine.showVariationPosition(fens[1], null, verbose[0], null);
-                if (v.playing) engine._variationPlayTick(v, null);
+                /* _variationPlayTick(v, null) — passing ts=null directly,
+                   the way the sub-picker's own "continue" row and the
+                   auto-continue listener below both do — treats *this*
+                   call itself as the first move of a fresh autoplay run
+                   ("ts == null" skips the timing check entirely and
+                   advances right away, matching what a reader clicking
+                   Play expects: the very next move appears immediately,
+                   only later ones get spaced out). Both of those callers
+                   are resuming from wherever the board already sits, so
+                   that's exactly right. This one is different: the first
+                   move was already just shown above via
+                   showVariationPosition(fens[1], ...), so treating the
+                   tick's own first call as *another* "advance right
+                   away" skips straight to the second move instead of
+                   pacing normally from here — which is exactly what
+                   looked like "clicking 13...Nc7+ jumps straight to
+                   13...Ke7". Scheduling through requestAnimationFrame
+                   instead gives the tick a real timestamp on its first
+                   call, so its own delay check applies from the start
+                   rather than being bypassed once. */
+                if (v.playing) requestAnimationFrame((ts) => engine._variationPlayTick(v, ts));
             }
 
             // Mainline branch point: the move about to be played next from
@@ -1036,28 +1073,32 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
 
             /* goTo() (see pgn-player.js) auto-pauses whenever
                commentBox.update() reports "content" for the move just
-               played — and it treats a move with recorded PGN "(...)"
-               alternatives as content on its own, even with no actual
-               comment text, so it can render a preview of those
-               alternatives right in the comment box. pgn-study hides
-               that preview outright (.video-comment .variation-block
-               above) in favor of its own move-picker — which already
-               owns pausing at a branch, one ply *before* it, not after —
-               so left alone this fires a second, silent pause the
-               instant the picker's own choice is confirmed: nothing
-               changes on screen, but playback stops needing yet another
-               click to nudge it forward, immediately after the one that
-               was already supposed to resolve this exact branch.
-               Wrapping the update call to report only *real* content
-               (an actual comment or a [D]/[#] diagram) — never bare
-               alternatives — leaves every other reason to pause (a
-               genuine comment, a diagram) untouched, and does the same
-               for the DOM update itself, so nothing about what's
-               actually rendered changes either. */
+               played — and it treats both a move's recorded PGN "(...)"
+               alternatives AND a [D]/[#] diagram marker as content on
+               their own, even with no actual comment text, so it can
+               render an alternatives preview or an inline board
+               snapshot in the comment box. pgn-study hides that box
+               entirely (see .video-comment above) — the alternatives
+               preview is replaced by its own move-picker, which already
+               owns pausing at a branch, one ply *before* it, not after;
+               and a diagram is always just a snapshot of whatever
+               position is current, which the interactive board to its
+               left is already showing continuously, live, the whole
+               time — never something the reader could only see by
+               pausing here. Left unfiltered, either one fires a pause
+               with nothing on screen to explain it: a silent extra stop
+               right after the picker's own choice is confirmed, or a
+               dead stop on a move that happens to carry a diagram
+               marker and nothing else. Wrapping the update call to
+               report only real comment *text* as content — never bare
+               alternatives, never a diagram alone — leaves the one
+               genuine reason to pause (an actual comment) untouched,
+               and does the same for the DOM update itself, so nothing
+               about what's actually rendered changes either. */
             const originalCommentUpdate = engine.commentBox.update.bind(engine.commentBox);
             engine.commentBox.update = function (moveIndex, comments, variations, diagrams, ...rest) {
                 const hasContent = originalCommentUpdate(moveIndex, comments, variations, diagrams, ...rest);
-                return hasContent && !!(comments?.[moveIndex] || diagrams?.[moveIndex]);
+                return hasContent && !!comments?.[moveIndex];
             };
 
             updatePicker();
