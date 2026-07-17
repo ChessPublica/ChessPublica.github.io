@@ -222,18 +222,18 @@ pgn-study pgn-player {
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 1.1rem;
-        height: 2.75rem;
+        width: 0.85rem;
+        height: 2rem;
         background: #e4e4e7;
         border: 1px solid #d4d4d8;
-        border-radius: 0.5rem;
+        border-radius: 0.4rem;
         color: #71717a;
         pointer-events: none;
         transition: background 0.15s, border-color 0.15s;
     }
     .pgn-study-resizer-handle .lucide-icon {
-        width: 0.85rem;
-        height: 0.85rem;
+        width: 0.65rem;
+        height: 0.65rem;
     }
     .pgn-study-resizer:hover .pgn-study-resizer-handle,
     .pgn-study-resizer.dragging .pgn-study-resizer-handle {
