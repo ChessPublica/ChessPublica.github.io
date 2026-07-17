@@ -621,9 +621,17 @@ pgn-study pgn-player .play {
     display: none;
 }
 
-pgn-study pgn-player .video-comment .variation-block,
-pgn-study pgn-player .video-comment .comment-play-btn,
-pgn-study pgn-player .video-comment .comment-diagram {
+/* The reading column already shows every comment right next to the
+   move it belongs to (highlighted there instead when the player
+   reaches it — see .pgn-comment-active/.pgn-comment-inline.pgn-comment-active
+   below, and the cp-move/cp-variation-move listeners in pgn-study.js),
+   so showing the exact same text again under the board would just be
+   the same information twice. Hiding the box entirely rather than
+   picking off its individual pieces (as before) — nothing else ever
+   renders inside it here. Engine.goTo()/_updateVariationCommentBox()
+   still pause on a commented move exactly as before; only this box's
+   own visibility changes, not that pausing logic. */
+pgn-study pgn-player .video-comment {
     display: none;
 }
 
@@ -723,6 +731,29 @@ pgn-study .pgn-container .pgn-move-active {
 
 pgn-study .pgn-container .pgn-clickable-diagram.pgn-move-active {
     background: transparent;
+}
+
+/* Highlights the comment attached to whichever move the player is
+   currently paused on — see the cp-move/cp-variation-move listeners in
+   pgn-study.js — replacing the redundant copy <pgn-player>'s own
+   comment box used to show under the board (now hidden entirely, see
+   the .video-comment rule above). A distinct color from
+   .pgn-move-active's green so the two read as two different things at
+   a glance: green marks *where* the game is, this marks *what to read*
+   now that it's here. The transition is what makes it "pop" — an
+   instant color swap is easy to miss if the reader's already looking
+   at the board when it happens, a brief animated one draws the eye
+   over on its own. */
+pgn-study .pgn-container .pgn-comment.pgn-comment-active,
+pgn-study .pgn-container .pgn-comment-inline.pgn-comment-active {
+    background: #fff3cd;
+    box-shadow: 0 0 0 2px #fff3cd;
+    border-radius: 3px;
+    transition: background 0.4s ease, box-shadow 0.4s ease;
+}
+pgn-study .pgn-container p.pgn-comment.pgn-comment-active {
+    margin-left: -0.4rem;
+    padding-left: 0.4rem;
 }
 
 /* .pgn-comment carries its own padding-top (ChessPublica.css) on

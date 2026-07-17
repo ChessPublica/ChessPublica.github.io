@@ -769,14 +769,28 @@ function renderLine(node, parent, isVariation, plyCounter, options) {
                still set so a black move right after the comment gets
                its "N..." prefix reprinted — otherwise, reading "Qd5"
                straight after a full sentence looks like an unnumbered
-               continuation instead of a fresh move. */
-            buffer += formatComment(part.value) + " ";
+               continuation instead of a fresh move.
+
+               Wrapped in .pgn-comment-inline[data-fen] (opt-in, same as
+               .pgn-move above) so a host page can find and highlight
+               this exact comment once the player reaches the move it's
+               attached to — current.fen is the same value .pgn-move
+               just above carries, so the two need distinguishing by
+               class, not just the attribute, when matching one back. */
+            buffer += (clickable
+              ? '<span class="pgn-comment-inline" data-fen="' + current.fen + '">' + formatComment(part.value) + '</span>'
+              : formatComment(part.value)) + " ";
             needsMoveNumber = true;
           } else {
             flushBuffer(parent, buffer, isVariation);
             buffer = "";
             var p = document.createElement("p");
             p.className = "pgn-comment";
+            /* Same opt-in, mainline counterpart to data-fen above —
+               plyCounter.n was already incremented for this move by the
+               .pgn-move span built above, so the ply it's attached to is
+               one behind the counter's current value. */
+            if (clickable) p.dataset.ply = String(plyCounter.n - 1);
             p.innerHTML = formatComment(part.value);
             parent.appendChild(p);
             needsMoveNumber = true;
