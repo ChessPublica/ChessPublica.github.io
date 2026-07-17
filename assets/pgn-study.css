@@ -749,6 +749,7 @@ pgn-study .pgn-container .pgn-comment-inline.pgn-comment-active {
     background: #fff3cd;
     box-shadow: 0 0 0 2px #fff3cd;
     border-radius: 3px;
+    font-weight: bold;
     transition: background 0.4s ease, box-shadow 0.4s ease;
 }
 pgn-study .pgn-container p.pgn-comment.pgn-comment-active {
