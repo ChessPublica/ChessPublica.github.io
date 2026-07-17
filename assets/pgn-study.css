@@ -173,7 +173,7 @@ pgn-study pgn-player {
         align-items: stretch;
         padding: var(--frame-pad) var(--frame-pad) var(--frame-pad-bottom) var(--frame-pad);
     }
-    pgn-study pgn-player { --board-size: min(calc(400px * 1.25), 94cqw); }
+    pgn-study pgn-player { --board-size: min(calc(400px * 1.5), 94cqw); }
     /* Row 1, spanning every column (including the resizer track)
        — pgn-player/.pgn-study-resizer/.pgn-container have no
        placement rules of their own, so grid auto-flow puts them

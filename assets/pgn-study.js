@@ -151,8 +151,8 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
             /* One-way resize: dragging left (shrinking the board) is
                allowed down to a 20% floor. Dragging right can actually
                grow the board — up to the point where it hits its own
-               cap (500px, see "pgn-study pgn-player { --board-size:
-               min(calc(400px * 1.25), 94cqw) }" above): past that column
+               cap (600px, see "pgn-study pgn-player { --board-size:
+               min(calc(400px * 1.5), 94cqw) }" above): past that column
                width, the board can't grow any further, so widening the
                column more would only add empty padding around an
                already-maxed-out board — the drag stops right there
@@ -167,7 +167,7 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
                     - (parseFloat(getComputedStyle(studyEl).paddingRight) || 0)
                     - 6; // the resizer track itself
                 const min = totalWidth * 0.2;
-                const boardCapWidth = 500 / 0.94;
+                const boardCapWidth = 600 / 0.94;
                 const max = Math.min(boardCapWidth, totalWidth * 0.85);
                 return Math.min(Math.max(px, min), max);
             };
