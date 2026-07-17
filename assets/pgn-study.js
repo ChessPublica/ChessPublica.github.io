@@ -1,19 +1,20 @@
 /**
  * ChessPublica — <pgn-study>
  *
- * Turns a bare `<pgn-study>[PGN text]</pgn-study>` element into the full
- * framed study UI: ribbon (play/pause, table of contents, mobile article
- * toggle, settings, collapse/expand), loading placeholder, resizable
- * board/reading-column split, move picker, reading-column scroll sync,
- * and opening table of contents. A page's <body> needs nothing but the
- * one <pgn-study> element (holding the raw PGN text) plus the usual
+ * Turns a bare `<pgn-study>[PGN text]</pgn-study>` element — or a
+ * `<pgn-study src="...">` pointing at a PGN URL (e.g. a Lichess study/game
+ * export) — into the full framed study UI: ribbon (play/pause, table of
+ * contents, mobile article toggle, settings, collapse/expand), loading
+ * placeholder, resizable board/reading-column split, move picker,
+ * reading-column scroll sync, and opening table of contents. A page's
+ * <body> needs nothing but the one <pgn-study> element plus the usual
  * ChessPublica bundle script/stylesheet — see pgn-study/sadler/index.html
  * for a minimal example.
  */
 
 import { initPgnElements } from "./init.js";
 import { lucideIconUrl } from "./icons.js";
-import { toFigurine } from "./helpers.js";
+import { toFigurine, fetchText } from "./helpers.js";
 
 /* This page's <body> is nothing but a single <pgn-study> element holding
    the raw PGN text as its content — the ribbon, the loading placeholder,
@@ -104,32 +105,68 @@ class PgnStudyElement extends HTMLElement {
     const studyEl = this;
     studyEl.insertAdjacentHTML('beforebegin', LOADING_HTML);
 
-    /* <pgn-study> holds the PGN text exactly once. Split it into a real
-       <pgn-player> (left) and a real <pgn clickable-moves> (right) — the
-       same two elements this page always used, just built from one shared
-       source instead of two hand-kept-in-sync copies of the PGN.
-       initPgnElements() below (rather than waiting on ChessPublica's own
-       DOMContentLoaded init pass to eventually scan for it) is what
-       actually renders the new <pgn> tag — nothing about how
-       <pgn>/<pgn-player> themselves work is touched, only this element's
-       own markup.
+    /* <pgn-study> holds the PGN text exactly once — either inline as its
+       own content, or fetched from a `src` URL (e.g. a Lichess study/game
+       .pgn export), the same as <pgn-player src="..."> already supports.
+       Either way it ends up split into a real <pgn-player> (left) and a
+       real <pgn clickable-moves> (right) — the same two elements this
+       page always used, just built from one shared source instead of two
+       hand-kept-in-sync copies of the PGN. initPgnElements() below
+       (rather than waiting on ChessPublica's own DOMContentLoaded init
+       pass to eventually scan for it) is what actually renders the new
+       <pgn> tag — nothing about how <pgn>/<pgn-player> themselves work is
+       touched, only this element's own markup.
 
-       innerHTML (not textContent) both ways: <pgn-study>'s content was
-       parsed as real HTML by the browser like any element, so this
-       preserves inline HTML inside comments (<br>, <em>, …) exactly as the
-       original two separate blocks did — <pgn-player> reads it back via
-       .textContent (tags collapse away, same as before), <pgn> via
-       .innerHTML (tags survive, same as before). Read out before
-       RIBBON_HTML goes in below — otherwise studyEl.innerHTML would pick up
-       the ribbon markup too. */
-    const pgnHTML = studyEl.innerHTML;
+       Everything downstream (movesRoot lookup, move picker, reading
+       sync, TOC, …) assumes <pgn>'s move markup already exists the
+       instant initPgnElements() returns just below — true only if it
+       renders synchronously from inline text, since <pgn>'s own `src`
+       handling defers its fetch until it scrolls into view instead. So a
+       `src` here is fetched once, up front, and handed to both children
+       as if it were inline content, rather than forwarding `src` onto
+       each child and letting them fetch it twice, out of step with each
+       other. */
+    const src = studyEl.getAttribute('src');
+    let pgnText = null;
+    if (src) {
+      try {
+        pgnText = await fetchText(src);
+      } catch (e) {
+        document.getElementById('pgnStudyLoading')?.remove();
+        const err = document.createElement('div');
+        err.style.cssText = 'color:red;font-family:monospace;white-space:pre-wrap;padding:0.5rem;border:1px solid red;margin:1rem 0;';
+        err.textContent = `ChessPublica error: failed to load <pgn-study> from ${src}: ${e.message}`;
+        studyEl.before(err);
+        return;
+      }
+    }
+
+    /* innerHTML (not textContent), inline case only: <pgn-study>'s inline
+       content was parsed as real HTML by the browser like any element, so
+       reading it back this way preserves inline HTML inside comments
+       (<br>, <em>, …) exactly as the original two separate blocks did —
+       <pgn-player> reads it back via .textContent (tags collapse away,
+       same as before), <pgn> via .innerHTML (tags survive, same as
+       before). Read out before RIBBON_HTML goes in below — otherwise
+       studyEl.innerHTML would pick up the ribbon markup too.
+
+       Fetched text carries none of that trust, so it's assigned via
+       .textContent on both children instead of .innerHTML: any literal
+       "<"/"&" it happens to contain then round-trips back out as inert,
+       correctly-escaped text (via <pgn>'s own .innerHTML read inside
+       initPgnElements()) rather than being parsed as real markup. */
+    const pgnHTML = src ? null : studyEl.innerHTML;
 
     const playerEl = document.createElement('pgn-player');
-    playerEl.innerHTML = pgnHTML;
-
     const pgnEl = document.createElement('pgn');
     pgnEl.setAttribute('clickable-moves', '');
-    pgnEl.innerHTML = pgnHTML;
+    if (src) {
+      playerEl.textContent = pgnText;
+      pgnEl.textContent = pgnText;
+    } else {
+      playerEl.innerHTML = pgnHTML;
+      pgnEl.innerHTML = pgnHTML;
+    }
 
 const resizerEl = document.createElement('div');
 resizerEl.className = 'pgn-study-resizer';
