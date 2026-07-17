@@ -2398,18 +2398,47 @@ class VideoEngine {
     const ctx = this._fenMoveContext(branchFEN || v.fens[0] || fen);
     const isGameOver = index >= v.fens.length - 1;
 
-    this.commentBox.update(
+    const wasPlaying = v.playing;
+    const hasComment = this.commentBox.update(
       moveIdx,
       comments,
       children,
       diagrams,
       fen,
-      !v.playing,
+      !wasPlaying,
       branchFEN,
       ctx.fullMoveNum,
       ctx.isBlack,
       isGameOver
     );
+
+    /* Mirrors goTo()'s own autoplay-pauses-at-a-comment behavior for the
+       main line (see below) — a variation move with real content to show
+       (a comment or a [D]/[#] diagram; bare recorded alternatives don't
+       count, matching whatever commentBox.update() itself treats as
+       "content") stops autoplay so the reader can read it before the
+       next move replaces it, instead of ticking straight through with
+       nothing to indicate why the comment box just changed.
+       _pauseVariationPlay() flips session.playing off and notifies
+       listeners but doesn't re-render the comment box itself — do that
+       once more with isPaused now true so a host page's own "Continue"
+       button (hidden in pgn-study, shown elsewhere) appears immediately,
+       instead of only on the next manual step. */
+    if (wasPlaying && hasComment) {
+      this._pauseVariationPlay();
+      this.commentBox.update(
+        moveIdx,
+        comments,
+        children,
+        diagrams,
+        fen,
+        true,
+        branchFEN,
+        ctx.fullMoveNum,
+        ctx.isBlack,
+        isGameOver
+      );
+    }
   }
 
 
