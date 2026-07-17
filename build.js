@@ -69,12 +69,22 @@ async function main() {
     { cwd: ROOT, stdio: "inherit" },
   );
 
-  /* 3. Minify ChessPublica.css */
+  /* 3. Minify ChessPublica.css (+ pgn-study.css, concatenated first —
+     esbuild's single-file minify doesn't follow @import without
+     --bundle, so combine the source text ourselves instead, same as
+     the vendor JS/CSS concatenation above). */
+  const cssCombinedIn = path.join(DIST, "_ChessPublica combined.css");
+  writeFileSync(
+    cssCombinedIn,
+    readFileSync(path.join(ROOT, "assets/ChessPublica.css"), "utf8") + "\n"
+      + readFileSync(path.join(ROOT, "assets/pgn-study.css"), "utf8"),
+  );
   const cssOut = path.join(DIST, "ChessPublica.min.css");
   execSync(
-    `npx esbuild assets/ChessPublica.css --minify --outfile="${cssOut}"`,
+    `npx esbuild "${cssCombinedIn}" --minify --outfile="${cssOut}"`,
     { cwd: ROOT, stdio: "inherit" },
   );
+  unlinkSync(cssCombinedIn);
 
   /* 4. Assemble dist files */
   const bundleJs = readFileSync(bundleOut, "utf8");

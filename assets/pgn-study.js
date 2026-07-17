@@ -1,14 +1,19 @@
 /**
- * ChessPublica — PGN Study page
+ * ChessPublica — <pgn-study>
  *
  * Turns a bare `<pgn-study>[PGN text]</pgn-study>` element into the full
  * framed study UI: ribbon (play/pause, table of contents, mobile article
  * toggle, settings, collapse/expand), loading placeholder, resizable
  * board/reading-column split, move picker, reading-column scroll sync,
- * and opening table of contents. Pair with pgn-study.css and a page
- * whose <body> holds nothing but the one <pgn-study> element — see
- * pgn-study/sadler/index.html for a minimal example.
+ * and opening table of contents. A page's <body> needs nothing but the
+ * one <pgn-study> element (holding the raw PGN text) plus the usual
+ * ChessPublica bundle script/stylesheet — see pgn-study/sadler/index.html
+ * for a minimal example.
  */
+
+import { initPgnElements } from "./init.js";
+import { lucideIconUrl } from "./icons.js";
+import { toFigurine } from "./helpers.js";
 
 /* This page's <body> is nothing but a single <pgn-study> element holding
    the raw PGN text as its content — the ribbon, the loading placeholder,
@@ -85,35 +90,46 @@ const LOADING_HTML = `
         </div>
     </div>`;
 
-const studyEl = document.querySelector('pgn-study');
-studyEl.insertAdjacentHTML('beforebegin', LOADING_HTML);
+class PgnStudyElement extends HTMLElement {
 
-/* <pgn-study> holds the PGN text exactly once. Split it into a real
-   <pgn-player> (left) and a real <pgn clickable-moves> (right) — the
-   same two elements this page always used, just built from one shared
-   source instead of two hand-kept-in-sync copies of the PGN. Runs
-   synchronously (not on DOMContentLoaded) so both elements exist in
-   time for ChessPublica's own DOMContentLoaded init pass to pick up the
-   new <pgn> tag exactly like any other on the page — nothing about how
-   <pgn>/<pgn-player> themselves work is touched, only this page's
-   markup.
+  async connectedCallback() {
+    // Custom elements can in principle be disconnected and reconnected
+    // (e.g. moved elsewhere in the DOM) — guard against rebuilding the
+    // whole study a second time if that ever happens, rather than
+    // duplicating the ribbon/board/reading-column on top of what's
+    // already there.
+    if (this._cpInitialized) return;
+    this._cpInitialized = true;
 
-   innerHTML (not textContent) both ways: <pgn-study>'s content was
-   parsed as real HTML by the browser like any element, so this
-   preserves inline HTML inside comments (<br>, <em>, …) exactly as the
-   original two separate blocks did — <pgn-player> reads it back via
-   .textContent (tags collapse away, same as before), <pgn> via
-   .innerHTML (tags survive, same as before). Read out before
-   RIBBON_HTML goes in below — otherwise studyEl.innerHTML would pick up
-   the ribbon markup too. */
-const pgnHTML = studyEl.innerHTML;
+    const studyEl = this;
+    studyEl.insertAdjacentHTML('beforebegin', LOADING_HTML);
 
-const playerEl = document.createElement('pgn-player');
-playerEl.innerHTML = pgnHTML;
+    /* <pgn-study> holds the PGN text exactly once. Split it into a real
+       <pgn-player> (left) and a real <pgn clickable-moves> (right) — the
+       same two elements this page always used, just built from one shared
+       source instead of two hand-kept-in-sync copies of the PGN.
+       initPgnElements() below (rather than waiting on ChessPublica's own
+       DOMContentLoaded init pass to eventually scan for it) is what
+       actually renders the new <pgn> tag — nothing about how
+       <pgn>/<pgn-player> themselves work is touched, only this element's
+       own markup.
 
-const pgnEl = document.createElement('pgn');
-pgnEl.setAttribute('clickable-moves', '');
-pgnEl.innerHTML = pgnHTML;
+       innerHTML (not textContent) both ways: <pgn-study>'s content was
+       parsed as real HTML by the browser like any element, so this
+       preserves inline HTML inside comments (<br>, <em>, …) exactly as the
+       original two separate blocks did — <pgn-player> reads it back via
+       .textContent (tags collapse away, same as before), <pgn> via
+       .innerHTML (tags survive, same as before). Read out before
+       RIBBON_HTML goes in below — otherwise studyEl.innerHTML would pick up
+       the ribbon markup too. */
+    const pgnHTML = studyEl.innerHTML;
+
+    const playerEl = document.createElement('pgn-player');
+    playerEl.innerHTML = pgnHTML;
+
+    const pgnEl = document.createElement('pgn');
+    pgnEl.setAttribute('clickable-moves', '');
+    pgnEl.innerHTML = pgnHTML;
 
 const resizerEl = document.createElement('div');
 resizerEl.className = 'pgn-study-resizer';
@@ -124,12 +140,20 @@ const resizerHandle = document.createElement('span');
 resizerHandle.className = 'pgn-study-resizer-handle';
 const resizerHandleIcon = document.createElement('span');
 resizerHandleIcon.className = 'lucide-icon';
-resizerHandleIcon.style.setProperty('--icon', window.ChessPublica.lucideIconUrl('grip-vertical'));
+resizerHandleIcon.style.setProperty('--icon', lucideIconUrl('grip-vertical'));
 resizerHandle.appendChild(resizerHandleIcon);
 resizerEl.appendChild(resizerHandle);
 
 studyEl.replaceChildren(playerEl, resizerEl, pgnEl);
 studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
+
+// Renders the freshly-created <pgn> tag right away — same renderer
+// ChessPublica's own DOMContentLoaded pass would eventually reach it
+// with (it skips anything already rendered, keyed off a data attribute
+// it sets — see init.js), just not waiting for that pass to get here on
+// its own, since everything below depends on .pgn-container already
+// existing.
+initPgnElements();
 
         /* Drag-to-resize the board/reading-list columns (desktop grid
            layout only — the resizer is display:none in the stacked
@@ -241,14 +265,14 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
         // collapse toggle's own icon starts as "circle-x" (expanded —
         // click to collapse); syncCollapseToggle() below swaps it to
         // "maximize-2" (collapsed — click to expand) and back.
-        document.getElementById('pgnStudyPlayPauseIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('circle-play'));
-        document.getElementById('pgnStudyTocIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('list'));
-        document.getElementById('pgnStudySettingsIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('settings'));
+        document.getElementById('pgnStudyPlayPauseIcon').style.setProperty('--icon', lucideIconUrl('circle-play'));
+        document.getElementById('pgnStudyTocIcon').style.setProperty('--icon', lucideIconUrl('list'));
+        document.getElementById('pgnStudySettingsIcon').style.setProperty('--icon', lucideIconUrl('settings'));
         // Same "A≡" glyph pgn.js/pgn-player.js already use for a game's own
         // title byline (.video-title-emoji) — already the site's existing
         // shorthand for "article text", so reused here rather than adding
         // a new icon to assets/icons.js's curated set.
-        document.getElementById('pgnStudyArticleIcon').style.setProperty('--icon', window.ChessPublica.lucideIconUrl('text-initial'));
+        document.getElementById('pgnStudyArticleIcon').style.setProperty('--icon', lucideIconUrl('text-initial'));
 
         /* ARTICLE ribbon button (mobile only — see its own CSS) — a plain
            layout toggle with no engine/board dependency at all, so it's
@@ -279,7 +303,7 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
             collapseToggle.title = label;
             collapseToggle.setAttribute('aria-label', label);
             collapseToggle.setAttribute('aria-pressed', String(collapsed));
-            collapseIcon.style.setProperty('--icon', window.ChessPublica.lucideIconUrl(collapsed ? 'maximize-2' : 'circle-x'));
+            collapseIcon.style.setProperty('--icon', lucideIconUrl(collapsed ? 'maximize-2' : 'circle-x'));
         }
         function setCollapsed(collapsed) {
             if (studyEl.classList.contains('pgn-study-collapsed') === collapsed) return;
@@ -361,11 +385,10 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
                move from its own comment box — since neither has a
                mainline ply index to hand to goTo())
            The left column itself stays put via the sticky CSS above. */
-        document.addEventListener('DOMContentLoaded', async () => {
-            // <pgn> only becomes `.pgn-container` (see init.js) once
-            // ChessPublica's own DOMContentLoaded listener has run — it
-            // was registered before this one, so that's already true by
-            // the time this fires.
+        {
+            // <pgn> became `.pgn-container` synchronously above, via the
+            // explicit initPgnElements() call right after it was created
+            // — nothing here needs to wait for anything further.
             const movesRoot = studyEl.querySelector('.pgn-container .pgn-moves');
             if (!movesRoot) {
                 // Nothing to sync, but still a reason not to leave the
@@ -646,7 +669,7 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
             const playPauseIcon = document.getElementById('pgnStudyPlayPauseIcon');
             const syncPlayPauseButton = () => {
                 const playing = engine.state.playing || !!(engine._variation && engine._variation.playing);
-                playPauseIcon.style.setProperty('--icon', window.ChessPublica.lucideIconUrl(playing ? 'pause' : 'circle-play'));
+                playPauseIcon.style.setProperty('--icon', lucideIconUrl(playing ? 'pause' : 'circle-play'));
                 playPauseBtn.title = playing ? 'Pause' : 'Play';
                 playPauseBtn.setAttribute('aria-label', playing ? 'Pause' : 'Play');
             };
@@ -732,7 +755,6 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
             const playIconUrl = playerEl.querySelector('.play .lucide-icon')?.style.getPropertyValue('--icon');
             if (playIconUrl) pickerEl.style.setProperty('--icon', playIconUrl);
 
-            const toFigurine = window.ChessPublica.toFigurine;
             const formatLabel = (san, fullNum, isBlack) =>
                 `${fullNum}${isBlack ? '…' : '.'} ${toFigurine(san)}`;
 
@@ -1379,7 +1401,12 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
 
                 let openings;
                 try {
-                    openings = await fetch('../../assets/eco-openings.json').then(r => r.json());
+                    // Root-relative, not page-relative — this file ships
+                    // as part of the shared bundle now, so it can't
+                    // assume anything about how deep the page embedding
+                    // <pgn-study> lives (see index.html's own use of
+                    // root-relative asset paths for the same reason).
+                    openings = await fetch('/assets/eco-openings.json').then(r => r.json());
                 } catch (e) {
                     return; // no network/asset — just skip the TOC rather than break the page
                 }
@@ -1513,4 +1540,8 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
                 const move = clickedIndex > 0 ? innermost.verbose[clickedIndex - 1] : null;
                 engine.showVariationPosition(innermost.fens[clickedIndex], null, move, null);
             }
-        });
+        }
+  }
+}
+
+customElements.define("pgn-study", PgnStudyElement);

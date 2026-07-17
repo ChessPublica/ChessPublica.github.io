@@ -10,9 +10,11 @@
  *   <pgn>           — Annotated game viewer (static)
  *   <fen>           — Static board from FEN string
  *   <puzzle>        — Single interactive puzzle
+ *   <pgn-study>     — Framed study page (interactive board + reading column)
  */
 
 import "./pgn-player.js";
+import "./pgn-study.js";
 import { toFigurine, parseGame } from "./helpers.js";
 import { createBoard } from "./board.js";
 import { buildMoveTree, parseHeaders, renderFullPGN } from "./pgn.js";
