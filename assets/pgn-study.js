@@ -496,7 +496,16 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
 
             playerEl.addEventListener('cp-move', (e) => {
                 const moveIndex = e.detail.moveIndex;
-                if (moveIndex == null || moveIndex < 0) { setActiveMove(null); setActiveComment(null); return; }
+                if (moveIndex == null || moveIndex < 0) {
+                    // The starting position — no move to highlight, but
+                    // an intro comment before the first move (see pgn.js's
+                    // own preComments, tagged data-ply="-1" the same way)
+                    // is still worth flagging active, same as any other
+                    // move's own comment.
+                    setActiveMove(null);
+                    setActiveComment(movesRoot.querySelector('.pgn-comment[data-ply="-1"]'));
+                    return;
+                }
 
                 const target = movesRoot.querySelector(`.pgn-move[data-ply="${moveIndex}"]`);
                 if (!target) { setActiveMove(null); setActiveComment(null); return; }
