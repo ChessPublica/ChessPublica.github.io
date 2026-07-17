@@ -752,42 +752,20 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
                 if (v.playing) engine._variationPlayTick(v, null);
             }
 
-            // Mainline branch point: state.moves[moveIdx] has recorded PGN
-            // "(...)" alternatives (state.variations[moveIdx]) — one row
-            // per alternative, plus a bold row for the move the game
-            // actually continues with ("continue reading" — resumes
-            // normal playback). goTo() auto-pauses one ply *past* this
-            // move (moveIdx already played, board showing the result) —
-            // rewound below so the picker instead shows the position the
-            // choice is made FROM, with nothing committed yet.
+            // Mainline branch point: the move about to be played next from
+            // here (engine.state.moves[moveIdx], where moveIdx ===
+            // engine.state.index — nothing past this point has been
+            // played yet) has recorded PGN "(...)" alternatives
+            // (engine.state.variations[moveIdx]) — one row per
+            // alternative, plus a bold row for the move the game actually
+            // continues with. The wrapped engine.goTo() below (see its
+            // own comment) is what keeps the engine sitting right here
+            // instead of auto-playing that move and landing one ply past
+            // it, so branchFEN below is simply the position already on
+            // the board — nothing needs rewinding to get there.
             function renderMainlinePicker(moveIdx) {
                 const alternatives = moveIdx >= 0 ? engine.state.variations[moveIdx] : null;
                 if (!alternatives || !alternatives.length) return;
-
-                if (engine.state.index === moveIdx + 1) {
-                    // Deferred, not called right here: goTo()'s own dispatch of
-                    // the "cp-move" that led to this call can still be mid-
-                    // flight several frames up the stack (its auto-pause-on-
-                    // variation logic calls pause(), which re-enters goTo() and
-                    // dispatches *from there* before the original call below
-                    // gets to dispatching its own) - rewinding the position
-                    // synchronously here would leave that still-pending outer
-                    // dispatch to fire afterward and read the already-rewound
-                    // index, misreading it as a *different* position and
-                    // wiping the very picker this call is about to build.
-                    // Queueing it as a microtask instead lets that whole
-                    // nested dispatch chain finish first (its own leftover
-                    // dispatch ends up reporting the *unrewound* index, same
-                    // as lastPicker below, so updatePicker()'s own guard
-                    // quietly absorbs it) — only then does the board actually
-                    // move back.
-                    queueMicrotask(() => {
-                        if (engine.state.index !== moveIdx + 1) return; // moved on before this ran
-                        suppressPickerUpdate = true;
-                        engine.goTo(moveIdx);
-                        suppressPickerUpdate = false;
-                    });
-                }
 
                 const branchFEN = engine.state.cache[moveIdx];
                 const ctx = fenMoveContext(branchFEN);
@@ -795,7 +773,7 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
                 const mainlineRow = makeRow(
                     formatLabel(engine.state.moves[moveIdx], ctx.fullMoveNum, ctx.isBlack),
                     true,
-                    () => engine.play(), // steps forward onto moveIdx itself, then resumes autoplay past it
+                    () => { allowNextAdvance = true; engine.play(); },
                 );
                 setActiveRow(mainlineRow); // pre-selected as the default Space/click choice
 
@@ -804,56 +782,31 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
                     const { fens, verbose } = replayMoves(branchFEN, variation.moves);
                     if (verbose.length === 0) return; // even the first move failed
 
-                    // No engine.pause() here — the engine is already
-                    // paused by the time this picker has any rows (goTo()
-                    // auto-pauses on a move with variations; calling it
-                    // again would fire a redundant "cp-move" for no
-                    // reason, though the guard in updatePicker() below
-                    // would no-op it harmlessly either way).
                     makeRow(formatLabel(variation.moves[0], ctx.fullMoveNum, ctx.isBlack), false, () => {
                         enterAndPlayVariation(fens, variation.moveAnnotations, verbose, variation);
                     });
                 });
             }
 
-            // Sub-variation branch point: variationObj.moves[index - 1] (a
-            // move *inside* the variation currently being viewed) has
-            // recorded nested alternatives (variationObj.childrenByMove
-            // [index - 1]) — same idea as renderMainlinePicker() above,
-            // one nesting level deeper, and recurses to any depth the
-            // same way (each child clicked becomes the new
-            // engine._variation.variationObj, so this function runs again
-            // against *its* childrenByMove next).
+            // Sub-variation branch point: variationObj.moves[index] (the
+            // move about to be played next *within this variation* —
+            // index === engine._variation.index, nothing past this point
+            // of the variation played yet) has recorded nested
+            // alternatives (variationObj.childrenByMove[index]) — same
+            // idea as renderMainlinePicker() above, one nesting level
+            // deeper, and recurses to any depth the same way (each child
+            // clicked becomes the new engine._variation.variationObj, so
+            // this function runs again against *its* childrenByMove
+            // next). index === 0 (the variation was just entered — see
+            // enterAndPlayVariation() above — and hasn't played even its
+            // own first move yet) is excluded by updatePicker() below,
+            // same reasoning as ever: nothing played yet to attach a
+            // picker to at that exact point.
             function renderSubPicker(variationObj, index) {
-                if (index <= 0) return; // the branch point itself, before any move of this variation — nothing played yet to attach a picker to
-                const children = variationObj.childrenByMove && variationObj.childrenByMove[index - 1];
+                const children = variationObj.childrenByMove && variationObj.childrenByMove[index];
                 if (!children || !children.length) return;
 
-                // A branch point was reached mid-playback — stop right
-                // here instead of continuing past it, mirroring goTo()'s
-                // own pause-on-variation behavior for the mainline. A
-                // no-op when we arrived via single-step (arrow keys)
-                // rather than the spacebar/auto-play tick loop.
-                if (engine._variation && engine._variation.playing) {
-                    engine._pauseVariationPlay();
-                }
-
-                // Same rewind as renderMainlinePicker() above (see its own
-                // comment for why this is deferred rather than called right
-                // here): variationGoTo() auto-pauses one ply *past* this
-                // move (index - 1 already played) — step back so the
-                // picker shows the position the choice is made FROM instead.
-                if (engine._variation && engine._variation.index === index) {
-                    const v = engine._variation;
-                    queueMicrotask(() => {
-                        if (engine._variation !== v || v.index !== index) return; // moved on before this ran
-                        suppressPickerUpdate = true;
-                        engine.variationGoTo(index - 1);
-                        suppressPickerUpdate = false;
-                    });
-                }
-
-                const branchFEN = engine._variation.fens[index - 1];
+                const branchFEN = engine._variation.fens[index];
                 const ctx = fenMoveContext(branchFEN);
 
                 // "Continue" — resume *this* variation's own playback
@@ -862,14 +815,12 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
                 // is nothing further in it to continue into.
                 if (index < variationObj.moves.length) {
                     const continueRow = makeRow(
-                        formatLabel(variationObj.moves[index - 1], ctx.fullMoveNum, ctx.isBlack),
+                        formatLabel(variationObj.moves[index], ctx.fullMoveNum, ctx.isBlack),
                         true,
                         () => {
-                            // First tick steps from index-1 onto index itself
-                            // (revealing this move), then keeps going same as
-                            // ever — see _variationPlayTick()'s own advance.
                             const v = engine._variation;
                             if (!v) return;
+                            allowNextAdvance = true;
                             v.maxIndex = v.fens.length - 1;
                             v.playing = true;
                             engine._variationPlayTick(v, null);
@@ -909,23 +860,16 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
                 return true;
             }
 
-            // Set around the rewind goTo()/variationGoTo() calls inside
-            // renderMainlinePicker()/renderSubPicker() (both defined above)
-            // — those move the position backward by one ply to show a
-            // branch point *before* it's committed, which fires its own
-            // "cp-move"/"cp-variation-move" straight back into this
-            // function. picksSame() alone can't catch that reentry (the
-            // rewound position is a genuinely different one from
-            // lastPicker), so this short-circuits it explicitly instead.
-            let suppressPickerUpdate = false;
-
             function updatePicker() {
-                if (suppressPickerUpdate) return;
                 let next;
                 if (!engine._variation) {
-                    next = { kind: 'main', moveIdx: engine.state.index - 1 };
+                    const moveIdx = engine.state.index;
+                    const alternatives = moveIdx >= 0 ? engine.state.variations[moveIdx] : null;
+                    next = (alternatives && alternatives.length) ? { kind: 'main', moveIdx } : { kind: 'none' };
                 } else if (engine._variation.variationObj) {
-                    next = { kind: 'sub', variationObj: engine._variation.variationObj, index: engine._variation.index };
+                    const index = engine._variation.index;
+                    const children = index > 0 ? engine._variation.variationObj.childrenByMove?.[index] : null;
+                    next = (children && children.length) ? { kind: 'sub', variationObj: engine._variation.variationObj, index } : { kind: 'none' };
                 } else {
                     // A variation entered without a variationObj (the
                     // reading column's own variation-move clicks don't
@@ -945,6 +889,80 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
                 else if (next.kind === 'sub') renderSubPicker(next.variationObj, next.index);
                 syncPickerFocus();
             }
+
+            /* Auto-play (the tick loop) and single-step navigation alike
+               normally advance one ply at a time by calling
+               goTo()/variationGoTo() with the very next index — including
+               a move that has recorded PGN "(...)" alternatives, which is
+               exactly the position the picker above wants to show
+               *before*, not after. An earlier version let that move play
+               (and animate onto the board) and then rewound one ply once
+               the picker noticed it should have stopped sooner — correct
+               in the end, but each half of that round trip is its own
+               animated piece slide (chessboard.js — see board.js), which
+               together read as the move playing and then immediately
+               un-playing itself.
+
+               Wrapping goTo()/variationGoTo() to simply refuse that one
+               specific step avoids the animation ever starting: the
+               position just never leaves the branch point on its own.
+               The one legitimate case that *does* need the exact same
+               step to go through is a row's own click handler above
+               ("continue" or resuming a variation's playback past its own
+               branch) — allowNextAdvance below is set by those two click
+               handlers immediately before they step forward, and nothing
+               else, specifically so it means "the reader just clicked
+               this exact row", not merely "this branch's picker happens
+               to be showing" (which is true the instant the picker
+               renders, well before any click — the very next tick of the
+               *auto-play* loop would otherwise read as having "already
+               shown" it too, defeating the whole point of pausing here).
+
+               goTo()'s own callers aren't consistent about *when* they
+               update state.index relative to calling it — play() and the
+               tick loop both do "state.index++; goTo(state.index)",
+               mutating it *before* the call, while arrow-key/TOC/reading-
+               column navigation instead pass "state.index + 1" as a
+               plain argument, leaving the field itself untouched until
+               goTo() runs. Reading engine.state.index in here can't tell
+               those apart — by the time some calls arrive it already
+               equals the target, not the position still on the board.
+               Tracking that separately (updated only when a call is
+               actually let through below) sidesteps the inconsistency
+               entirely. variationGoTo()'s own callers are consistent
+               (none of them pre-mutate engine._variation.index), so it
+               reads that directly instead. */
+            let allowNextAdvance = false;
+            let currentBoardIndex = engine.state.index;
+            const originalGoTo = engine.goTo.bind(engine);
+            engine.goTo = function (i) {
+                if (i === currentBoardIndex + 1) {
+                    const moveIdx = i - 1;
+                    const alternatives = engine.state.variations[moveIdx];
+                    if (alternatives && alternatives.length && !allowNextAdvance) {
+                        engine.state.index = currentBoardIndex; // undo play()/the tick loop's own pre-increment above
+                        engine.pause(); // re-renders the unchanged current position, paused
+                        return;
+                    }
+                }
+                allowNextAdvance = false;
+                currentBoardIndex = i;
+                return originalGoTo(i);
+            };
+            const originalVariationGoTo = engine.variationGoTo.bind(engine);
+            engine.variationGoTo = function (index) {
+                const v = engine._variation;
+                if (v && v.variationObj && index === v.index + 1) {
+                    const branchIdx = v.index;
+                    const children = v.variationObj.childrenByMove?.[branchIdx];
+                    if (children && children.length && !allowNextAdvance) {
+                        engine._pauseVariationPlay(); // re-dispatches at the unchanged current position, paused
+                        return;
+                    }
+                }
+                allowNextAdvance = false;
+                return originalVariationGoTo(index);
+            };
 
             updatePicker();
             playerEl.addEventListener('cp-move', updatePicker);
