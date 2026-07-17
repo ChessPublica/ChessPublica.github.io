@@ -235,7 +235,8 @@ function loadPGN(pgn) {
      MAIN LOOP
   --------------------------- */
 
-  for (const t of tokens) {
+  for (let ti = 0; ti < tokens.length; ti++) {
+    const t = tokens[ti];
 
     /* ENTER VARIATION */
     if (t.type === "var_start") {
@@ -266,10 +267,31 @@ function loadPGN(pgn) {
            first main-line move exists (e.g. a comment-only preamble), so
            there's nothing to attach this to yet. */
         if (parentMoveIndex >= 0) {
-          if (!variations[parentMoveIndex]) {
-            variations[parentMoveIndex] = [];
+          /* Usually a "(...)" immediately follows the exact move it's an
+             alternative to, so parentMoveIndex (the move just parsed) is
+             the right slot. But some annotators write the alternatives to
+             a reply BEFORE writing the reply itself — e.g. "10.Nxe4
+             (10...Bf5 ...) (10...Bg4 ...) 10...O-O" — so the variation
+             actually replaces the *next* main-line move, not the one just
+             parsed. The explicit "10..." move number the author included
+             right where the variation starts says which ply they meant,
+             even though the plain move-count (moveIndex) can't tell the
+             two cases apart on its own — so use it instead of guessing:
+             a leading move number whose color doesn't match the move at
+             parentMoveIndex means this variation belongs one slot later,
+             attached once that move is actually parsed. */
+          let anchorIndex = parentMoveIndex;
+          const leadToken = tokens[ti + 1];
+          if (leadToken && leadToken.type === "text" && isMoveNumber(leadToken.value)) {
+            const leadIsBlack = /^\d+\.\.\./.test(leadToken.value);
+            if (leadIsBlack !== moveContext(parentMoveIndex).isBlack) {
+              anchorIndex = parentMoveIndex + 1;
+            }
           }
-          variations[parentMoveIndex].push(newVar);
+          if (!variations[anchorIndex]) {
+            variations[anchorIndex] = [];
+          }
+          variations[anchorIndex].push(newVar);
         }
       } else if (varStack.length > 0) {
         /* Nested variation (depth 2+) — an alternative to one of the
