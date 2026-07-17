@@ -584,7 +584,7 @@ export function renderMoveTree(rootNode, container, headers, options) {
      stays full-size since it isn't "inside a comment" at all. */
   if (rootNode.startDiagram) {
     var startWrapper = createBoard(movesDiv, rootNode.startDiagram.fen, rootNode.startDiagram, { small: rootNode.startDiagram.fromComment });
-    markDiagramClickable(startWrapper, rootNode.startDiagram.fen, null, options);
+    markDiagramClickable(startWrapper, rootNode.startDiagram.fen, null, options, -1);
   }
 
   if (rootNode.preComments && rootNode.preComments.length) {
@@ -621,14 +621,29 @@ function renderNAG(nags) {
    diagram's `.cp-board-wrapper` (returned by createBoard()) with the
    FEN (and, for a move-attached diagram, the from/to squares) a host
    page needs to jump <pgn-player> to that position. `node` is null for
-   the game's opening diagram (no preceding move to draw an arrow for). */
-function markDiagramClickable(wrapper, fen, node, options) {
+   the game's opening diagram (no preceding move to draw an arrow for).
+
+   `ply` additionally carries the same 0-based mainline ply index
+   .pgn-move[data-ply] spans use — passed only for a main-line diagram
+   (undefined for one inside a variation, which has no such flat index
+   to give — see renderLine()'s own doc comment) — so a click handler
+   already keyed off data-ply (a plain goTo(), which is what actually
+   makes <pgn-player> re-evaluate whether this position is a branch
+   point and needs to show a picker) treats a main-line diagram exactly
+   like the move it's attached to, rather than falling back to the
+   variation-preview path (showVariationPosition(), which never touches
+   state.index and so never re-triggers that check) that data-fen alone
+   would otherwise send it down. */
+function markDiagramClickable(wrapper, fen, node, options, ply) {
   if (!wrapper || !options || !options.clickableMoves) return;
   wrapper.classList.add("pgn-clickable-diagram");
   wrapper.dataset.fen = fen;
   if (node && node.from && node.to) {
     wrapper.dataset.from = node.from;
     wrapper.dataset.to = node.to;
+  }
+  if (ply !== undefined && ply !== null) {
+    wrapper.dataset.ply = String(ply);
   }
 }
 
@@ -770,7 +785,7 @@ function renderLine(node, parent, isVariation, plyCounter, options) {
           flushBuffer(parent, buffer, isVariation);
           buffer = "";
           var diagWrapper = createBoard(parent, current.fen, current, { small: true });
-          markDiagramClickable(diagWrapper, current.fen, current, options);
+          markDiagramClickable(diagWrapper, current.fen, current, options, isVariation ? undefined : plyCounter.n - 1);
           needsMoveNumber = true;
         }
       }
