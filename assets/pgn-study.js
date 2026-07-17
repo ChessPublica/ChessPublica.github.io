@@ -991,6 +991,32 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
                 return originalVariationGoTo(index);
             };
 
+            /* goTo() (see pgn-player.js) auto-pauses whenever
+               commentBox.update() reports "content" for the move just
+               played — and it treats a move with recorded PGN "(...)"
+               alternatives as content on its own, even with no actual
+               comment text, so it can render a preview of those
+               alternatives right in the comment box. pgn-study hides
+               that preview outright (.video-comment .variation-block
+               above) in favor of its own move-picker — which already
+               owns pausing at a branch, one ply *before* it, not after —
+               so left alone this fires a second, silent pause the
+               instant the picker's own choice is confirmed: nothing
+               changes on screen, but playback stops needing yet another
+               click to nudge it forward, immediately after the one that
+               was already supposed to resolve this exact branch.
+               Wrapping the update call to report only *real* content
+               (an actual comment or a [D]/[#] diagram) — never bare
+               alternatives — leaves every other reason to pause (a
+               genuine comment, a diagram) untouched, and does the same
+               for the DOM update itself, so nothing about what's
+               actually rendered changes either. */
+            const originalCommentUpdate = engine.commentBox.update.bind(engine.commentBox);
+            engine.commentBox.update = function (moveIndex, comments, variations, diagrams, ...rest) {
+                const hasContent = originalCommentUpdate(moveIndex, comments, variations, diagrams, ...rest);
+                return hasContent && !!(comments?.[moveIndex] || diagrams?.[moveIndex]);
+            };
+
             updatePicker();
             playerEl.addEventListener('cp-move', updatePicker);
             playerEl.addEventListener('cp-variation-move', updatePicker);
