@@ -836,7 +836,27 @@ studyEl.insertAdjacentHTML('afterbegin', RIBBON_HTML);
                 v.maxIndex = v.fens.length - 1;
                 v.playing = true;
                 engine.showVariationPosition(fens[1], null, verbose[0], null);
-                if (v.playing) engine._variationPlayTick(v, null);
+                /* _variationPlayTick(v, null) — passing ts=null directly,
+                   the way the sub-picker's own "continue" row and the
+                   auto-continue listener below both do — treats *this*
+                   call itself as the first move of a fresh autoplay run
+                   ("ts == null" skips the timing check entirely and
+                   advances right away, matching what a reader clicking
+                   Play expects: the very next move appears immediately,
+                   only later ones get spaced out). Both of those callers
+                   are resuming from wherever the board already sits, so
+                   that's exactly right. This one is different: the first
+                   move was already just shown above via
+                   showVariationPosition(fens[1], ...), so treating the
+                   tick's own first call as *another* "advance right
+                   away" skips straight to the second move instead of
+                   pacing normally from here — which is exactly what
+                   looked like "clicking 13...Nc7+ jumps straight to
+                   13...Ke7". Scheduling through requestAnimationFrame
+                   instead gives the tick a real timestamp on its first
+                   call, so its own delay check applies from the start
+                   rather than being bypassed once. */
+                if (v.playing) requestAnimationFrame((ts) => engine._variationPlayTick(v, ts));
             }
 
             // Mainline branch point: the move about to be played next from
