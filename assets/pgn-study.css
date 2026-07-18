@@ -8,28 +8,21 @@
  * pgn-study/sadler/index.html for a minimal page that uses it.
  */
 
-/* This page is exactly one 90vw x 90vh frame (or its loading-
-   placeholder stand-in), each centered with a flat 5vh top/bottom
-   margin — 5vh + 90vh + 5vh should sum to exactly 100vh, but
-   margin collapsing/vh rounding can leave body a hair taller
-   than the viewport, letting it scroll by a few px. That's more
-   than just an unwanted scrollbar: the close (X) button below is
-   position:fixed (viewport-relative, so its offset lines up with
-   the frame without needing to be its DOM descendant), while the
-   frame itself scrolls with the page like normal content — the
-   two visibly drift apart the moment that scroll is possible.
-   Killing body/html scroll entirely removes the drift along with
-   the scrollbar, and costs nothing on *this* page: nothing here
-   is meant to need it (the frame's own columns already scroll
-   independently — see the overflow-y rules below). But this file
-   ships inside the shared bundle now, loaded by every page on the
-   site, not just ones with a <pgn-study> frame — an unscoped
-   html/body selector was killing scroll everywhere. Gate it on
-   the frame's actual presence instead. */
-html:has(pgn-study), body:has(pgn-study) {
-    height: 100%;
-    overflow: hidden;
-}
+/* This page used to be locked to exactly one 90vw x 90vh frame with
+   nothing else on it, which is why an earlier version of this rule
+   killed body/html scroll entirely — a stray close button was
+   position:fixed (viewport-relative) and drifted from the frame the
+   moment the page could scroll even a stray px. That button is gone
+   (the collapse/expand toggle now lives in the ribbon's normal flow —
+   see .pgn-study-collapse-toggle below), so there's nothing left that
+   depends on the viewport and page scroll being locked together.
+   More importantly, locking the whole page's scroll was never this
+   frame's call to make: <pgn-study> ships in the shared bundle now,
+   loaded on any page that wants one, possibly alongside other content
+   that page still needs to scroll past. The frame contains its own
+   layout via its own overflow: hidden below and the overflow-y rules
+   on its columns further down — it doesn't need or get to reach
+   outside itself and lock <html>/<body> to do that. */
 pgn-study {
     --frame-pad: 1.5rem;
     /* Bottom gets less than the other three sides — with the
