@@ -159,3 +159,8 @@ dialog::backdrop{background:rgb(0 0 0/.5)}
 .nag-more{display:grid;gap:.35rem}
 .nag-toggle{display:inline-flex;align-items:center;gap:.3rem;justify-self:start;border:0;background:none;color:var(--muted);padding:.15rem .3rem;font-size:.8rem}
 .nag-toggle:hover{color:var(--text)}
+
+/* Keep board overlays (shapes, promotion picker) inside the board's own stacking context
+   so they never paint over the sticky top bar when the page is scrolled. */
+.board-wrap{isolation:isolate}
+.topbar{z-index:20}
