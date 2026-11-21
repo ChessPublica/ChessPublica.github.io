@@ -251,7 +251,7 @@
     if (h.ChapterName) return h.ChapterName;
     if (h.White || h.Black) return (h.White || "?") + " – " + (h.Black || "?");
     if (h.Event) return h.Event;
-    return "Lesson " + (i + 1);
+    return "Game " + (i + 1);
   }
   function allPgn() { return study.chapters.map(chapterPgn).join("\n"); }
 
@@ -403,7 +403,7 @@
   function renderTree() {
     var ch = chap(), t = $("tree"), keep = t.scrollTop, html = "";
     html += '<div class="intro' + (ch.sel === ch.root ? " cur" : "") + '" data-id="' + ch.root.id + '">' +
-      (ch.root.comment ? escHtml(ch.root.comment) : "Start position — click to write a lesson introduction") + "</div>";
+      (ch.root.comment ? escHtml(ch.root.comment) : "Start position — click to write a game introduction") + "</div>";
     html += treeHtml(ch.root.children[0], false);
     t.innerHTML = html;
     t.scrollTop = keep;
@@ -448,7 +448,7 @@
     var c = $("comment");
     if (document.activeElement !== c || c.dataset.nid !== String(n.id)) c.value = stripShapes(n.comment);
     c.dataset.nid = n.id;
-    c.placeholder = isRoot ? "Lesson introduction…" : "Comment on this move… (**bold**, *italic* supported)";
+    c.placeholder = isRoot ? "Game introduction…" : "Comment on this move… (**bold**, *italic* supported)";
     var isVar = !isRoot && n.parent.children[0] !== n;
     $("n-promote").disabled = !isVar;
     $("n-main").disabled = !isVar;
@@ -456,7 +456,7 @@
   }
 
   var HDR_FIELDS = ["ChapterName", "Event", "Site", "Date", "Round", "White", "Black", "Result", "WhiteElo", "BlackElo", "ECO", "Annotator"];
-  var HDR_LABEL = { ChapterName: "Lesson name", Event: "Event", Site: "Site", Date: "Date", Round: "Round", White: "White", Black: "Black", Result: "Result", WhiteElo: "White Elo", BlackElo: "Black Elo", ECO: "ECO", Annotator: "Annotator" };
+  var HDR_LABEL = { ChapterName: "Game name", Event: "Event", Site: "Site", Date: "Date", Round: "Round", White: "White", Black: "Black", Result: "Result", WhiteElo: "White Elo", BlackElo: "Black Elo", ECO: "ECO", Annotator: "Annotator" };
   function renderHeaders() {
     var form = $("headers-form"), ch = chap();
     if (form.contains(document.activeElement) && form.dataset.ci === String(study.cur)) return;
@@ -505,7 +505,7 @@
     if (select !== false) study.cur = first;
     changed(); render();
     var w = chs.reduce(function (a, c) { return a + (c.warnings || 0); }, 0);
-    toast(chs.length + " lesson(s) added" + (w ? " — " + w + " illegal move(s) skipped (" + chs[0].bad.slice(0, 3).join(", ") + ")" : ""));
+    toast(chs.length + " game(s) added" + (w ? " — " + w + " illegal move(s) skipped (" + chs[0].bad.slice(0, 3).join(", ") + ")" : ""));
   }
   function isPristine(ch) { return !ch.root.children.length && !ch.root.comment && !Object.keys(ch.h).some(function (k) { return ch.h[k] && k !== "Result"; }); }
 
@@ -527,7 +527,7 @@
     study.chapters.splice(study.cur + 1, 0, c); study.cur++; changed(); render();
   };
   $("ch-del").onclick = function () {
-    if (!confirm("Delete this lesson?")) return;
+    if (!confirm("Delete this game?")) return;
     study.chapters.splice(study.cur, 1);
     if (!study.chapters.length) study.chapters.push(freshChapter());
     study.cur = Math.min(study.cur, study.chapters.length - 1); changed(); render();
@@ -541,7 +541,7 @@
   $("ch-up").onclick = function () { moveChapter(-1); };
   $("ch-down").onclick = function () { moveChapter(1); };
   $("ch-paste").onclick = function () {
-    openDialog("Paste PGN (multiple games = multiple lessons)", "", "Add", function (txt) { addChapters(parsePgn(txt)); });
+    openDialog("Paste PGN (one or more games)", "", "Add", function (txt) { addChapters(parsePgn(txt)); });
   };
   $("study-name").oninput = function (e) { study.name = e.target.value; changed(); };
 
@@ -652,7 +652,7 @@
     setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
   }
   function slug(s) { return (s || "").toLowerCase().replace(/[^a-z0-9ğüşıöç]+/gi, "-").replace(/^-+|-+$/g, "") || ""; }
-  function studyFileBase() { return slug(study.name) || slug(chapterTitle(study.chapters[0], 0)) || "collection"; }
+  function studyFileBase() { return slug(study.name) || slug(chapterTitle(study.chapters[0], 0)) || "article"; }
 
   $("btn-save-pgn").onclick = function () { download(studyFileBase() + ".pgn", allPgn(), "application/x-chess-pgn"); dirty = false; };
   $("btn-save-md").onclick = function () { saveMd(); };
@@ -670,8 +670,8 @@
           var chs = parsePgn(txt);
           if (!chs.length) { toast(f.name + ": no valid PGN found."); return; }
           var replace = isPristine(study.chapters[0]) && study.chapters.length === 1;
-          if (!replace) replace = confirm("Open \"" + f.name + "\" in place of the current collection?\n\nOK = replace the collection\nCancel = add as lesson(s)");
-          if (replace) { study.chapters = chs; study.cur = 0; study.name = f.name.replace(/\.[^.]+$/, ""); dirty = false; changed(); render(); toast(f.name + " opened — " + chs.length + " lesson(s)"); }
+          if (!replace) replace = confirm("Open \"" + f.name + "\" in place of the current article?\n\nOK = replace the article\nCancel = add as game(s)");
+          if (replace) { study.chapters = chs; study.cur = 0; study.name = f.name.replace(/\.[^.]+$/, ""); dirty = false; changed(); render(); toast(f.name + " opened — " + chs.length + " game(s)"); }
           else addChapters(chs);
           showView("editor");
         }
@@ -1064,7 +1064,7 @@
       var l = engine.lines[k], li = el("li");
       li.appendChild(el("span", { class: "sc" }, scoreText(l)));
       li.appendChild(el("span", { class: "pv" }, pvSan(engine.fen, l.pv, 10)));
-      var b = el("button", { type: "button", title: "Add this line to the collection as a variation", "aria-label": "Add line as variation", class: "icon-btn" }); b.appendChild(iconEl("plus"));
+      var b = el("button", { type: "button", title: "Add this line to the article as a variation", "aria-label": "Add line as variation", class: "icon-btn" }); b.appendChild(iconEl("plus"));
       b.onclick = function () { addLine(engine.fen, l.pv.slice(0, 10)); };
       li.appendChild(b); ol.appendChild(li);
     });

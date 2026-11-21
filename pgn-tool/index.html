@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PGN Tool — ChessPublica</title>
-    <meta name="description" content="Lichess-inspired PGN editor: lessons, variations, comments. Create, open and save PGN and Markdown files.">
+    <meta name="description" content="Lichess-inspired PGN editor: games, variations, comments. Create, open and save PGN and Markdown files.">
     <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
     <meta name="theme-color" content="#18181b">
     <link rel="stylesheet" href="../dist/ChessPublica.all.min.css">
@@ -64,9 +64,9 @@
             <button id="btn-open" class="icon-btn" title="Open a PGN or Markdown file (or drop it on the page)" aria-label="Open file"><svg class="ic" aria-hidden="true"><use href="#i-folder-open"/></svg></button>
         </div>
         <div class="btn-group">
-            <button id="btn-save-pgn" class="icon-btn primary" title="Download the whole collection as .pgn" aria-label="Download PGN"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg><span class="badge">PGN</span></button>
+            <button id="btn-save-pgn" class="icon-btn primary" title="Download the whole article as .pgn" aria-label="Download PGN"><svg class="ic" aria-hidden="true"><use href="#i-download"/></svg><span class="badge">PGN</span></button>
             <button id="btn-save-md" class="icon-btn" title="Download as a Markdown file" aria-label="Download Markdown"><svg class="ic" aria-hidden="true"><use href="#i-file-down"/></svg><span class="badge">MD</span></button>
-            <button id="btn-print" class="icon-btn" title="Print the collection (or the Markdown preview) / save as PDF" aria-label="Print"><svg class="ic" aria-hidden="true"><use href="#i-printer"/></svg></button>
+            <button id="btn-print" class="icon-btn" title="Print the article (or the Markdown preview) / save as PDF" aria-label="Print"><svg class="ic" aria-hidden="true"><use href="#i-printer"/></svg></button>
         </div>
         <input type="file" id="file-input" accept=".pgn,.md,.markdown,.txt,text/plain" multiple hidden>
     </div>
@@ -75,20 +75,20 @@
 <main id="view-editor" class="view">
     <aside class="chapters">
         <div class="pane-head">
-            <input id="study-name" class="study-name" placeholder="Collection name" aria-label="Collection name">
+            <input id="study-name" class="study-name" placeholder="Article name" aria-label="Article name">
         </div>
         <ol id="chapter-list" class="chapter-list"></ol>
         <div class="chapter-actions">
             <div class="btn-group">
-            <button id="ch-add" class="icon-btn" title="Add an empty lesson" aria-label="Add an empty lesson"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg></button>
-            <button id="ch-fen" class="icon-btn" title="Add a lesson from a FEN" aria-label="Add a lesson from a FEN"><svg class="ic" aria-hidden="true"><use href="#i-file-input"/></svg></button>
-            <button id="ch-paste" class="icon-btn" title="Add lesson(s) by pasting PGN" aria-label="Add lesson(s) by pasting PGN"><svg class="ic" aria-hidden="true"><use href="#i-clipboard-paste"/></svg></button>
-            <button id="ch-dup" class="icon-btn" title="Duplicate lesson" aria-label="Duplicate lesson"><svg class="ic" aria-hidden="true"><use href="#i-copy-plus"/></svg></button>
+            <button id="ch-add" class="icon-btn" title="Add an empty game" aria-label="Add an empty game"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg></button>
+            <button id="ch-fen" class="icon-btn" title="Add a game from a FEN" aria-label="Add a game from a FEN"><svg class="ic" aria-hidden="true"><use href="#i-file-input"/></svg></button>
+            <button id="ch-paste" class="icon-btn" title="Add game(s) by pasting PGN" aria-label="Add game(s) by pasting PGN"><svg class="ic" aria-hidden="true"><use href="#i-clipboard-paste"/></svg></button>
+            <button id="ch-dup" class="icon-btn" title="Duplicate game" aria-label="Duplicate game"><svg class="ic" aria-hidden="true"><use href="#i-copy-plus"/></svg></button>
             </div>
             <div class="btn-group">
-            <button id="ch-up" class="icon-btn" title="Move lesson up" aria-label="Move lesson up"><svg class="ic" aria-hidden="true"><use href="#i-arrow-up"/></svg></button>
-            <button id="ch-down" class="icon-btn" title="Move lesson down" aria-label="Move lesson down"><svg class="ic" aria-hidden="true"><use href="#i-arrow-down"/></svg></button>
-            <button id="ch-del" class="icon-btn danger" title="Delete lesson" aria-label="Delete lesson"><svg class="ic" aria-hidden="true"><use href="#i-trash-2"/></svg></button>
+            <button id="ch-up" class="icon-btn" title="Move game up" aria-label="Move game up"><svg class="ic" aria-hidden="true"><use href="#i-arrow-up"/></svg></button>
+            <button id="ch-down" class="icon-btn" title="Move game down" aria-label="Move game down"><svg class="ic" aria-hidden="true"><use href="#i-arrow-down"/></svg></button>
+            <button id="ch-del" class="icon-btn danger" title="Delete game" aria-label="Delete game"><svg class="ic" aria-hidden="true"><use href="#i-trash-2"/></svg></button>
             </div>
         </div>
     </aside>
@@ -120,7 +120,7 @@
         <div class="fen-row">
             <input id="fen-view" readonly aria-label="FEN">
             <button id="fen-copy" class="icon-btn" title="Copy FEN" aria-label="Copy FEN"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg></button>
-            <button id="fen-new" class="icon-btn" title="New lesson from this position" aria-label="New lesson from this position"><svg class="ic" aria-hidden="true"><use href="#i-grid-2x2-plus"/></svg></button>
+            <button id="fen-new" class="icon-btn" title="New game from this position" aria-label="New game from this position"><svg class="ic" aria-hidden="true"><use href="#i-grid-2x2-plus"/></svg></button>
         </div>
         <p class="hint">Drag a piece to make a move. A move that differs from the existing continuation is added as a variation.</p>
     </section>
@@ -142,7 +142,7 @@
                 <div class="evalbar"><div id="eval-fill" class="eval-fill"></div><span id="eval-text">–</span></div>
                 <div id="eng-status" class="msg">Engine is off.</div>
                 <ol id="eng-lines-out" class="eng-lines"></ol>
-                <p class="hint">Runs Stockfish in your browser (loaded from a CDN on first use). “+” adds a line to the collection as a variation; the best move is drawn as a blue arrow.</p>
+                <p class="hint">Runs Stockfish in your browser (loaded from a CDN on first use). “+” adds a line to the article as a variation; the best move is drawn as a blue arrow.</p>
             </div>
         </section>
         <nav class="subtabs">
@@ -176,11 +176,11 @@
 
         <div id="pane-pgn" class="pane" hidden>
             <div class="pgn-actions">
-                <label><input type="radio" name="pgn-scope" value="study" checked> Whole collection</label>
-                <label><input type="radio" name="pgn-scope" value="chapter"> This lesson</label>
+                <label><input type="radio" name="pgn-scope" value="study" checked> Whole article</label>
+                <label><input type="radio" name="pgn-scope" value="chapter"> This game</label>
                 <span class="spacer"></span>
                 <button id="pgn-copy" class="icon-btn" title="Copy PGN" aria-label="Copy PGN"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg></button>
-                <button id="pgn-apply" class="icon-btn primary" title="Apply the text changes to the collection" aria-label="Apply the text changes to the collection"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg></button>
+                <button id="pgn-apply" class="icon-btn primary" title="Apply the text changes to the article" aria-label="Apply the text changes to the article"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg></button>
             </div>
             <textarea id="pgn-text" spellcheck="false"></textarea>
             <div id="pgn-msg" class="msg"></div>
@@ -201,8 +201,8 @@
         </div>
         <div class="btn-group">
             <button class="icon-btn" data-md="fen" title="Insert the current board position as a &lt;fen&gt; block" aria-label="Insert the current board position as a &lt;fen&gt; block"><svg class="ic" aria-hidden="true"><use href="#i-layout-grid"/></svg></button>
-            <button class="icon-btn" data-md="pgn" title="Insert the current lesson as a &lt;pgn&gt; block" aria-label="Insert the current lesson as a &lt;pgn&gt; block"><svg class="ic" aria-hidden="true"><use href="#i-swords"/></svg></button>
-            <button id="md-from-study" class="icon-btn" title="Generate Markdown from the whole collection (replaces current content)" aria-label="Generate Markdown from the whole collection"><svg class="ic" aria-hidden="true"><use href="#i-wand-sparkles"/></svg></button>
+            <button class="icon-btn" data-md="pgn" title="Insert the current game as a &lt;pgn&gt; block" aria-label="Insert the current game as a &lt;pgn&gt; block"><svg class="ic" aria-hidden="true"><use href="#i-swords"/></svg></button>
+            <button id="md-from-study" class="icon-btn" title="Generate Markdown from the whole article (replaces current content)" aria-label="Generate Markdown from the whole article"><svg class="ic" aria-hidden="true"><use href="#i-wand-sparkles"/></svg></button>
         </div>
         <div class="btn-group">
             <button id="md-open" class="icon-btn" title="Open a Markdown file" aria-label="Open a Markdown file"><svg class="ic" aria-hidden="true"><use href="#i-folder-open"/></svg></button>
