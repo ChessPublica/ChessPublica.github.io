@@ -522,7 +522,7 @@
     if (select !== false) study.cur = first;
     changed(); render();
     var w = chs.reduce(function (a, c) { return a + (c.warnings || 0); }, 0);
-    toast(chs.length + " game(s) added" + (w ? " — " + w + " illegal move(s) skipped (" + chs[0].bad.slice(0, 3).join(", ") + ")" : ""));
+    toast(chs.length + " game(s) added" + (w ? " — " + w + " illegal move(s) skipped (" + chs.reduce(function (a, c) { return a.concat(c.bad || []); }, []).slice(0, 3).join(", ") + ")" : ""));
   }
   function isPristine(ch) { return !ch.root.children.length && !ch.root.comment && !Object.keys(ch.h).some(function (k) { return ch.h[k] && k !== "Result"; }); }
 
@@ -558,13 +558,54 @@
   $("ch-up").onclick = function () { moveChapter(-1); };
   $("ch-down").onclick = function () { moveChapter(1); };
   $("ch-paste").onclick = function () {
-    openDialog("Paste PGN (one or more games)", "", "Add", function (txt) { addChapters(parsePgn(txt)); });
+    openDialog("Paste PGN (one or more games) — or a Lichess link", "", "Add", function (txt) {
+      if (/^https?:\/\/\S+$/.test(txt.trim())) importFromUrl(txt.trim()); else addChapters(parsePgn(txt));
+    });
   };
+  $("ch-lichess").onclick = function () {
+    openDialog("Paste a Lichess study, chapter or game link", "", "Import", function (txt) {
+      var u = txt.trim();
+      if (!u) return;
+      importFromUrl(u);
+    }, { rows: 3, placeholder: "https://lichess.org/study/XXXXXXXX/YYYYYYYY" });
+  };
+
+  /* Lichess web routes don't send CORS headers; /api/* routes do. Rewrite the
+     common routes (study, study chapter, single game) to their API equivalents. */
+  function normalizeLichessUrl(src) {
+    var m = src.match(/^https?:\/\/(?:www\.)?lichess\.org\/(.*)$/i);
+    if (!m) return src;
+    var path = m[1].replace(/[?#].*$/, "").replace(/\/+$/, ""), mm;
+    if ((mm = path.match(/^api\//))) return src;
+    if ((mm = path.match(/^study\/([^/]+)\/([^/.]+)(?:\.pgn)?$/))) return "https://lichess.org/api/study/" + mm[1] + "/" + mm[2] + ".pgn";
+    if ((mm = path.match(/^study\/([^/.]+)(?:\.pgn)?$/))) return "https://lichess.org/api/study/" + mm[1] + ".pgn";
+    if ((mm = path.match(/^([a-zA-Z0-9]{8})(?:[a-zA-Z0-9]{4})?(?:\/(?:white|black))?(?:\.pgn)?$/))) return "https://lichess.org/game/export/" + mm[1] + ".pgn";
+    return src;
+  }
+  function importFromUrl(url) {
+    var api = normalizeLichessUrl(url);
+    toast("Loading…");
+    fetch(api, { headers: { Accept: "application/x-chess-pgn" } }).then(function (r) {
+      if (!r.ok) throw new Error(r.status === 404 || r.status === 403 ? "not found or private (HTTP " + r.status + ")" : "HTTP " + r.status);
+      return r.text();
+    }).then(function (txt) {
+      var chs = parsePgn(txt);
+      if (!chs.length) throw new Error("no PGN found at that link");
+      /* A Lichess study name becomes the article name if the article is still unnamed */
+      var sn = /\[StudyName "([^"]+)"\]/.exec(txt);
+      if (sn && !study.name) { study.name = sn[1]; }
+      addChapters(chs);
+    }).catch(function (e) {
+      toast("Could not import: " + (e && e.message ? e.message : e));
+    });
+  }
   $("study-name").oninput = function (e) { study.name = e.target.value; changed(); };
 
   /* ---------- Diyalog ---------- */
-  function openDialog(title, text, okLabel, cb) {
+  function openDialog(title, text, okLabel, cb, opts) {
     var d = $("dlg");
+    $("dlg-text").rows = (opts && opts.rows) || 12;
+    $("dlg-text").placeholder = (opts && opts.placeholder) || "";
     $("dlg-title").textContent = title; $("dlg-text").value = text; $("dlg-ok").textContent = okLabel;
     d.onclose = function () { if (d.returnValue === "ok") cb($("dlg-text").value); };
     d.returnValue = ""; d.showModal(); $("dlg-text").focus();
