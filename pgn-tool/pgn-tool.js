@@ -376,6 +376,11 @@
     });
   }
 
+  /* Figurine algebraic notation for display only (same glyphs as the rest of ChessPublica) */
+  var FIG = { K: "♔", Q: "♕", R: "♖", B: "♗", N: "♘" };
+  function figurine(san) {
+    return san.replace(/^[KQRBN]/, function (p) { return FIG[p]; }).replace(/=([KQRBN])/, function (_, p) { return "=" + FIG[p]; });
+  }
   function nagStr(n) { return n.nags.map(function (g) { return NAG_SYMBOL[g] || ("$" + g); }).join(""); }
 
   function treeHtml(start, force) {
@@ -386,7 +391,7 @@
       out += '<span class="mv' + (n === sn ? " cur" : "") + '" data-id="' + n.id + '">';
       if (white) out += '<span class="num">' + parts[5] + ".</span>";
       else if (force) out += '<span class="num">' + parts[5] + "…</span>";
-      out += escHtml(n.san) + escHtml(nagStr(n)) + "</span> ";
+      out += escHtml(figurine(n.san)) + escHtml(nagStr(n)) + "</span> ";
       force = false;
       if (n.comment) { out += '<span class="cm" data-id="' + n.id + '">' + escHtml(n.comment.replace(/\[%[^\]]*\]\s*/g, "")) + "</span> "; force = true; }
       var p = n.parent;
