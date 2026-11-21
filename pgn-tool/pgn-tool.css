@@ -53,7 +53,9 @@ textarea{resize:vertical}
 .cm{color:var(--muted);font-style:italic;font-weight:400;font-size:.88rem;margin:0 .2rem;cursor:pointer}
 .intro{color:var(--muted);font-style:italic;margin-bottom:.5rem;cursor:pointer;padding:.1rem .2rem;border-radius:4px}.intro.cur{background:var(--cur)}
 .annot{margin-top:.6rem;display:grid;gap:.5rem}
-.nags{display:flex;flex-wrap:wrap;gap:.25rem}.nags button{padding:.15rem .5rem;min-width:2.1rem}.nags button.on{background:var(--accent);color:var(--accent-fg)}
+.nags{display:grid;gap:.35rem;max-height:170px;overflow:auto;padding:.1rem}
+.nag-group{display:flex;flex-wrap:wrap;gap:.25rem;align-items:center}
+.nag-label{flex:0 0 100%;font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}.nags button{padding:.15rem .5rem;min-width:2.1rem}.nags button.on{background:var(--accent);color:var(--accent-fg)}
 .nags .gap{width:.6rem}
 .node-actions{display:flex;gap:.4rem;flex-wrap:wrap}.node-actions button{font-size:.8rem}
 .headers-form{display:grid;grid-template-columns:110px 1fr auto;gap:.4rem;align-items:center}

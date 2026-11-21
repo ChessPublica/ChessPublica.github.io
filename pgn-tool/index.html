@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PGN Tool — ChessPublica</title>
-    <meta name="description" content="Lichess-study-style PGN editor: chapters, variations, comments. Create, open and save PGN and Markdown files.">
+    <meta name="description" content="Lichess-inspired PGN editor: lessons, variations, comments. Create, open and save PGN and Markdown files.">
     <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
     <meta name="theme-color" content="#18181b">
     <link rel="stylesheet" href="../dist/ChessPublica.all.min.css">
@@ -19,8 +19,8 @@
     </nav>
     <div class="topbar-actions">
         <button id="btn-open" title="Open a PGN or Markdown file (or drop it on the page)">Open…</button>
-        <button id="btn-save-pgn" class="primary" title="Download the whole study as .pgn">Download PGN</button>
-        <button id="btn-print" title="Print the study (or the Markdown preview) / save as PDF">Print</button>
+        <button id="btn-save-pgn" class="primary" title="Download the whole collection as .pgn">Download PGN</button>
+        <button id="btn-print" title="Print the collection (or the Markdown preview) / save as PDF">Print</button>
         <button id="btn-save-md" title="Download as a Markdown file">Download MD</button>
         <input type="file" id="file-input" accept=".pgn,.md,.markdown,.txt,text/plain" multiple hidden>
     </div>
@@ -29,13 +29,13 @@
 <main id="view-editor" class="view">
     <aside class="chapters">
         <div class="pane-head">
-            <input id="study-name" class="study-name" placeholder="Study name" aria-label="Study name">
+            <input id="study-name" class="study-name" placeholder="Collection name" aria-label="Collection name">
         </div>
         <ol id="chapter-list" class="chapter-list"></ol>
         <div class="chapter-actions">
-            <button id="ch-add" title="Add an empty chapter">+ Chapter</button>
-            <button id="ch-fen" title="Add a chapter from a FEN">From FEN</button>
-            <button id="ch-paste" title="Add chapter(s) by pasting PGN">Paste PGN</button>
+            <button id="ch-add" title="Add an empty lesson">+ Lesson</button>
+            <button id="ch-fen" title="Add a lesson from a FEN">From FEN</button>
+            <button id="ch-paste" title="Add lesson(s) by pasting PGN">Paste PGN</button>
             <button id="ch-dup">Duplicate</button>
             <button id="ch-up" title="Move up">↑</button>
             <button id="ch-down" title="Move down">↓</button>
@@ -65,7 +65,7 @@
         <div class="fen-row">
             <input id="fen-view" readonly aria-label="FEN">
             <button id="fen-copy">Copy</button>
-            <button id="fen-new" title="New chapter from this position">Chapter from position</button>
+            <button id="fen-new" title="New lesson from this position">Lesson from position</button>
         </div>
         <p class="hint">Drag a piece to make a move. A move that differs from the existing continuation is added as a variation.</p>
     </section>
@@ -87,7 +87,7 @@
                 <div class="evalbar"><div id="eval-fill" class="eval-fill"></div><span id="eval-text">–</span></div>
                 <div id="eng-status" class="msg">Engine is off.</div>
                 <ol id="eng-lines-out" class="eng-lines"></ol>
-                <p class="hint">Runs Stockfish in your browser (loaded from a CDN on first use). “+” adds a line to the study as a variation; the best move is drawn as a blue arrow.</p>
+                <p class="hint">Runs Stockfish in your browser (loaded from a CDN on first use). “+” adds a line to the collection as a variation; the best move is drawn as a blue arrow.</p>
             </div>
         </section>
         <nav class="subtabs">
@@ -119,11 +119,11 @@
 
         <div id="pane-pgn" class="pane" hidden>
             <div class="pgn-actions">
-                <label><input type="radio" name="pgn-scope" value="study" checked> Whole study</label>
-                <label><input type="radio" name="pgn-scope" value="chapter"> This chapter</label>
+                <label><input type="radio" name="pgn-scope" value="study" checked> Whole collection</label>
+                <label><input type="radio" name="pgn-scope" value="chapter"> This lesson</label>
                 <span class="spacer"></span>
                 <button id="pgn-copy">Copy</button>
-                <button id="pgn-apply" class="primary" title="Apply the text changes to the study">Apply</button>
+                <button id="pgn-apply" class="primary" title="Apply the text changes to the collection">Apply</button>
             </div>
             <textarea id="pgn-text" spellcheck="false"></textarea>
             <div id="pgn-msg" class="msg"></div>
@@ -142,8 +142,8 @@
         <button data-md="quote">Quote</button>
         <span class="sep"></span>
         <button data-md="fen" title="Insert the current board position as a &lt;fen&gt; block">+ Position (FEN)</button>
-        <button data-md="pgn" title="Insert the current chapter as a &lt;pgn&gt; block">+ Chapter (PGN)</button>
-        <button id="md-from-study" title="Generate Markdown from the whole study (replaces current content)">Generate from study</button>
+        <button data-md="pgn" title="Insert the current lesson as a &lt;pgn&gt; block">+ Lesson (PGN)</button>
+        <button id="md-from-study" title="Generate Markdown from the whole collection (replaces current content)">Generate from collection</button>
         <button id="md-open">Open MD…</button>
         <button id="md-save" class="primary">Download MD</button>
         <button id="md-html" title="Download the preview as a standalone .html page">Download HTML</button>
