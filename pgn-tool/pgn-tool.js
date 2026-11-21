@@ -376,6 +376,11 @@
     });
   }
 
+  /* Figurine algebraic notation for display only (same glyphs as the rest of ChessPublica) */
+  var FIG = { K: "♔", Q: "♕", R: "♖", B: "♗", N: "♘" };
+  function figurine(san) {
+    return san.replace(/^[KQRBN]/, function (p) { return FIG[p]; }).replace(/=([KQRBN])/, function (_, p) { return "=" + FIG[p]; });
+  }
   function nagStr(n) { return n.nags.map(function (g) { return NAG_SYMBOL[g] || ("$" + g); }).join(""); }
 
   function treeHtml(start, force) {
@@ -386,7 +391,7 @@
       out += '<span class="mv' + (n === sn ? " cur" : "") + '" data-id="' + n.id + '">';
       if (white) out += '<span class="num">' + parts[5] + ".</span>";
       else if (force) out += '<span class="num">' + parts[5] + "…</span>";
-      out += escHtml(n.san) + escHtml(nagStr(n)) + "</span> ";
+      out += escHtml(figurine(n.san)) + escHtml(nagStr(n)) + "</span> ";
       force = false;
       if (n.comment) { out += '<span class="cm" data-id="' + n.id + '">' + escHtml(n.comment.replace(/\[%[^\]]*\]\s*/g, "").replace(/\[(?:D|#)\]/g, "▦")) + "</span> "; force = true; }
       var p = n.parent;
@@ -416,10 +421,12 @@
 
   /* Groups where only one glyph makes sense at a time */
   var EXCLUSIVE = { "Move quality": true, "Evaluation": true };
+  var ALWAYS_SHOWN = { "Move quality": true, "Evaluation": true };
+  var nagsExpanded = false;
   function renderAnnot() {
     var n = sel(), isRoot = !n.parent;
     var box = $("nags"); box.innerHTML = "";
-    var groups = [], byName = {};
+    var groups = [], byName = {}, more = el("div", { class: "nag-more" });
     NAG_TABLE.forEach(function (r) {
       if (!byName[r[3]]) { byName[r[3]] = []; groups.push(r[3]); }
       byName[r[3]].push(r);
@@ -443,8 +450,17 @@
         };
         sec.appendChild(b);
       });
-      box.appendChild(sec);
+      if (ALWAYS_SHOWN[name]) box.appendChild(sec);
+      else more.appendChild(sec);
     });
+    var hiddenCount = n.nags.filter(function (g) { return NAG_TABLE.some(function (r) { return r[0] === g && !ALWAYS_SHOWN[r[3]]; }); }).length;
+    var toggle = el("button", { type: "button", class: "nag-toggle", "aria-expanded": String(nagsExpanded) });
+    toggle.appendChild(iconEl(nagsExpanded ? "chevron-up" : "chevron-down"));
+    toggle.appendChild(el("span", null, nagsExpanded ? "Show less" : "Show more" + (hiddenCount ? " (" + hiddenCount + " set)" : "")));
+    toggle.onclick = function () { nagsExpanded = !nagsExpanded; renderAnnot(); };
+    more.hidden = !nagsExpanded;
+    box.appendChild(toggle);
+    box.appendChild(more);
     $("insert-diagram").classList.toggle("on", /\[D\]/.test(n.comment));
     var c = $("comment");
     if (document.activeElement !== c || c.dataset.nid !== String(n.id)) c.value = stripShapes(n.comment);
