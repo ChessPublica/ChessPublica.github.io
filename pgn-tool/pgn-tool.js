@@ -310,6 +310,7 @@
       [n.from, n.to].forEach(function (sq) { var s = wrap.querySelector(".square-" + sq); if (s) s.classList.add("hl"); });
     }
     $("fen-view").value = n.fen;
+    renderShapes();
   }
 
   /* ================================================================
@@ -318,6 +319,7 @@
   function render() {
     renderChapters();
     updateBoard();
+    engineAnalyze();
     renderTree();
     renderAnnot();
     renderHeaders();
@@ -392,7 +394,7 @@
     }
     MOVE_NAGS.forEach(addBtn); box.appendChild(el("span", { class: "gap" })); EVAL_NAGS.forEach(addBtn);
     var c = $("comment");
-    if (document.activeElement !== c || c.dataset.nid !== String(n.id)) c.value = n.comment;
+    if (document.activeElement !== c || c.dataset.nid !== String(n.id)) c.value = stripShapes(n.comment);
     c.dataset.nid = n.id;
     c.placeholder = isRoot ? "Chapter introduction…" : "Comment on this move… (**bold**, *italic* supported)";
     var isVar = !isRoot && n.parent.children[0] !== n;
@@ -536,7 +538,8 @@
   });
 
   $("comment").addEventListener("input", function (e) {
-    sel().comment = e.target.value; changed(); renderTree();
+    var pre = shapePrefix(sel().comment);
+    sel().comment = (pre && e.target.value ? pre + " " : pre) + e.target.value; changed(); renderTree();
     if (!sel().parent) renderChapters();
   });
   $("n-del").onclick = function () {
@@ -758,12 +761,279 @@
     download((slug(t) || "page") + ".html", html, "text/html");
   };
 
+
+  /* ================================================================
+     SHAPES — arrows ([%cal]) and square circles ([%csl])
+  ================================================================ */
+  var SHAPE_COLORS = { G: "#15781b", R: "#882020", B: "#003088", Y: "#e68f00" };
+  var CMD_RE = /\[%(?:cal|csl)\s+[^\]]*\]\s*/g;
+  function stripShapes(c) { return c.replace(CMD_RE, "").trim(); }
+  function shapePrefix(c) { return (c.match(CMD_RE) || []).map(function (s) { return s.trim(); }).join(" "); }
+
+  function getShapes(c) {
+    var arrows = [], circles = [], m;
+    var cal = /\[%cal\s+([^\]]*)\]/g, csl = /\[%csl\s+([^\]]*)\]/g;
+    while ((m = cal.exec(c))) m[1].split(/[\s,]+/).forEach(function (t) {
+      var a = /^([GRBY])([a-h][1-8])([a-h][1-8])$/.exec(t);
+      if (a) { if (a[2] === a[3]) circles.push({ c: a[1], sq: a[2] }); else arrows.push({ c: a[1], from: a[2], to: a[3] }); }
+    });
+    while ((m = csl.exec(c))) m[1].split(/[\s,]+/).forEach(function (t) {
+      var a = /^([GRBY])([a-h][1-8])$/.exec(t); if (a) circles.push({ c: a[1], sq: a[2] });
+    });
+    return { arrows: arrows, circles: circles };
+  }
+  function setShapes(n, sh) {
+    var text = stripShapes(n.comment), parts = [];
+    if (sh.circles.length) parts.push("[%csl " + sh.circles.map(function (s) { return s.c + s.sq; }).join(",") + "]");
+    if (sh.arrows.length) parts.push("[%cal " + sh.arrows.map(function (s) { return s.c + s.from + s.to; }).join(",") + "]");
+    n.comment = parts.join(" ") + (parts.length && text ? " " : "") + text;
+    changed(); renderTree(); renderShapes();
+  }
+
+  function sqCenter(sq) {
+    var f = sq.charCodeAt(0) - 97, r = parseInt(sq[1], 10) - 1;
+    if (orientation === "black") { f = 7 - f; r = 7 - r; }
+    return [(f + 0.5) * 100, (7 - r + 0.5) * 100];
+  }
+  function arrowSvg(a, color, opacity) {
+    var p = sqCenter(a.from), q = sqCenter(a.to);
+    var dx = q[0] - p[0], dy = q[1] - p[1], len = Math.sqrt(dx * dx + dy * dy), ux = dx / len, uy = dy / len;
+    var head = 34, x1 = p[0] + ux * 22, y1 = p[1] + uy * 22, bx = q[0] - ux * (head + 6), by = q[1] - uy * (head + 6);
+    var tx = q[0] - ux * 6, ty = q[1] - uy * 6, nx = -uy, ny = ux;
+    return '<g opacity="' + opacity + '" fill="' + color + '" stroke="' + color + '">' +
+      '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + bx + '" y2="' + by + '" stroke-width="16" stroke-linecap="round"/>' +
+      '<polygon stroke="none" points="' + tx + "," + ty + " " + (bx + nx * 24) + "," + (by + ny * 24) + " " + (bx - nx * 24) + "," + (by - ny * 24) + '"/></g>';
+  }
+  function renderShapes() {
+    var svg = $("shapes"), sh = getShapes(sel().comment), out = "";
+    sh.circles.forEach(function (s) {
+      var p = sqCenter(s.sq);
+      out += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="44" fill="none" stroke="' + SHAPE_COLORS[s.c] + '" stroke-width="8" opacity=".8"/>';
+    });
+    sh.arrows.forEach(function (a) { out += arrowSvg(a, SHAPE_COLORS[a.c], 0.8); });
+    var best = engine.on && engine.lines[1] && engine.lines[1].pv[0];
+    if (best && engine.fen === sel().fen) out += arrowSvg({ from: best.slice(0, 2), to: best.slice(2, 4) }, "#3b82f6", 0.55);
+    if (drawing && drawing.cur && drawing.cur !== drawing.start) out += arrowSvg({ from: drawing.start, to: drawing.cur }, SHAPE_COLORS[drawing.color], 0.5);
+    svg.innerHTML = out;
+  }
+
+  var drawing = null, drawColor = "G", drawMode = false;
+  function squareAt(cx, cy) {
+    var r = $("board-wrap").getBoundingClientRect();
+    var f = Math.floor((cx - r.left) / r.width * 8), k = Math.floor((cy - r.top) / r.height * 8);
+    if (f < 0 || f > 7 || k < 0 || k > 7) return null;
+    if (orientation === "black") { f = 7 - f; k = 7 - k; }
+    return String.fromCharCode(97 + f) + (8 - k);
+  }
+  function modColor(e) {
+    if (e.shiftKey && (e.ctrlKey || e.altKey || e.metaKey)) return "Y";
+    if (e.shiftKey) return "R";
+    if (e.ctrlKey || e.altKey || e.metaKey) return "B";
+    return "G";
+  }
+  function toggleShape(start, end, color) {
+    var n = sel(), sh = getShapes(n.comment);
+    if (start === end) {
+      var i = sh.circles.findIndex(function (s) { return s.sq === start; });
+      var same = i >= 0 && sh.circles[i].c === color;
+      if (i >= 0) sh.circles.splice(i, 1);
+      if (!same) sh.circles.push({ c: color, sq: start });
+    } else {
+      var j = sh.arrows.findIndex(function (s) { return s.from === start && s.to === end; });
+      var same2 = j >= 0 && sh.arrows[j].c === color;
+      if (j >= 0) sh.arrows.splice(j, 1);
+      if (!same2) sh.arrows.push({ c: color, from: start, to: end });
+    }
+    setShapes(n, sh);
+  }
+  function beginDraw(e, color) {
+    var s = squareAt(e.clientX, e.clientY);
+    if (!s) return false;
+    drawing = { start: s, cur: s, color: color };
+    return true;
+  }
+  function moveDraw(e) {
+    if (!drawing) return;
+    var s = squareAt(e.clientX, e.clientY);
+    if (s && s !== drawing.cur) { drawing.cur = s; renderShapes(); }
+  }
+  function endDraw(e) {
+    if (!drawing) return;
+    var d = drawing; drawing = null;
+    var s = squareAt(e.clientX, e.clientY) || d.cur;
+    if (!sel().parent && false) return;
+    toggleShape(d.start, s, d.color);
+  }
+  var wrap = $("board-wrap");
+  wrap.addEventListener("contextmenu", function (e) { e.preventDefault(); });
+  wrap.addEventListener("mousedown", function (e) { if (e.button === 2) { e.preventDefault(); beginDraw(e, modColor(e)); } });
+  window.addEventListener("mousemove", moveDraw);
+  window.addEventListener("mouseup", function (e) { if (e.button === 2) endDraw(e); });
+  $("shapes").addEventListener("pointerdown", function (e) {
+    if (!drawMode || e.button !== 0) return;
+    e.preventDefault();
+    if (beginDraw(e, e.shiftKey || e.ctrlKey || e.altKey ? modColor(e) : drawColor)) this.setPointerCapture(e.pointerId);
+  });
+  $("shapes").addEventListener("pointermove", function (e) { if (drawMode) moveDraw(e); });
+  $("shapes").addEventListener("pointerup", function (e) { if (drawMode && e.button === 0) endDraw(e); });
+  $("draw-toggle").onclick = function () {
+    drawMode = !drawMode; this.classList.toggle("on", drawMode); wrap.classList.toggle("draw-on", drawMode);
+  };
+  document.querySelectorAll("#draw-colors button").forEach(function (b) {
+    b.onclick = function () {
+      drawColor = b.dataset.c;
+      document.querySelectorAll("#draw-colors button").forEach(function (x) { x.classList.toggle("on", x === b); });
+    };
+  });
+  $("shapes-clear").onclick = function () { setShapes(sel(), { arrows: [], circles: [] }); };
+
+  /* ================================================================
+     ENGINE — Stockfish (stockfish.js 10, asm.js) in a Web Worker
+  ================================================================ */
+  var SF_URL = "https://cdn.jsdelivr.net/npm/stockfish.js@10.0.2/stockfish.js";
+  var engine = { on: false, worker: null, ready: false, searching: false, pending: null, fen: null, lines: {}, depth: 0, failed: false, timer: null };
+
+  function engineStart() {
+    if (engine.worker || engine.failed) return;
+    try {
+      var blob = new Blob(["importScripts('" + SF_URL + "');"], { type: "application/javascript" });
+      engine.worker = new Worker(URL.createObjectURL(blob));
+    } catch (e) { return engineFail(); }
+    engine.worker.onerror = engineFail;
+    engine.worker.onmessage = function (ev) { engineLine(String(ev.data)); };
+    engine.worker.postMessage("uci");
+    $("eng-status").textContent = "Loading engine…";
+  }
+  function engineFail() {
+    engine.failed = true; engine.worker = null; engine.searching = false;
+    $("eng-status").textContent = "Engine failed to load (internet access to cdn.jsdelivr.net is required).";
+  }
+  function engineSend(s) { if (engine.worker) engine.worker.postMessage(s); }
+
+  function engineLine(l) {
+    if (l === "uciok") {
+      engineSend("setoption name MultiPV value " + $("eng-lines").value);
+      engineSend("isready");
+    } else if (l === "readyok") {
+      engine.ready = true; engineAnalyze();
+    } else if (l.indexOf("info") === 0 && l.indexOf(" pv ") > 0 && l.indexOf("score") > 0 && engine.fen) {
+      var d = /\bdepth (\d+)/.exec(l), mp = /\bmultipv (\d+)/.exec(l), sc = /\bscore (cp|mate) (-?\d+)/.exec(l), pv = /\bpv (.+)$/.exec(l);
+      if (!d || !sc || !pv) return;
+      var turn = engine.fen.split(" ")[1], v = parseInt(sc[2], 10);
+      if (turn === "b") v = -v;
+      engine.lines[mp ? +mp[1] : 1] = { depth: +d[1], kind: sc[1], v: v, pv: pv[1].trim().split(/\s+/) };
+      engine.depth = Math.max(engine.depth, +d[1]);
+      if (!engine.timer) engine.timer = setTimeout(function () { engine.timer = null; renderEngine(); renderShapes(); }, 150);
+    } else if (l.indexOf("bestmove") === 0) {
+      engine.searching = false;
+      if (engine.pending) { engine.pending = null; engineAnalyze(); }
+      else { renderEngine(true); }
+    }
+  }
+
+  function engineAnalyze() {
+    if (!engine.on || !engine.ready || engine.failed) return;
+    var fen = sel().fen;
+    if (engine.searching) {
+      if (engine.fen === fen && !engine.restart) return;
+      engine.pending = true; engineSend("stop"); return;
+    }
+    engine.restart = false;
+    engine.fen = fen; engine.lines = {}; engine.depth = 0;
+    chess.load(fen);
+    if (chess.game_over()) {
+      renderEngine(true);
+      $("eng-status").textContent = chess.in_checkmate() ? "Checkmate." : "Game over — draw.";
+      $("eval-text").textContent = chess.in_checkmate() ? (chess.turn() === "w" ? "0-1" : "1-0") : "½-½";
+      $("eval-fill").style.width = chess.in_checkmate() ? (chess.turn() === "w" ? "0%" : "100%") : "50%";
+      $("eng-lines-out").innerHTML = ""; return;
+    }
+    engine.searching = true;
+    engineSend("position fen " + fen);
+    engineSend("go depth " + $("eng-depth").value);
+    $("eng-status").textContent = "Analyzing…";
+    renderEngine();
+  }
+
+  function scoreText(l) {
+    if (l.kind === "mate") return (l.v > 0 ? "#" : "-#") + Math.abs(l.v);
+    var p = l.v / 100; return (p > 0 ? "+" : "") + p.toFixed(2);
+  }
+  function pvSan(fen, pv, max) {
+    chess.load(fen);
+    var parts = fen.split(" "), num = parseInt(parts[5], 10) || 1, white = parts[1] === "w", out = [], first = true;
+    for (var i = 0; i < pv.length && i < max; i++) {
+      var mv = chess.move({ from: pv[i].slice(0, 2), to: pv[i].slice(2, 4), promotion: pv[i][4] });
+      if (!mv) break;
+      if (white) out.push(num + "." + mv.san); else out.push((first ? num + "..." : "") + mv.san);
+      if (!white) num++;
+      white = !white; first = false;
+    }
+    return out.join(" ");
+  }
+  function renderEngine(done) {
+    if (!engine.on) return;
+    var ol = $("eng-lines-out"), keys = Object.keys(engine.lines).sort();
+    if (!keys.length) return;
+    var top = engine.lines[1];
+    if (top) {
+      $("eval-text").textContent = scoreText(top);
+      var pct = top.kind === "mate" ? (top.v > 0 ? 100 : 0) : 50 + 50 * (2 / (1 + Math.exp(-0.004 * top.v)) - 1);
+      $("eval-fill").style.width = Math.max(2, Math.min(98, pct)) + "%";
+    }
+    ol.innerHTML = "";
+    keys.forEach(function (k) {
+      var l = engine.lines[k], li = el("li");
+      li.appendChild(el("span", { class: "sc" }, scoreText(l)));
+      li.appendChild(el("span", { class: "pv" }, pvSan(engine.fen, l.pv, 10)));
+      var b = el("button", { type: "button", title: "Add this line to the study as a variation" }, "+");
+      b.onclick = function () { addLine(engine.fen, l.pv.slice(0, 10)); };
+      li.appendChild(b); ol.appendChild(li);
+    });
+    $("eng-status").textContent = (done ? "Done" : "Analyzing") + " — depth " + engine.depth;
+  }
+
+  function addLine(fen, pv) {
+    var cur = sel();
+    if (cur.fen !== fen) return;
+    chess.load(fen);
+    pv.forEach(function (u) {
+      var mv = chess.move({ from: u.slice(0, 2), to: u.slice(2, 4), promotion: u[4] });
+      if (!mv) return;
+      var ex = null; cur.children.forEach(function (c) { if (c.san === mv.san) ex = c; });
+      if (!ex) { ex = makeNode(cur, mv.san, chess.fen(), mv.from, mv.to); cur.children.push(ex); }
+      cur = ex;
+    });
+    changed(); render();
+  }
+
+  $("eng-on").onchange = function () {
+    engine.on = this.checked;
+    $("eng-body").hidden = !engine.on;
+    try { localStorage.setItem("chesspublica-pgn-tool-engine", engine.on ? "1" : "0"); } catch (e) { }
+    if (engine.on) {
+      if (engine.failed) engine.failed = false;
+      engineStart();
+      if (engine.ready) engineAnalyze();
+    } else {
+      if (engine.searching) { engine.pending = null; engineSend("stop"); }
+      $("eng-status").textContent = "Engine is off."; $("eng-lines-out").innerHTML = "";
+      $("eval-text").textContent = "–"; $("eval-fill").style.width = "50%";
+      renderShapes();
+    }
+  };
+  $("eng-lines").onchange = function () {
+    engineSend("setoption name MultiPV value " + this.value); engine.restart = true; engineAnalyze();
+  };
+  $("eng-depth").onchange = function () { engine.restart = true; engineAnalyze(); };
+
   /* ================================================================
      START
   ================================================================ */
   restore();
   initBoard();
   render();
+  try { if (localStorage.getItem("chesspublica-pgn-tool-engine") === "1") { $("eng-on").checked = true; $("eng-on").onchange(); } } catch (e) { }
   if ($("md-text").value.trim()) renderPreview();
   dirty = false;
   window.__pgnTool = { parsePgn: parsePgn, chapterPgn: chapterPgn, study: study };

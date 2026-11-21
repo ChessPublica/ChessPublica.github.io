@@ -45,6 +45,7 @@
     <section class="board-col">
         <div id="board-wrap" class="board-wrap">
             <div id="board"></div>
+            <svg id="shapes" class="shapes" viewBox="0 0 800 800" aria-hidden="true"></svg>
             <div id="promo" class="promo" hidden></div>
         </div>
         <div class="board-controls">
@@ -53,6 +54,12 @@
             <button id="nav-next" title="Forward (→)">▶</button>
             <button id="nav-end" title="End (End)">⏭</button>
             <button id="nav-flip" title="Flip board (F)">⇅ Flip</button>
+            <span class="sep"></span>
+            <button id="draw-toggle" title="Draw mode: drag on the board to draw arrows, click a square for a circle. (Right-click also works.)">✎ Draw</button>
+            <span id="draw-colors" class="draw-colors">
+                <button data-c="G" class="on" style="background:#15781b" title="Green (right-drag)"></button><button data-c="R" style="background:#882020" title="Red (Shift + right-drag)"></button><button data-c="B" style="background:#003088" title="Blue (Ctrl/Alt + right-drag)"></button><button data-c="Y" style="background:#e68f00" title="Yellow (Shift+Ctrl + right-drag)"></button>
+            </span>
+            <button id="shapes-clear" title="Remove all arrows and circles from this position">Clear</button>
         </div>
         <div class="fen-row">
             <input id="fen-view" readonly aria-label="FEN">
@@ -101,6 +108,26 @@
             <textarea id="pgn-text" spellcheck="false"></textarea>
             <div id="pgn-msg" class="msg"></div>
         </div>
+
+        <section id="engine-module" class="module">
+            <header class="module-head">
+                <span class="module-title">♚ Stockfish analysis</span>
+                <label class="switch" title="Turn engine analysis on or off">
+                    <input type="checkbox" id="eng-on" role="switch" aria-label="Stockfish analysis">
+                    <span class="slider"></span>
+                </label>
+            </header>
+            <div id="eng-body" class="module-body" hidden>
+                <div class="engine-head">
+                    <label>Lines <select id="eng-lines"><option>1</option><option selected>3</option><option>4</option><option>5</option></select></label>
+                    <label>Depth <select id="eng-depth"><option>12</option><option>16</option><option selected>18</option><option>22</option></select></label>
+                </div>
+                <div class="evalbar"><div id="eval-fill" class="eval-fill"></div><span id="eval-text">–</span></div>
+                <div id="eng-status" class="msg">Engine is off.</div>
+                <ol id="eng-lines-out" class="eng-lines"></ol>
+                <p class="hint">Runs Stockfish in your browser (loaded from a CDN on first use). “+” adds a line to the study as a variation; the best move is drawn as a blue arrow.</p>
+            </div>
+        </section>
     </section>
 </main>
 
