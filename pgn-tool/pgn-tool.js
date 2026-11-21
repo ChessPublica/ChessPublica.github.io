@@ -1,12 +1,12 @@
 /* ChessPublica — PGN Tool
- * Lichess-study benzeri PGN editörü + Markdown editörü.
- * Bağımlılıklar (../dist/ChessPublica.all.min.js içinden): jQuery, Chess (chess.js 0.12), Chessboard.
+ * Lichess-study-style PGN editor + Markdown editor.
+ * Dependencies (from ../dist/ChessPublica.all.min.js): jQuery, Chess (chess.js 0.12), Chessboard.
  */
 (function () {
   "use strict";
 
   /* ================================================================
-     PGN MODELİ
+     PGN MODEL
   ================================================================ */
   var START_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
   var nextId = 1;
@@ -35,7 +35,7 @@
   var MOVE_NAGS = [1, 2, 3, 4, 5, 6];
   var EVAL_NAGS = [10, 13, 14, 15, 16, 17, 18, 19];
 
-  /* ---------- Ayrıştırma ---------- */
+  /* ---------- Parsing ---------- */
 
   function splitGames(text) {
     text = String(text).replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
@@ -50,7 +50,7 @@
       }
       if (!cur) { if (!line.trim()) return; cur = { tags: [], body: "" }; games.push(cur); }
       cur.body += line + "\n";
-      /* { } yorum sınırlarını izle ki yorum içindeki "[...]" başlık sanılmasın */
+      /* track { } comment bounds so "[...]" inside a comment is not mistaken for a tag */
       for (var i = 0; i < line.length; i++) {
         if (!inBrace && line[i] === "{") inBrace = true;
         else if (inBrace && line[i] === "}") inBrace = false;
@@ -213,7 +213,7 @@
     if (h.ChapterName) return h.ChapterName;
     if (h.White || h.Black) return (h.White || "?") + " – " + (h.Black || "?");
     if (h.Event) return h.Event;
-    return "Bölüm " + (i + 1);
+    return "Chapter " + (i + 1);
   }
   function allPgn() { return study.chapters.map(chapterPgn).join("\n"); }
 
@@ -226,7 +226,7 @@
   function persist() {
     try {
       localStorage.setItem(LS_KEY, JSON.stringify({ name: study.name, pgn: allPgn(), cur: study.cur, md: $("md-text").value }));
-    } catch (e) { /* depolama kapalı olabilir */ }
+    } catch (e) { /* storage may be unavailable */ }
   }
   function restore() {
     try {
@@ -363,7 +363,7 @@
   function renderTree() {
     var ch = chap(), t = $("tree"), keep = t.scrollTop, html = "";
     html += '<div class="intro' + (ch.sel === ch.root ? " cur" : "") + '" data-id="' + ch.root.id + '">' +
-      (ch.root.comment ? escHtml(ch.root.comment) : "Başlangıç konumu — bölüm açıklaması için tıkla") + "</div>";
+      (ch.root.comment ? escHtml(ch.root.comment) : "Start position — click to write a chapter introduction") + "</div>";
     html += treeHtml(ch.root.children[0], false);
     t.innerHTML = html;
     t.scrollTop = keep;
@@ -394,7 +394,7 @@
     var c = $("comment");
     if (document.activeElement !== c || c.dataset.nid !== String(n.id)) c.value = n.comment;
     c.dataset.nid = n.id;
-    c.placeholder = isRoot ? "Bölüm açıklaması (giriş yorumu)…" : "Bu hamleye yorum yaz… (**kalın**, *italik* desteklenir)";
+    c.placeholder = isRoot ? "Chapter introduction…" : "Comment on this move… (**bold**, *italic* supported)";
     var isVar = !isRoot && n.parent.children[0] !== n;
     $("n-promote").disabled = !isVar;
     $("n-main").disabled = !isVar;
@@ -402,7 +402,7 @@
   }
 
   var HDR_FIELDS = ["ChapterName", "Event", "Site", "Date", "Round", "White", "Black", "Result", "WhiteElo", "BlackElo", "ECO", "Annotator"];
-  var HDR_LABEL = { ChapterName: "Bölüm adı", Event: "Etkinlik", Site: "Yer", Date: "Tarih", Round: "Tur", White: "Beyaz", Black: "Siyah", Result: "Sonuç", WhiteElo: "Beyaz Elo", BlackElo: "Siyah Elo", ECO: "ECO", Annotator: "Yorumcu" };
+  var HDR_LABEL = { ChapterName: "Chapter name", Event: "Event", Site: "Site", Date: "Date", Round: "Round", White: "White", Black: "Black", Result: "Result", WhiteElo: "White Elo", BlackElo: "Black Elo", ECO: "ECO", Annotator: "Annotator" };
   function renderHeaders() {
     var form = $("headers-form"), ch = chap();
     if (form.contains(document.activeElement) && form.dataset.ci === String(study.cur)) return;
@@ -424,7 +424,7 @@
       form.appendChild(lab); form.appendChild(inp);
       var extra = el("span");
       if (HDR_FIELDS.indexOf(k) < 0) {
-        var x = el("button", { type: "button", title: "Etiketi sil" }, "✕");
+        var x = el("button", { type: "button", title: "Remove tag" }, "✕");
         x.onclick = function () { delete ch.h[k]; changed(); form.dataset.ci = ""; form.innerHTML = ""; renderHeaders(); };
         extra.appendChild(x);
       }
@@ -441,26 +441,26 @@
   }
 
   /* ================================================================
-     BÖLÜM İŞLEMLERİ
+     CHAPTER OPERATIONS
   ================================================================ */
   function addChapters(chs, select) {
-    if (!chs.length) { toast("Geçerli oyun bulunamadı."); return; }
+    if (!chs.length) { toast("No valid games found."); return; }
     if (study.chapters.length === 1 && isPristine(study.chapters[0])) study.chapters = [];
     var first = study.chapters.length;
     chs.forEach(function (c) { study.chapters.push(c); });
     if (select !== false) study.cur = first;
     changed(); render();
     var w = chs.reduce(function (a, c) { return a + (c.warnings || 0); }, 0);
-    toast(chs.length + " bölüm eklendi" + (w ? " — " + w + " geçersiz hamle atlandı (" + chs[0].bad.slice(0, 3).join(", ") + ")" : ""));
+    toast(chs.length + " chapter(s) added" + (w ? " — " + w + " illegal move(s) skipped (" + chs[0].bad.slice(0, 3).join(", ") + ")" : ""));
   }
   function isPristine(ch) { return !ch.root.children.length && !ch.root.comment && !Object.keys(ch.h).some(function (k) { return ch.h[k] && k !== "Result"; }); }
 
   $("ch-add").onclick = function () { addChapters([freshChapter()]); };
   $("ch-fen").onclick = function () {
-    var f = prompt("FEN gir:", START_FEN);
+    var f = prompt("Enter a FEN:", START_FEN);
     if (!f) return;
     var t = new Chess();
-    if (!t.load(f.trim())) { toast("Geçersiz FEN."); return; }
+    if (!t.load(f.trim())) { toast("Invalid FEN."); return; }
     study.chapters.push(makeChapter(t.fen(), { Event: "", White: "", Black: "", Result: "*" }));
     study.cur = study.chapters.length - 1; changed(); render();
   };
@@ -473,7 +473,7 @@
     study.chapters.splice(study.cur + 1, 0, c); study.cur++; changed(); render();
   };
   $("ch-del").onclick = function () {
-    if (!confirm("Bu bölüm silinsin mi?")) return;
+    if (!confirm("Delete this chapter?")) return;
     study.chapters.splice(study.cur, 1);
     if (!study.chapters.length) study.chapters.push(freshChapter());
     study.cur = Math.min(study.cur, study.chapters.length - 1); changed(); render();
@@ -487,7 +487,7 @@
   $("ch-up").onclick = function () { moveChapter(-1); };
   $("ch-down").onclick = function () { moveChapter(1); };
   $("ch-paste").onclick = function () {
-    openDialog("PGN yapıştır (birden çok oyun = birden çok bölüm)", "", "Ekle", function (txt) { addChapters(parsePgn(txt)); });
+    openDialog("Paste PGN (multiple games = multiple chapters)", "", "Add", function (txt) { addChapters(parsePgn(txt)); });
   };
   $("study-name").oninput = function (e) { study.name = e.target.value; changed(); };
 
@@ -500,7 +500,7 @@
   }
 
   /* ================================================================
-     HAMLE AĞACI / TAHTA KONTROLLERİ
+     MOVE TREE / BOARD CONTROLS
   ================================================================ */
   $("tree").addEventListener("click", function (e) {
     var t = e.target.closest("[data-id]");
@@ -541,7 +541,7 @@
   });
   $("n-del").onclick = function () {
     var n = sel(); if (!n.parent) return;
-    if (n.children.length && !confirm("Bu hamle ve devamı silinsin mi?")) return;
+    if (n.children.length && !confirm("Delete this move and everything after it?")) return;
     var p = n.parent; p.children.splice(p.children.indexOf(n), 1);
     changed(); goTo(p);
   };
@@ -574,22 +574,22 @@
   $("pgn-apply").onclick = function () {
     var scope = document.querySelector('input[name="pgn-scope"]:checked').value;
     var chs = parsePgn($("pgn-text").value);
-    if (!chs.length) { $("pgn-msg").textContent = "Geçerli oyun bulunamadı — değişiklik uygulanmadı."; return; }
+    if (!chs.length) { $("pgn-msg").textContent = "No valid games found — nothing applied."; return; }
     var w = chs.reduce(function (a, c) { return a + (c.warnings || 0); }, 0);
     if (scope === "study") { study.chapters = chs; study.cur = Math.min(study.cur, chs.length - 1); }
     else { study.chapters.splice.apply(study.chapters, [study.cur, 1].concat(chs)); }
     changed(); $("pgn-text").blur(); render();
-    $("pgn-msg").textContent = "Uygulandı" + (w ? " — " + w + " geçersiz hamle atlandı." : ".");
+    $("pgn-msg").textContent = "Applied" + (w ? " — " + w + " illegal move(s) skipped." : ".");
   };
 
   function copyText(t) {
-    if (navigator.clipboard) navigator.clipboard.writeText(t).then(function () { toast("Kopyalandı"); }, fallback);
+    if (navigator.clipboard) navigator.clipboard.writeText(t).then(function () { toast("Copied"); }, fallback);
     else fallback();
-    function fallback() { var ta = el("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); toast("Kopyalandı"); } catch (e) { } ta.remove(); }
+    function fallback() { var ta = el("textarea"); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); toast("Copied"); } catch (e) { } ta.remove(); }
   }
 
   /* ================================================================
-     DOSYA AÇ / KAYDET
+     OPEN / SAVE FILES
   ================================================================ */
   function download(name, text, type) {
     var a = el("a"); a.href = URL.createObjectURL(new Blob([text], { type: type + ";charset=utf-8" }));
@@ -610,14 +610,13 @@
       var r = new FileReader();
       r.onload = function () {
         var txt = String(r.result), isMd = /\.(md|markdown)$/i.test(f.name);
-        if (isMd) { $("md-text").value = txt; showView("markdown"); renderPreview(); changed(); toast(f.name + " açıldı"); }
+        if (isMd) { $("md-text").value = txt; showView("markdown"); renderPreview(); changed(); toast(f.name + " opened"); }
         else {
           var chs = parsePgn(txt);
-          if (!chs.length) { toast(f.name + ": geçerli PGN bulunamadı."); return; }
+          if (!chs.length) { toast(f.name + ": no valid PGN found."); return; }
           var replace = isPristine(study.chapters[0]) && study.chapters.length === 1;
-          if (!replace && dirty) replace = confirm("«" + f.name + "» açılsın mı?\n\nTamam = mevcut çalışmanın yerine aç\nİptal = bölüm olarak ekle") ;
-          else if (!replace) replace = confirm("«" + f.name + "» mevcut çalışmanın yerine mi açılsın?\n\nTamam = yerine aç\nİptal = bölüm olarak ekle");
-          if (replace) { study.chapters = chs; study.cur = 0; study.name = f.name.replace(/\.[^.]+$/, ""); dirty = false; changed(); render(); toast(f.name + " açıldı — " + chs.length + " bölüm"); }
+          if (!replace) replace = confirm("Open \"" + f.name + "\" in place of the current study?\n\nOK = replace the study\nCancel = add as chapter(s)");
+          if (replace) { study.chapters = chs; study.cur = 0; study.name = f.name.replace(/\.[^.]+$/, ""); dirty = false; changed(); render(); toast(f.name + " opened — " + chs.length + " chapter(s)"); }
           else addChapters(chs);
           showView("editor");
         }
@@ -667,7 +666,7 @@
     return out.join("\n");
   }
   $("md-from-study").onclick = function () {
-    if ($("md-text").value.trim() && !confirm("Mevcut Markdown içeriğinin yerine geçsin mi?")) return;
+    if ($("md-text").value.trim() && !confirm("Replace the current Markdown content?")) return;
     $("md-text").value = studyToMarkdown(); renderPreview(); changed();
   };
 
@@ -687,12 +686,12 @@
   document.querySelectorAll("[data-md]").forEach(function (b) {
     b.onclick = function () {
       switch (b.dataset.md) {
-        case "h2": insertAtCursor("## ", "", "Başlık"); break;
-        case "bold": insertAtCursor("**", "**", "kalın"); break;
-        case "italic": insertAtCursor("*", "*", "italik"); break;
-        case "link": insertAtCursor("[", "](https://)", "bağlantı"); break;
-        case "list": insertAtCursor("- ", "", "madde"); break;
-        case "quote": insertAtCursor("> ", "", "alıntı"); break;
+        case "h2": insertAtCursor("## ", "", "Heading"); break;
+        case "bold": insertAtCursor("**", "**", "bold"); break;
+        case "italic": insertAtCursor("*", "*", "italic"); break;
+        case "link": insertAtCursor("[", "](https://)", "link"); break;
+        case "list": insertAtCursor("- ", "", "item"); break;
+        case "quote": insertAtCursor("> ", "", "quote"); break;
         case "fen": insertBlock("```fen\n" + sel().fen + "\n```"); break;
         case "pgn": insertBlock("```pgn\n" + chapterPgn(chap()).trim() + "\n```"); break;
       }
@@ -760,7 +759,7 @@
   };
 
   /* ================================================================
-     BAŞLAT
+     START
   ================================================================ */
   restore();
   initBoard();

@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PGN Tool — ChessPublica</title>
-    <meta name="description" content="Lichess study benzeri PGN editörü: bölümler, varyantlar, yorumlar, PGN ve Markdown dosyaları oluştur, aç ve kaydet.">
+    <meta name="description" content="Lichess-study-style PGN editor: chapters, variations, comments. Create, open and save PGN and Markdown files.">
     <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
     <meta name="theme-color" content="#18181b">
     <link rel="stylesheet" href="../dist/ChessPublica.all.min.css">
@@ -14,13 +14,13 @@
 <header class="topbar">
     <a href="/" class="brand">♞ ChessPublica <span>PGN Tool</span></a>
     <nav class="tabs" role="tablist">
-        <button class="tab active" data-view="editor" role="tab">PGN Editörü</button>
+        <button class="tab active" data-view="editor" role="tab">PGN Editor</button>
         <button class="tab" data-view="markdown" role="tab">Markdown</button>
     </nav>
     <div class="topbar-actions">
-        <button id="btn-open" title="PGN veya Markdown dosyası aç (ya da sayfaya sürükle)">Aç…</button>
-        <button id="btn-save-pgn" class="primary" title="Tüm çalışmayı .pgn olarak indir">PGN indir</button>
-        <button id="btn-save-md" title="Markdown dosyası olarak indir">MD indir</button>
+        <button id="btn-open" title="Open a PGN or Markdown file (or drop it on the page)">Open…</button>
+        <button id="btn-save-pgn" class="primary" title="Download the whole study as .pgn">Download PGN</button>
+        <button id="btn-save-md" title="Download as a Markdown file">Download MD</button>
         <input type="file" id="file-input" accept=".pgn,.md,.markdown,.txt,text/plain" multiple hidden>
     </div>
 </header>
@@ -28,17 +28,17 @@
 <main id="view-editor" class="view">
     <aside class="chapters">
         <div class="pane-head">
-            <input id="study-name" class="study-name" placeholder="Çalışma adı" aria-label="Çalışma adı">
+            <input id="study-name" class="study-name" placeholder="Study name" aria-label="Study name">
         </div>
         <ol id="chapter-list" class="chapter-list"></ol>
         <div class="chapter-actions">
-            <button id="ch-add" title="Boş bölüm ekle">+ Bölüm</button>
-            <button id="ch-fen" title="FEN'den bölüm ekle">FEN'den</button>
-            <button id="ch-paste" title="PGN yapıştırarak bölüm(ler) ekle">PGN yapıştır</button>
-            <button id="ch-dup">Çoğalt</button>
-            <button id="ch-up" title="Yukarı taşı">↑</button>
-            <button id="ch-down" title="Aşağı taşı">↓</button>
-            <button id="ch-del" class="danger">Sil</button>
+            <button id="ch-add" title="Add an empty chapter">+ Chapter</button>
+            <button id="ch-fen" title="Add a chapter from a FEN">From FEN</button>
+            <button id="ch-paste" title="Add chapter(s) by pasting PGN">Paste PGN</button>
+            <button id="ch-dup">Duplicate</button>
+            <button id="ch-up" title="Move up">↑</button>
+            <button id="ch-down" title="Move down">↓</button>
+            <button id="ch-del" class="danger">Delete</button>
         </div>
     </aside>
 
@@ -48,24 +48,24 @@
             <div id="promo" class="promo" hidden></div>
         </div>
         <div class="board-controls">
-            <button id="nav-start" title="Başa (Home)">⏮</button>
-            <button id="nav-prev" title="Geri (←)">◀</button>
-            <button id="nav-next" title="İleri (→)">▶</button>
-            <button id="nav-end" title="Sona (End)">⏭</button>
-            <button id="nav-flip" title="Tahtayı çevir (F)">⇅ Çevir</button>
+            <button id="nav-start" title="Start (Home)">⏮</button>
+            <button id="nav-prev" title="Back (←)">◀</button>
+            <button id="nav-next" title="Forward (→)">▶</button>
+            <button id="nav-end" title="End (End)">⏭</button>
+            <button id="nav-flip" title="Flip board (F)">⇅ Flip</button>
         </div>
         <div class="fen-row">
             <input id="fen-view" readonly aria-label="FEN">
-            <button id="fen-copy">Kopyala</button>
-            <button id="fen-new" title="Bu konumdan yeni bölüm">Konumdan bölüm</button>
+            <button id="fen-copy">Copy</button>
+            <button id="fen-new" title="New chapter from this position">Chapter from position</button>
         </div>
-        <p class="hint">Hamle yapmak için taşı sürükle. Mevcut hamleden farklı bir hamle varyant olarak eklenir.</p>
+        <p class="hint">Drag a piece to make a move. A move that differs from the existing continuation is added as a variation.</p>
     </section>
 
     <section class="side-col">
         <nav class="subtabs">
-            <button class="subtab active" data-pane="moves">Hamleler</button>
-            <button class="subtab" data-pane="headers">Bilgiler</button>
+            <button class="subtab active" data-pane="moves">Moves</button>
+            <button class="subtab" data-pane="headers">Headers</button>
             <button class="subtab" data-pane="pgn">PGN</button>
         </nav>
 
@@ -73,11 +73,11 @@
             <div id="tree" class="tree" tabindex="0"></div>
             <div class="annot">
                 <div class="nags" id="nags"></div>
-                <textarea id="comment" rows="4" placeholder="Bu hamleye yorum yaz… (**kalın**, *italik* desteklenir)"></textarea>
+                <textarea id="comment" rows="4" placeholder="Comment on this move… (**bold**, *italic* supported)"></textarea>
                 <div class="node-actions">
-                    <button id="n-promote" title="Varyantı bir üst sıraya taşı">Varyantı yükselt</button>
-                    <button id="n-main" title="Bu varyantı ana hat yap">Ana hat yap</button>
-                    <button id="n-del" class="danger" title="Bu hamleyi ve devamını sil">Buradan sonrasını sil</button>
+                    <button id="n-promote" title="Move the variation up one place">Promote variation</button>
+                    <button id="n-main" title="Make this variation the main line">Make main line</button>
+                    <button id="n-del" class="danger" title="Delete this move and everything after it">Delete from here</button>
                 </div>
             </div>
         </div>
@@ -85,18 +85,18 @@
         <div id="pane-headers" class="pane" hidden>
             <div id="headers-form" class="headers-form"></div>
             <div class="header-add">
-                <input id="hdr-new-name" placeholder="Yeni etiket (örn. Annotator)">
-                <button id="hdr-add">Ekle</button>
+                <input id="hdr-new-name" placeholder="New tag (e.g. Annotator)">
+                <button id="hdr-add">Add</button>
             </div>
         </div>
 
         <div id="pane-pgn" class="pane" hidden>
             <div class="pgn-actions">
-                <label><input type="radio" name="pgn-scope" value="study" checked> Tüm çalışma</label>
-                <label><input type="radio" name="pgn-scope" value="chapter"> Bu bölüm</label>
+                <label><input type="radio" name="pgn-scope" value="study" checked> Whole study</label>
+                <label><input type="radio" name="pgn-scope" value="chapter"> This chapter</label>
                 <span class="spacer"></span>
-                <button id="pgn-copy">Kopyala</button>
-                <button id="pgn-apply" class="primary" title="Metindeki değişiklikleri çalışmaya uygula">Uygula</button>
+                <button id="pgn-copy">Copy</button>
+                <button id="pgn-apply" class="primary" title="Apply the text changes to the study">Apply</button>
             </div>
             <textarea id="pgn-text" spellcheck="false"></textarea>
             <div id="pgn-msg" class="msg"></div>
@@ -109,19 +109,19 @@
         <button data-md="h2">H2</button>
         <button data-md="bold"><b>B</b></button>
         <button data-md="italic"><i>I</i></button>
-        <button data-md="link">Bağlantı</button>
-        <button data-md="list">Liste</button>
-        <button data-md="quote">Alıntı</button>
+        <button data-md="link">Link</button>
+        <button data-md="list">List</button>
+        <button data-md="quote">Quote</button>
         <span class="sep"></span>
-        <button data-md="fen" title="Mevcut tahta konumunu ```fen bloğu olarak ekle">+ Konum (FEN)</button>
-        <button data-md="pgn" title="Mevcut bölümü ```pgn bloğu olarak ekle">+ Bölüm (PGN)</button>
-        <button id="md-from-study" title="Tüm çalışmadan Markdown üret (mevcut içeriğin yerine geçer)">Çalışmadan üret</button>
-        <button id="md-open">MD aç…</button>
-        <button id="md-save" class="primary">MD indir</button>
-        <button id="md-html" title="Önizlemeyi bağımsız bir .html sayfası olarak indir">HTML indir</button>
+        <button data-md="fen" title="Insert the current board position as a ```fen block">+ Position (FEN)</button>
+        <button data-md="pgn" title="Insert the current chapter as a ```pgn block">+ Chapter (PGN)</button>
+        <button id="md-from-study" title="Generate Markdown from the whole study (replaces current content)">Generate from study</button>
+        <button id="md-open">Open MD…</button>
+        <button id="md-save" class="primary">Download MD</button>
+        <button id="md-html" title="Download the preview as a standalone .html page">Download HTML</button>
     </div>
     <div class="md-split">
-        <textarea id="md-text" spellcheck="false" placeholder="# Başlık&#10;&#10;Metin yaz. ```pgn ... ``` bloğu etkileşimli oyun, ```fen ... ``` bloğu diyagram olur."></textarea>
+        <textarea id="md-text" spellcheck="false" placeholder="# Title&#10;&#10;Write text. A ```pgn ... ``` block becomes an interactive game, a ```fen ... ``` block becomes a diagram."></textarea>
         <div id="md-preview" class="md-preview prose"></div>
     </div>
 </main>
@@ -131,14 +131,14 @@
         <h3 id="dlg-title"></h3>
         <textarea id="dlg-text" rows="12" spellcheck="false"></textarea>
         <div class="dlg-actions">
-            <button value="cancel">İptal</button>
-            <button id="dlg-ok" value="ok" class="primary">Ekle</button>
+            <button value="cancel">Cancel</button>
+            <button id="dlg-ok" value="ok" class="primary">Add</button>
         </div>
     </form>
 </dialog>
 
 <div id="toast" class="toast" hidden></div>
-<div id="dropzone" class="dropzone" hidden>Dosyayı bırak (.pgn / .md)</div>
+<div id="dropzone" class="dropzone" hidden>Drop a file (.pgn / .md)</div>
 
 <script src="../dist/ChessPublica.all.min.js"></script>
 <script src="pgn-tool.js"></script>
