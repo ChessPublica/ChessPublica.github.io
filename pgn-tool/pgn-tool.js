@@ -664,7 +664,7 @@
       if (ch.h.White || ch.h.Black) meta.unshift((ch.h.White || "?") + " – " + (ch.h.Black || "?"));
       if (meta.length) out.push("*" + meta.join(" · ") + "*\n");
       if (ch.root.comment) out.push(ch.root.comment + "\n");
-      out.push("```pgn\n" + chapterPgn(ch).trim() + "\n```\n");
+      out.push("<pgn>\n" + chapterPgn(ch).trim() + "\n</pgn>\n");
     });
     return out.join("\n");
   }
@@ -695,8 +695,8 @@
         case "link": insertAtCursor("[", "](https://)", "link"); break;
         case "list": insertAtCursor("- ", "", "item"); break;
         case "quote": insertAtCursor("> ", "", "quote"); break;
-        case "fen": insertBlock("```fen\n" + sel().fen + "\n```"); break;
-        case "pgn": insertBlock("```pgn\n" + chapterPgn(chap()).trim() + "\n```"); break;
+        case "fen": insertBlock("<fen>\n" + sel().fen + "\n</fen>"); break;
+        case "pgn": insertBlock("<pgn>\n" + chapterPgn(chap()).trim() + "\n</pgn>"); break;
       }
     };
   });
@@ -709,12 +709,25 @@
     s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/(^|[^*])\*([^*\s][^*]*)\*/g, "$1<em>$2</em>");
     return s;
   }
+  /* <pgn>/<fen> blocks pass through as raw text; only markup outside a small
+     safe allowlist is neutralised so a pasted .md can't inject scripts. */
+  function safeRaw(raw) {
+    return raw.replace(/<(?!\/?(?:pgn|fen|br|strong|em|b|i|code)\b)/gi, "&lt;");
+  }
   function mdToHtml(src) {
     var lines = src.replace(/\r\n?/g, "\n").split("\n"), out = [], i = 0, para = [], list = null;
     function flushPara() { if (para.length) { out.push("<p>" + inline(para.join(" ")) + "</p>"); para = []; } }
     function flushList() { if (list) { out.push("</" + list + ">"); list = null; } }
     while (i < lines.length) {
       var l = lines[i], m;
+      if ((m = /^\s*<(pgn|fen)(\s[^>]*)?>/i.exec(l))) {
+        flushPara(); flushList();
+        var tagName = m[1].toLowerCase(), closeRe = new RegExp("</" + tagName + "\\s*>", "i"), raw = l;
+        while (!closeRe.test(raw) && i + 1 < lines.length) raw += "\n" + lines[++i];
+        i++;
+        out.push(safeRaw(raw));
+        continue;
+      }
       if ((m = /^```\s*(\w*)\s*$/.exec(l))) {
         flushPara(); flushList();
         var buf = []; i++;
