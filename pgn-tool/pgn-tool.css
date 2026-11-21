@@ -115,10 +115,13 @@ dialog::backdrop{background:rgb(0 0 0/.5)}
 .switch input:checked+.slider::before{transform:translateX(18px)}
 .switch input:focus-visible+.slider{outline:2px solid var(--cur);outline-offset:2px}
 
-#print-area{display:none}
+#print-area{display:none;--board-size:340px}
+/* Rendered off-screen at a real width so boards can measure themselves before printing */
+#print-area.measuring{display:block;position:fixed;left:-10000px;top:0;width:680px;visibility:hidden}
 @media print{
   body>*:not(#print-area){display:none!important}
-  #print-area{display:block!important;padding:0;color:#000;background:#fff}
+  #print-area,#print-area.measuring{display:block!important;position:static!important;visibility:visible!important;width:auto!important;padding:0;color:#000;background:#fff}
+  #print-area .cp-board-wrapper,#print-area .cp-board,#print-area .fen-container{break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   body{background:#fff;color:#000;display:block}
   #print-area h1,#print-area h2{break-after:avoid}
   #print-area pgn,#print-area .pgn-container,#print-area [class*="pgn"]{break-inside:auto}
