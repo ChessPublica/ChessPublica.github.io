@@ -416,10 +416,12 @@
 
   /* Groups where only one glyph makes sense at a time */
   var EXCLUSIVE = { "Move quality": true, "Evaluation": true };
+  var ALWAYS_SHOWN = { "Move quality": true, "Evaluation": true };
+  var nagsExpanded = false;
   function renderAnnot() {
     var n = sel(), isRoot = !n.parent;
     var box = $("nags"); box.innerHTML = "";
-    var groups = [], byName = {};
+    var groups = [], byName = {}, more = el("div", { class: "nag-more" });
     NAG_TABLE.forEach(function (r) {
       if (!byName[r[3]]) { byName[r[3]] = []; groups.push(r[3]); }
       byName[r[3]].push(r);
@@ -443,8 +445,17 @@
         };
         sec.appendChild(b);
       });
-      box.appendChild(sec);
+      if (ALWAYS_SHOWN[name]) box.appendChild(sec);
+      else more.appendChild(sec);
     });
+    var hiddenCount = n.nags.filter(function (g) { return NAG_TABLE.some(function (r) { return r[0] === g && !ALWAYS_SHOWN[r[3]]; }); }).length;
+    var toggle = el("button", { type: "button", class: "nag-toggle", "aria-expanded": String(nagsExpanded) });
+    toggle.appendChild(iconEl(nagsExpanded ? "chevron-up" : "chevron-down"));
+    toggle.appendChild(el("span", null, nagsExpanded ? "Show less" : "Show more" + (hiddenCount ? " (" + hiddenCount + " set)" : "")));
+    toggle.onclick = function () { nagsExpanded = !nagsExpanded; renderAnnot(); };
+    more.hidden = !nagsExpanded;
+    box.appendChild(toggle);
+    box.appendChild(more);
     var c = $("comment");
     if (document.activeElement !== c || c.dataset.nid !== String(n.id)) c.value = stripShapes(n.comment);
     c.dataset.nid = n.id;
