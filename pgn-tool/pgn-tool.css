@@ -154,3 +154,8 @@ dialog::backdrop{background:rgb(0 0 0/.5)}
 .pgn-actions .icon-btn.primary{background:var(--accent);color:var(--accent-fg)}
 .nags button,.eng-lines button{font:inherit}
 @media (max-width:640px){.tab .lbl{display:none}.topbar{gap:.5rem}}
+
+.nags{max-height:none;overflow:visible}
+.nag-more{display:grid;gap:.35rem}
+.nag-toggle{display:inline-flex;align-items:center;gap:.3rem;justify-self:start;border:0;background:none;color:var(--muted);padding:.15rem .3rem;font-size:.8rem}
+.nag-toggle:hover{color:var(--text)}
