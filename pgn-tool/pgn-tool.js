@@ -766,6 +766,17 @@
     clearTimeout(previewTimer); previewTimer = setTimeout(renderPreview, 450); changed();
   });
 
+  /* ---------- Print ---------- */
+  $("btn-print").onclick = function () {
+    var md = !$("view-markdown").hidden ? $("md-text").value : studyToMarkdown();
+    if (!md.trim()) { toast("Nothing to print."); return; }
+    var area = $("print-area");
+    area.innerHTML = mdToHtml(md);
+    try { if (window.ChessPublica && ChessPublica.initAll) ChessPublica.initAll(); } catch (e) { console.error(e); }
+    setTimeout(function () { window.print(); }, 700);
+  };
+  window.addEventListener("afterprint", function () { $("print-area").innerHTML = ""; });
+
   $("md-html").onclick = function () {
     var body = mdToHtml($("md-text").value), t = (/^#\s+(.+)$/m.exec($("md-text").value) || [])[1] || study.name || "ChessPublica";
     var html = '<!DOCTYPE html>\n<html lang="tr">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>' + escHtml(t) +
