@@ -30,10 +30,42 @@
     return makeChapter(START_FEN, { Event: "", Site: "", Date: "", Round: "", White: "", Black: "", Result: "*" });
   }
 
-  var NAG_SYMBOL = { 1: "!", 2: "?", 3: "!!", 4: "??", 5: "!?", 6: "?!", 10: "=", 13: "∞", 14: "⩲", 15: "⩱", 16: "±", 17: "∓", 18: "+−", 19: "−+" };
+  /* Standard numeric annotation glyphs: [number, symbol, description, group] */
+  var NAG_TABLE = [
+    [1, "!", "Good move", "Move quality"], [2, "?", "Mistake", "Move quality"], [3, "!!", "Brilliant move", "Move quality"],
+    [4, "??", "Blunder", "Move quality"], [5, "!?", "Interesting move", "Move quality"], [6, "?!", "Dubious move", "Move quality"],
+    [7, "□", "Only move", "Move quality"], [8, "□", "Singular move (no alternative)", "Move quality"], [9, "⨯", "Worst move", "Move quality"],
+    [10, "=", "Equal position", "Evaluation"], [11, "=", "Equal, quiet position", "Evaluation"], [12, "=", "Equal, active position", "Evaluation"],
+    [13, "∞", "Unclear position", "Evaluation"], [14, "⩲", "White has a slight advantage", "Evaluation"], [15, "⩱", "Black has a slight advantage", "Evaluation"],
+    [16, "±", "White has a moderate advantage", "Evaluation"], [17, "∓", "Black has a moderate advantage", "Evaluation"],
+    [18, "+−", "White has a decisive advantage", "Evaluation"], [19, "−+", "Black has a decisive advantage", "Evaluation"],
+    [20, "+−−", "White has a crushing advantage", "Evaluation"], [21, "−++", "Black has a crushing advantage", "Evaluation"],
+    [22, "⊙", "White is in zugzwang", "Position"], [23, "⊙", "Black is in zugzwang", "Position"],
+    [24, "○", "White has a slight space advantage", "Position"], [25, "○", "Black has a slight space advantage", "Position"],
+    [26, "○○", "White has a moderate space advantage", "Position"], [27, "○○", "Black has a moderate space advantage", "Position"],
+    [28, "○○○", "White has a decisive space advantage", "Position"], [29, "○○○", "Black has a decisive space advantage", "Position"],
+    [30, "⟳", "White has a slight time (development) advantage", "Position"], [31, "⟳", "Black has a slight time (development) advantage", "Position"],
+    [32, "⟳⟳", "White has a moderate time (development) advantage", "Position"], [33, "⟳⟳", "Black has a moderate time (development) advantage", "Position"],
+    [34, "⟳⟳⟳", "White has a decisive time (development) advantage", "Position"], [35, "⟳⟳⟳", "Black has a decisive time (development) advantage", "Position"],
+    [36, "↑", "White has the initiative", "Initiative & attack"], [37, "↑", "Black has the initiative", "Initiative & attack"],
+    [38, "↑↑", "White has a lasting initiative", "Initiative & attack"], [39, "↑↑", "Black has a lasting initiative", "Initiative & attack"],
+    [40, "→", "White has the attack", "Initiative & attack"], [41, "→", "Black has the attack", "Initiative & attack"],
+    [42, "⩲∞", "White has insufficient compensation for the material deficit", "Initiative & attack"], [43, "⩱∞", "Black has insufficient compensation for the material deficit", "Initiative & attack"],
+    [44, "=∞", "White has sufficient compensation for the material deficit", "Initiative & attack"], [45, "=∞", "Black has sufficient compensation for the material deficit", "Initiative & attack"],
+    [46, "∞", "White has more than adequate compensation for the material deficit", "Initiative & attack"], [47, "∞", "Black has more than adequate compensation for the material deficit", "Initiative & attack"],
+    [130, "⇆", "White has slight counterplay", "Counterplay & time"], [131, "⇆", "Black has slight counterplay", "Counterplay & time"],
+    [132, "⇆⇆", "White has moderate counterplay", "Counterplay & time"], [133, "⇆⇆", "Black has moderate counterplay", "Counterplay & time"],
+    [134, "⇆⇆⇆", "White has decisive counterplay", "Counterplay & time"], [135, "⇆⇆⇆", "Black has decisive counterplay", "Counterplay & time"],
+    [136, "⊕", "White has moderate time control pressure", "Counterplay & time"], [137, "⊕", "Black has moderate time control pressure", "Counterplay & time"],
+    [138, "⊕⊕", "White has severe time control pressure", "Counterplay & time"], [139, "⊕⊕", "Black has severe time control pressure", "Counterplay & time"],
+    [140, "∆", "With the idea…", "Other"], [141, "⇗", "Aimed against…", "Other"], [142, "⌓", "Better is…", "Other"],
+    [143, "⌔", "Worse is…", "Other"], [144, "=", "Equivalent is…", "Other"], [145, "RR", "Editorial comment", "Other"], [146, "N", "Novelty", "Other"]
+  ];
+  var NAG_SYMBOL = {};
+  NAG_TABLE.forEach(function (r) { NAG_SYMBOL[r[0]] = r[1]; });
   var SUFFIX_NAG = { "!": 1, "?": 2, "!!": 3, "??": 4, "!?": 5, "?!": 6 };
-  var MOVE_NAGS = [1, 2, 3, 4, 5, 6];
-  var EVAL_NAGS = [10, 13, 14, 15, 16, 17, 18, 19];
+
+
 
   /* ---------- Parsing ---------- */
 
@@ -213,7 +245,7 @@
     if (h.ChapterName) return h.ChapterName;
     if (h.White || h.Black) return (h.White || "?") + " – " + (h.Black || "?");
     if (h.Event) return h.Event;
-    return "Chapter " + (i + 1);
+    return "Lesson " + (i + 1);
   }
   function allPgn() { return study.chapters.map(chapterPgn).join("\n"); }
 
@@ -338,7 +370,7 @@
     });
   }
 
-  function nagStr(n) { return n.nags.map(function (g) { return NAG_SYMBOL[g] || ""; }).join(""); }
+  function nagStr(n) { return n.nags.map(function (g) { return NAG_SYMBOL[g] || ("$" + g); }).join(""); }
 
   function treeHtml(start, force) {
     var out = "", n = start, sn = sel();
@@ -365,7 +397,7 @@
   function renderTree() {
     var ch = chap(), t = $("tree"), keep = t.scrollTop, html = "";
     html += '<div class="intro' + (ch.sel === ch.root ? " cur" : "") + '" data-id="' + ch.root.id + '">' +
-      (ch.root.comment ? escHtml(ch.root.comment) : "Start position — click to write a chapter introduction") + "</div>";
+      (ch.root.comment ? escHtml(ch.root.comment) : "Start position — click to write a lesson introduction") + "</div>";
     html += treeHtml(ch.root.children[0], false);
     t.innerHTML = html;
     t.scrollTop = keep;
@@ -376,27 +408,41 @@
     }
   }
 
+  /* Groups where only one glyph makes sense at a time */
+  var EXCLUSIVE = { "Move quality": true, "Evaluation": true };
   function renderAnnot() {
     var n = sel(), isRoot = !n.parent;
     var box = $("nags"); box.innerHTML = "";
-    function addBtn(g) {
-      var b = el("button", { type: "button", title: "NAG $" + g }, NAG_SYMBOL[g]);
-      if (n.nags.indexOf(g) >= 0) b.className = "on";
-      b.disabled = isRoot;
-      b.onclick = function () {
-        var group = MOVE_NAGS.indexOf(g) >= 0 ? MOVE_NAGS : EVAL_NAGS;
-        var had = n.nags.indexOf(g) >= 0;
-        n.nags = n.nags.filter(function (x) { return group.indexOf(x) < 0; });
-        if (!had) n.nags.push(g);
-        changed(); renderTree(); renderAnnot();
-      };
-      box.appendChild(b);
-    }
-    MOVE_NAGS.forEach(addBtn); box.appendChild(el("span", { class: "gap" })); EVAL_NAGS.forEach(addBtn);
+    var groups = [], byName = {};
+    NAG_TABLE.forEach(function (r) {
+      if (!byName[r[3]]) { byName[r[3]] = []; groups.push(r[3]); }
+      byName[r[3]].push(r);
+    });
+    groups.forEach(function (name) {
+      var sec = el("div", { class: "nag-group" });
+      sec.appendChild(el("span", { class: "nag-label" }, name));
+      byName[name].forEach(function (r) {
+        var g = r[0], b = el("button", { type: "button", title: r[2] + " ($" + g + ")" }, r[1]);
+        if (n.nags.indexOf(g) >= 0) b.className = "on";
+        b.disabled = isRoot;
+        b.onclick = function () {
+          var had = n.nags.indexOf(g) >= 0;
+          if (EXCLUSIVE[name]) {
+            var ids = byName[name].map(function (x) { return x[0]; });
+            n.nags = n.nags.filter(function (x) { return ids.indexOf(x) < 0; });
+          } else n.nags = n.nags.filter(function (x) { return x !== g; });
+          if (!had) n.nags.push(g);
+          n.nags.sort(function (x, y) { return x - y; });
+          changed(); renderTree(); renderAnnot();
+        };
+        sec.appendChild(b);
+      });
+      box.appendChild(sec);
+    });
     var c = $("comment");
     if (document.activeElement !== c || c.dataset.nid !== String(n.id)) c.value = stripShapes(n.comment);
     c.dataset.nid = n.id;
-    c.placeholder = isRoot ? "Chapter introduction…" : "Comment on this move… (**bold**, *italic* supported)";
+    c.placeholder = isRoot ? "Lesson introduction…" : "Comment on this move… (**bold**, *italic* supported)";
     var isVar = !isRoot && n.parent.children[0] !== n;
     $("n-promote").disabled = !isVar;
     $("n-main").disabled = !isVar;
@@ -404,7 +450,7 @@
   }
 
   var HDR_FIELDS = ["ChapterName", "Event", "Site", "Date", "Round", "White", "Black", "Result", "WhiteElo", "BlackElo", "ECO", "Annotator"];
-  var HDR_LABEL = { ChapterName: "Chapter name", Event: "Event", Site: "Site", Date: "Date", Round: "Round", White: "White", Black: "Black", Result: "Result", WhiteElo: "White Elo", BlackElo: "Black Elo", ECO: "ECO", Annotator: "Annotator" };
+  var HDR_LABEL = { ChapterName: "Lesson name", Event: "Event", Site: "Site", Date: "Date", Round: "Round", White: "White", Black: "Black", Result: "Result", WhiteElo: "White Elo", BlackElo: "Black Elo", ECO: "ECO", Annotator: "Annotator" };
   function renderHeaders() {
     var form = $("headers-form"), ch = chap();
     if (form.contains(document.activeElement) && form.dataset.ci === String(study.cur)) return;
@@ -453,7 +499,7 @@
     if (select !== false) study.cur = first;
     changed(); render();
     var w = chs.reduce(function (a, c) { return a + (c.warnings || 0); }, 0);
-    toast(chs.length + " chapter(s) added" + (w ? " — " + w + " illegal move(s) skipped (" + chs[0].bad.slice(0, 3).join(", ") + ")" : ""));
+    toast(chs.length + " lesson(s) added" + (w ? " — " + w + " illegal move(s) skipped (" + chs[0].bad.slice(0, 3).join(", ") + ")" : ""));
   }
   function isPristine(ch) { return !ch.root.children.length && !ch.root.comment && !Object.keys(ch.h).some(function (k) { return ch.h[k] && k !== "Result"; }); }
 
@@ -475,7 +521,7 @@
     study.chapters.splice(study.cur + 1, 0, c); study.cur++; changed(); render();
   };
   $("ch-del").onclick = function () {
-    if (!confirm("Delete this chapter?")) return;
+    if (!confirm("Delete this lesson?")) return;
     study.chapters.splice(study.cur, 1);
     if (!study.chapters.length) study.chapters.push(freshChapter());
     study.cur = Math.min(study.cur, study.chapters.length - 1); changed(); render();
@@ -489,7 +535,7 @@
   $("ch-up").onclick = function () { moveChapter(-1); };
   $("ch-down").onclick = function () { moveChapter(1); };
   $("ch-paste").onclick = function () {
-    openDialog("Paste PGN (multiple games = multiple chapters)", "", "Add", function (txt) { addChapters(parsePgn(txt)); });
+    openDialog("Paste PGN (multiple games = multiple lessons)", "", "Add", function (txt) { addChapters(parsePgn(txt)); });
   };
   $("study-name").oninput = function (e) { study.name = e.target.value; changed(); };
 
@@ -600,7 +646,7 @@
     setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
   }
   function slug(s) { return (s || "").toLowerCase().replace(/[^a-z0-9ğüşıöç]+/gi, "-").replace(/^-+|-+$/g, "") || ""; }
-  function studyFileBase() { return slug(study.name) || slug(chapterTitle(study.chapters[0], 0)) || "study"; }
+  function studyFileBase() { return slug(study.name) || slug(chapterTitle(study.chapters[0], 0)) || "collection"; }
 
   $("btn-save-pgn").onclick = function () { download(studyFileBase() + ".pgn", allPgn(), "application/x-chess-pgn"); dirty = false; };
   $("btn-save-md").onclick = function () { saveMd(); };
@@ -618,8 +664,8 @@
           var chs = parsePgn(txt);
           if (!chs.length) { toast(f.name + ": no valid PGN found."); return; }
           var replace = isPristine(study.chapters[0]) && study.chapters.length === 1;
-          if (!replace) replace = confirm("Open \"" + f.name + "\" in place of the current study?\n\nOK = replace the study\nCancel = add as chapter(s)");
-          if (replace) { study.chapters = chs; study.cur = 0; study.name = f.name.replace(/\.[^.]+$/, ""); dirty = false; changed(); render(); toast(f.name + " opened — " + chs.length + " chapter(s)"); }
+          if (!replace) replace = confirm("Open \"" + f.name + "\" in place of the current collection?\n\nOK = replace the collection\nCancel = add as lesson(s)");
+          if (replace) { study.chapters = chs; study.cur = 0; study.name = f.name.replace(/\.[^.]+$/, ""); dirty = false; changed(); render(); toast(f.name + " opened — " + chs.length + " lesson(s)"); }
           else addChapters(chs);
           showView("editor");
         }
@@ -902,6 +948,7 @@
   $("shapes").addEventListener("pointerup", function (e) { if (drawMode && e.button === 0) endDraw(e); });
   $("draw-toggle").onclick = function () {
     drawMode = !drawMode; this.classList.toggle("on", drawMode); wrap.classList.toggle("draw-on", drawMode);
+    $("draw-colors").hidden = !drawMode; $("shapes-clear").hidden = !drawMode;
   };
   document.querySelectorAll("#draw-colors button").forEach(function (b) {
     b.onclick = function () {
@@ -1010,7 +1057,7 @@
       var l = engine.lines[k], li = el("li");
       li.appendChild(el("span", { class: "sc" }, scoreText(l)));
       li.appendChild(el("span", { class: "pv" }, pvSan(engine.fen, l.pv, 10)));
-      var b = el("button", { type: "button", title: "Add this line to the study as a variation" }, "+");
+      var b = el("button", { type: "button", title: "Add this line to the collection as a variation" }, "+");
       b.onclick = function () { addLine(engine.fen, l.pv.slice(0, 10)); };
       li.appendChild(b); ol.appendChild(li);
     });

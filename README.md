@@ -54,7 +54,7 @@ Each tag accepts either inline content or a `src` attribute pointing at a
 ## PGN Tool
 
 [`/pgn-tool/`](https://chesspublica.github.io/pgn-tool/) is a browser-based,
-Lichess-study-style editor: multi-chapter studies, drag-to-move with
+Lichess-inspired editor: multi-lesson collections, drag-to-move with
 variations, comments and NAGs, header editing, a raw PGN pane, and a
 Markdown editor with live preview (`<pgn>` / `<fen>` blocks render as
 boards). Open or drop `.pgn`/`.md` files; export `.pgn`, `.md` or `.html`.
