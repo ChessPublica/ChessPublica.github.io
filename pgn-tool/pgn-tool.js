@@ -296,7 +296,7 @@
       },
       onDrop: onDrop,
     });
-    window.addEventListener("resize", function () { board.resize(); });
+    window.addEventListener("resize", function () { board.resize(); renderShapes(); });
   }
 
   function onDrop(source, target, piece) {
@@ -899,7 +899,19 @@
       '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + bx + '" y2="' + by + '" stroke-width="16" stroke-linecap="round"/>' +
       '<polygon stroke="none" points="' + tx + "," + ty + " " + (bx + nx * 24) + "," + (by + ny * 24) + " " + (bx - nx * 24) + "," + (by - ny * 24) + '"/></g>';
   }
+  /* chessboard.js draws a border around the squares; line the overlay up with the
+     squares themselves (the border's inside edge) so circles/arrows are centred. */
+  function alignShapes() {
+    var svg = $("shapes"), bd = $("board").querySelector(".board-b72b1");
+    if (!bd) return;
+    var wr = $("board-wrap").getBoundingClientRect(), br = bd.getBoundingClientRect();
+    var left = br.left - wr.left + bd.clientLeft, top = br.top - wr.top + bd.clientTop;
+    svg.style.inset = "auto";
+    svg.style.left = left + "px"; svg.style.top = top + "px";
+    svg.style.width = bd.clientWidth + "px"; svg.style.height = bd.clientHeight + "px";
+  }
   function renderShapes() {
+    alignShapes();
     var svg = $("shapes"), sh = getShapes(sel().comment), out = "";
     sh.circles.forEach(function (s) {
       var p = sqCenter(s.sq);
@@ -914,7 +926,7 @@
 
   var drawing = null, drawColor = "G", drawMode = false;
   function squareAt(cx, cy) {
-    var r = $("board-wrap").getBoundingClientRect();
+    var r = $("shapes").getBoundingClientRect();
     var f = Math.floor((cx - r.left) / r.width * 8), k = Math.floor((cy - r.top) / r.height * 8);
     if (f < 0 || f > 7 || k < 0 || k > 7) return null;
     if (orientation === "black") { f = 7 - f; k = 7 - k; }
