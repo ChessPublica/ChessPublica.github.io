@@ -164,3 +164,15 @@ dialog::backdrop{background:rgb(0 0 0/.5)}
    so they never paint over the sticky top bar when the page is scrolled. */
 .board-wrap{isolation:isolate}
 .topbar{z-index:20}
+
+/* NAG popup */
+.nags{display:flex;align-items:center;gap:.6rem;max-height:none;overflow:visible;padding:0}
+.nag-chips{display:inline-flex;gap:.25rem;flex-wrap:wrap}
+.nag-chip{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:.1rem .45rem;font-weight:600;font-size:.9rem}
+.nag-dlg{width:min(560px,94vw)}
+.nag-dlg-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem}
+.nag-dlg-head h3{margin:0;font-size:1rem}
+#nag-palette{display:grid;gap:.5rem;align-items:start}
+#nag-palette .nag-group{display:flex;flex-wrap:wrap;gap:.25rem;align-items:center}
+#nag-palette button{padding:.2rem .55rem;min-width:2.2rem;font:inherit}
+#nag-palette button.on{background:var(--accent);color:var(--accent-fg)}
