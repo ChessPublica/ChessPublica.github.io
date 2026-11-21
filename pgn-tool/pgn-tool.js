@@ -902,6 +902,7 @@
   $("shapes").addEventListener("pointerup", function (e) { if (drawMode && e.button === 0) endDraw(e); });
   $("draw-toggle").onclick = function () {
     drawMode = !drawMode; this.classList.toggle("on", drawMode); wrap.classList.toggle("draw-on", drawMode);
+    $("draw-colors").hidden = !drawMode; $("shapes-clear").hidden = !drawMode;
   };
   document.querySelectorAll("#draw-colors button").forEach(function (b) {
     b.onclick = function () {

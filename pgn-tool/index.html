@@ -57,10 +57,10 @@
             <button id="nav-flip" title="Flip board (F)">⇅ Flip</button>
             <span class="sep"></span>
             <button id="draw-toggle" title="Draw mode: drag on the board to draw arrows, click a square for a circle. (Right-click also works.)">✎ Draw</button>
-            <span id="draw-colors" class="draw-colors">
+            <span id="draw-colors" class="draw-colors" hidden>
                 <button data-c="G" class="on" style="background:#15781b" title="Green (right-drag)"></button><button data-c="R" style="background:#882020" title="Red (Shift + right-drag)"></button><button data-c="B" style="background:#003088" title="Blue (Ctrl/Alt + right-drag)"></button><button data-c="Y" style="background:#e68f00" title="Yellow (Shift+Ctrl + right-drag)"></button>
             </span>
-            <button id="shapes-clear" title="Remove all arrows and circles from this position">Clear</button>
+            <button id="shapes-clear" hidden title="Remove all arrows and circles from this position">Clear</button>
         </div>
         <div class="fen-row">
             <input id="fen-view" readonly aria-label="FEN">
