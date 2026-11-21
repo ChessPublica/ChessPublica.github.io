@@ -631,7 +631,6 @@
     b.onclick = function () {
       document.querySelectorAll(".subtab").forEach(function (x) { x.classList.toggle("active", x === b); });
       ["moves", "headers", "pgn"].forEach(function (p) { $("pane-" + p).hidden = p !== b.dataset.pane; });
-      $("engine-module").hidden = b.dataset.pane !== "moves";
       if (b.dataset.pane === "pgn") renderPgnPane();
       if (b.dataset.pane === "headers") { $("headers-form").dataset.ci = ""; renderHeaders(); }
     };

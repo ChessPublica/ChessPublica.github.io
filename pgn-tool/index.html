@@ -131,6 +131,13 @@
     </section>
 
     <section class="side-col">
+        <nav class="subtabs">
+            <button class="subtab active" data-pane="moves" title="Moves" aria-label="Moves"><svg class="ic" aria-hidden="true"><use href="#i-list-tree"/></svg><span class="lbl">Moves</span></button>
+            <button class="subtab" data-pane="headers" title="Headers" aria-label="Headers"><svg class="ic" aria-hidden="true"><use href="#i-tags"/></svg><span class="lbl">Headers</span></button>
+            <button class="subtab" data-pane="pgn" title="PGN" aria-label="PGN"><svg class="ic" aria-hidden="true"><use href="#i-file-code"/></svg><span class="lbl">PGN</span></button>
+        </nav>
+
+        <div id="pane-moves" class="pane">
         <section id="engine-module" class="module">
             <header class="module-head">
                 <span class="module-title"><img src="stockfish-logo.png" alt="" width="22" height="22"> Stockfish analysis</span>
@@ -150,13 +157,6 @@
                 <p class="hint">Runs Stockfish in your browser (loaded from a CDN on first use). “+” adds a line to the article as a variation; the best move is drawn as a blue arrow.</p>
             </div>
         </section>
-        <nav class="subtabs">
-            <button class="subtab active" data-pane="moves" title="Moves" aria-label="Moves"><svg class="ic" aria-hidden="true"><use href="#i-list-tree"/></svg><span class="lbl">Moves</span></button>
-            <button class="subtab" data-pane="headers" title="Headers" aria-label="Headers"><svg class="ic" aria-hidden="true"><use href="#i-tags"/></svg><span class="lbl">Headers</span></button>
-            <button class="subtab" data-pane="pgn" title="PGN" aria-label="PGN"><svg class="ic" aria-hidden="true"><use href="#i-file-code"/></svg><span class="lbl">PGN</span></button>
-        </nav>
-
-        <div id="pane-moves" class="pane">
             <div id="tree" class="tree" tabindex="0"></div>
             <div class="annot">
                 <div class="nags" id="nags"></div>
