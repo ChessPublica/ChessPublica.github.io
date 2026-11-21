@@ -631,6 +631,7 @@
     b.onclick = function () {
       document.querySelectorAll(".subtab").forEach(function (x) { x.classList.toggle("active", x === b); });
       ["moves", "headers", "pgn"].forEach(function (p) { $("pane-" + p).hidden = p !== b.dataset.pane; });
+      $("engine-module").hidden = b.dataset.pane !== "moves";
       if (b.dataset.pane === "pgn") renderPgnPane();
       if (b.dataset.pane === "headers") { $("headers-form").dataset.ci = ""; renderHeaders(); }
     };
@@ -1070,7 +1071,8 @@
     for (var i = 0; i < pv.length && i < max; i++) {
       var mv = chess.move({ from: pv[i].slice(0, 2), to: pv[i].slice(2, 4), promotion: pv[i][4] });
       if (!mv) break;
-      if (white) out.push(num + "." + mv.san); else out.push((first ? num + "..." : "") + mv.san);
+      var fs = figurine(mv.san);
+      if (white) out.push(num + "." + fs); else out.push((first ? num + "..." : "") + fs);
       if (!white) num++;
       white = !white; first = false;
     }
