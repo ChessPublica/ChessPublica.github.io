@@ -817,11 +817,12 @@
     var md = !$("view-markdown").hidden ? $("md-text").value : studyToMarkdown();
     if (!md.trim()) { toast("Nothing to print."); return; }
     var area = $("print-area");
+    area.classList.add("measuring");
     area.innerHTML = mdToHtml(md);
     try { if (window.ChessPublica && ChessPublica.initAll) ChessPublica.initAll(); } catch (e) { console.error(e); }
     setTimeout(function () { window.print(); }, 700);
   };
-  window.addEventListener("afterprint", function () { $("print-area").innerHTML = ""; });
+  window.addEventListener("afterprint", function () { var a = $("print-area"); a.innerHTML = ""; a.classList.remove("measuring"); });
 
   $("md-html").onclick = function () {
     var body = mdToHtml($("md-text").value), t = (/^#\s+(.+)$/m.exec($("md-text").value) || [])[1] || study.name || "ChessPublica";
