@@ -236,6 +236,12 @@
   function $(id) { return document.getElementById(id); }
   function el(tag, attrs, text) { var e = document.createElement(tag); if (attrs) Object.keys(attrs).forEach(function (k) { e.setAttribute(k, attrs[k]); }); if (text != null) e.textContent = text; return e; }
 
+  function iconEl(name) {
+    var s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    s.setAttribute("class", "ic"); s.setAttribute("aria-hidden", "true");
+    var u = document.createElementNS("http://www.w3.org/2000/svg", "use");
+    u.setAttribute("href", "#i-" + name); s.appendChild(u); return s;
+  }
   function toast(msg) {
     var t = $("toast"); t.textContent = msg; t.hidden = false;
     clearTimeout(toast._t); toast._t = setTimeout(function () { t.hidden = true; }, 2600);
@@ -472,7 +478,7 @@
       form.appendChild(lab); form.appendChild(inp);
       var extra = el("span");
       if (HDR_FIELDS.indexOf(k) < 0) {
-        var x = el("button", { type: "button", title: "Remove tag" }, "✕");
+        var x = el("button", { type: "button", title: "Remove tag", "aria-label": "Remove tag", class: "icon-btn" }); x.appendChild(iconEl("x"));
         x.onclick = function () { delete ch.h[k]; changed(); form.dataset.ci = ""; form.innerHTML = ""; renderHeaders(); };
         extra.appendChild(x);
       }
@@ -1058,7 +1064,7 @@
       var l = engine.lines[k], li = el("li");
       li.appendChild(el("span", { class: "sc" }, scoreText(l)));
       li.appendChild(el("span", { class: "pv" }, pvSan(engine.fen, l.pv, 10)));
-      var b = el("button", { type: "button", title: "Add this line to the collection as a variation" }, "+");
+      var b = el("button", { type: "button", title: "Add this line to the collection as a variation", "aria-label": "Add line as variation", class: "icon-btn" }); b.appendChild(iconEl("plus"));
       b.onclick = function () { addLine(engine.fen, l.pv.slice(0, 10)); };
       li.appendChild(b); ol.appendChild(li);
     });

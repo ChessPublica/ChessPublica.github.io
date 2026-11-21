@@ -128,3 +128,29 @@ dialog::backdrop{background:rgb(0 0 0/.5)}
 }
 
 .module-title{display:flex;align-items:center;gap:.5rem}.module-title img{border-radius:4px}
+
+/* ---- Icon ribbons ---- */
+.ic{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle}
+.icon-btn{display:inline-flex;align-items:center;justify-content:center;gap:.3rem;min-width:34px;height:34px;padding:0 .5rem}
+.icon-btn.danger{color:var(--danger)}
+.badge{font-size:.62rem;font-weight:700;letter-spacing:.04em}
+.btn-group{display:inline-flex;align-items:center;gap:0;border:1px solid var(--line);border-radius:8px;background:var(--panel);overflow:hidden}
+.btn-group>button{border:0;border-radius:0;background:transparent}
+.btn-group>button+button,.btn-group>.draw-colors,.btn-group>button+.draw-colors{border-left:1px solid var(--line)}
+.btn-group>button:hover{background:var(--bg)}
+.btn-group>button.primary{background:var(--accent);color:var(--accent-fg)}
+.btn-group>button.on,#draw-toggle.on{background:var(--accent);color:var(--accent-fg)}
+.btn-group>button:disabled{opacity:.35}
+.tab{display:inline-flex;align-items:center;gap:.4rem}
+.subtab{display:inline-flex;align-items:center;gap:.4rem}
+.subtab .lbl{display:none}.subtab.active .lbl{display:inline}
+.draw-colors{padding:0 .4rem;height:34px;align-items:center}
+.draw-colors:not([hidden]){display:inline-flex}
+.board-controls,.chapter-actions,.md-toolbar,.node-actions,.fen-row{gap:.5rem}
+.chapter-actions{display:flex;flex-wrap:wrap}
+.chapter-actions button{font-size:inherit;padding:0 .5rem}
+.fen-row .icon-btn{border:1px solid var(--line);border-radius:8px}
+.pgn-actions .icon-btn,.header-add .icon-btn{border:1px solid var(--line);border-radius:8px}
+.pgn-actions .icon-btn.primary{background:var(--accent);color:var(--accent-fg)}
+.nags button,.eng-lines button{font:inherit}
+@media (max-width:640px){.tab .lbl{display:none}.topbar{gap:.5rem}}
