@@ -71,6 +71,25 @@
     </section>
 
     <section class="side-col">
+        <section id="engine-module" class="module">
+            <header class="module-head">
+                <span class="module-title"><img src="stockfish-logo.png" alt="" width="22" height="22"> Stockfish analysis</span>
+                <label class="switch" title="Turn engine analysis on or off">
+                    <input type="checkbox" id="eng-on" role="switch" aria-label="Stockfish analysis">
+                    <span class="slider"></span>
+                </label>
+            </header>
+            <div id="eng-body" class="module-body" hidden>
+                <div class="engine-head">
+                    <label>Lines <select id="eng-lines"><option>1</option><option selected>3</option><option>4</option><option>5</option></select></label>
+                    <label>Depth <select id="eng-depth"><option>12</option><option>16</option><option selected>18</option><option>22</option></select></label>
+                </div>
+                <div class="evalbar"><div id="eval-fill" class="eval-fill"></div><span id="eval-text">–</span></div>
+                <div id="eng-status" class="msg">Engine is off.</div>
+                <ol id="eng-lines-out" class="eng-lines"></ol>
+                <p class="hint">Runs Stockfish in your browser (loaded from a CDN on first use). “+” adds a line to the study as a variation; the best move is drawn as a blue arrow.</p>
+            </div>
+        </section>
         <nav class="subtabs">
             <button class="subtab active" data-pane="moves">Moves</button>
             <button class="subtab" data-pane="headers">Headers</button>
@@ -110,25 +129,6 @@
             <div id="pgn-msg" class="msg"></div>
         </div>
 
-        <section id="engine-module" class="module">
-            <header class="module-head">
-                <span class="module-title">♚ Stockfish analysis</span>
-                <label class="switch" title="Turn engine analysis on or off">
-                    <input type="checkbox" id="eng-on" role="switch" aria-label="Stockfish analysis">
-                    <span class="slider"></span>
-                </label>
-            </header>
-            <div id="eng-body" class="module-body" hidden>
-                <div class="engine-head">
-                    <label>Lines <select id="eng-lines"><option>1</option><option selected>3</option><option>4</option><option>5</option></select></label>
-                    <label>Depth <select id="eng-depth"><option>12</option><option>16</option><option selected>18</option><option>22</option></select></label>
-                </div>
-                <div class="evalbar"><div id="eval-fill" class="eval-fill"></div><span id="eval-text">–</span></div>
-                <div id="eng-status" class="msg">Engine is off.</div>
-                <ol id="eng-lines-out" class="eng-lines"></ol>
-                <p class="hint">Runs Stockfish in your browser (loaded from a CDN on first use). “+” adds a line to the study as a variation; the best move is drawn as a blue arrow.</p>
-            </div>
-        </section>
     </section>
 </main>
 

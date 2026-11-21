@@ -101,7 +101,7 @@ dialog::backdrop{background:rgb(0 0 0/.5)}
 .eng-lines button{padding:.05rem .45rem}
 [hidden]{display:none!important}
 
-.module{margin-top:.8rem;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.module{margin-bottom:.8rem;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .module-head{display:flex;align-items:center;justify-content:space-between;padding:.55rem .8rem;background:var(--bg)}
 .module-title{font-weight:600}
 .module-body{padding:.7rem .8rem}
@@ -121,3 +121,5 @@ dialog::backdrop{background:rgb(0 0 0/.5)}
   #print-area h1,#print-area h2{break-after:avoid}
   #print-area pgn,#print-area .pgn-container,#print-area [class*="pgn"]{break-inside:auto}
 }
+
+.module-title{display:flex;align-items:center;gap:.5rem}.module-title img{border-radius:4px}
