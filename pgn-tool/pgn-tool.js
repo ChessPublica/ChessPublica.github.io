@@ -393,7 +393,7 @@
       else if (force) out += '<span class="num">' + parts[5] + "…</span>";
       out += escHtml(figurine(n.san)) + escHtml(nagStr(n)) + "</span> ";
       force = false;
-      if (n.comment) { out += '<span class="cm" data-id="' + n.id + '">' + escHtml(n.comment.replace(/\[%[^\]]*\]\s*/g, "")) + "</span> "; force = true; }
+      if (n.comment) { out += '<span class="cm" data-id="' + n.id + '">' + escHtml(n.comment.replace(/\[%[^\]]*\]\s*/g, "").replace(/\[(?:D|#)\]/g, "▦")) + "</span> "; force = true; }
       var p = n.parent;
       if (p.children[0] === n && p.children.length > 1) {
         for (var i = 1; i < p.children.length; i++) out += '<div class="var">' + treeHtml(p.children[i], true) + "</div>";
@@ -461,6 +461,7 @@
     more.hidden = !nagsExpanded;
     box.appendChild(toggle);
     box.appendChild(more);
+    $("insert-diagram").classList.toggle("on", /\[D\]/.test(n.comment));
     var c = $("comment");
     if (document.activeElement !== c || c.dataset.nid !== String(n.id)) c.value = stripShapes(n.comment);
     c.dataset.nid = n.id;
@@ -980,6 +981,16 @@
     };
   });
   $("shapes-clear").onclick = function () { setShapes(sel(), { arrows: [], circles: [] }); };
+
+  /* ---------- Insert diagram ([D]) ---------- */
+  var DIAGRAM_RE = /\[D\]\s*/g;
+  $("insert-diagram").onclick = function () {
+    var n = sel(), pre = shapePrefix(n.comment), text = stripShapes(n.comment);
+    if (/\[D\]/.test(text)) text = text.replace(DIAGRAM_RE, "").trim();
+    else text = ("[D] " + text).trim();
+    n.comment = (pre && text ? pre + " " : pre) + text;
+    changed(); renderTree(); renderAnnot();
+  };
 
   /* ================================================================
      ENGINE — Stockfish (stockfish.js 10, asm.js) in a Web Worker
