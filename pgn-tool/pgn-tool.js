@@ -421,46 +421,61 @@
 
   /* Groups where only one glyph makes sense at a time */
   var EXCLUSIVE = { "Move quality": true, "Evaluation": true };
-  var ALWAYS_SHOWN = { "Move quality": true, "Evaluation": true };
-  var nagsExpanded = false;
-  function renderAnnot() {
-    var n = sel(), isRoot = !n.parent;
-    var box = $("nags"); box.innerHTML = "";
-    var groups = [], byName = {}, more = el("div", { class: "nag-more" });
+  /* One entry per distinct glyph: identical-looking NAGs (e.g. the White/Black pairs, $7/$8, $10-$12)
+     collapse into a single button that sets the first number and clears all its siblings. */
+  var NAG_UNIQUE = (function () {
+    var bySym = {}, list = [];
     NAG_TABLE.forEach(function (r) {
-      if (!byName[r[3]]) { byName[r[3]] = []; groups.push(r[3]); }
-      byName[r[3]].push(r);
+      var u = bySym[r[1]];
+      if (!u) { u = bySym[r[1]] = { sym: r[1], group: r[3], nums: [], desc: [] }; list.push(u); }
+      u.nums.push(r[0]); u.desc.push(r[2] + " ($" + r[0] + ")");
     });
-    groups.forEach(function (name) {
+    return list;
+  })();
+  var NAG_GROUPS = (function () {
+    var names = [], map = {};
+    NAG_UNIQUE.forEach(function (u) { if (!map[u.group]) { map[u.group] = []; names.push(u.group); } map[u.group].push(u); });
+    return names.map(function (n) { return { name: n, items: map[n] }; });
+  })();
+  function nagActive(n, u) { return u.nums.some(function (g) { return n.nags.indexOf(g) >= 0; }); }
+
+  function renderNagPalette() {
+    var n = sel(), box = $("nag-palette"); box.innerHTML = "";
+    NAG_GROUPS.forEach(function (grp) {
       var sec = el("div", { class: "nag-group" });
-      sec.appendChild(el("span", { class: "nag-label" }, name));
-      byName[name].forEach(function (r) {
-        var g = r[0], b = el("button", { type: "button", title: r[2] + " ($" + g + ")" }, r[1]);
-        if (n.nags.indexOf(g) >= 0) b.className = "on";
-        b.disabled = isRoot;
+      sec.appendChild(el("span", { class: "nag-label" }, grp.name));
+      grp.items.forEach(function (u) {
+        var b = el("button", { type: "button", title: u.desc.join("\n") }, u.sym);
+        if (nagActive(n, u)) b.className = "on";
         b.onclick = function () {
-          var had = n.nags.indexOf(g) >= 0;
-          if (EXCLUSIVE[name]) {
-            var ids = byName[name].map(function (x) { return x[0]; });
-            n.nags = n.nags.filter(function (x) { return ids.indexOf(x) < 0; });
-          } else n.nags = n.nags.filter(function (x) { return x !== g; });
-          if (!had) n.nags.push(g);
+          var had = nagActive(n, u);
+          var drop = u.nums;
+          if (EXCLUSIVE[grp.name]) {
+            drop = [];
+            NAG_UNIQUE.forEach(function (x) { if (x.group === grp.name) drop = drop.concat(x.nums); });
+          }
+          n.nags = n.nags.filter(function (x) { return drop.indexOf(x) < 0; });
+          if (!had) n.nags.push(u.nums[0]);
           n.nags.sort(function (x, y) { return x - y; });
           changed(); renderTree(); renderAnnot();
         };
         sec.appendChild(b);
       });
-      if (ALWAYS_SHOWN[name]) box.appendChild(sec);
-      else more.appendChild(sec);
+      box.appendChild(sec);
     });
-    var hiddenCount = n.nags.filter(function (g) { return NAG_TABLE.some(function (r) { return r[0] === g && !ALWAYS_SHOWN[r[3]]; }); }).length;
-    var toggle = el("button", { type: "button", class: "nag-toggle", "aria-expanded": String(nagsExpanded) });
-    toggle.appendChild(iconEl(nagsExpanded ? "chevron-up" : "chevron-down"));
-    toggle.appendChild(el("span", null, nagsExpanded ? "Show less" : "Show more" + (hiddenCount ? " (" + hiddenCount + " set)" : "")));
-    toggle.onclick = function () { nagsExpanded = !nagsExpanded; renderAnnot(); };
-    more.hidden = !nagsExpanded;
-    box.appendChild(toggle);
-    box.appendChild(more);
+  }
+
+  function renderAnnot() {
+    var n = sel(), isRoot = !n.parent;
+    var box = $("nags"); box.innerHTML = "";
+    var open = el("button", { type: "button", class: "icon-btn", title: "Annotation glyphs (NAGs)", "aria-label": "Annotation glyphs" });
+    open.appendChild(iconEl("hash")); open.disabled = isRoot;
+    open.onclick = function () { renderNagPalette(); $("nag-dlg").showModal(); };
+    var wrapBtn = el("div", { class: "btn-group" }); wrapBtn.appendChild(open); box.appendChild(wrapBtn);
+    var chips = el("span", { class: "nag-chips" });
+    n.nags.forEach(function (g) { chips.appendChild(el("span", { class: "nag-chip", title: "$" + g }, NAG_SYMBOL[g] || "$" + g)); });
+    box.appendChild(chips);
+    if ($("nag-dlg").open) renderNagPalette();
     $("insert-diagram").classList.toggle("on", /\[D\]/.test(n.comment));
     var c = $("comment");
     if (document.activeElement !== c || c.dataset.nid !== String(n.id)) c.value = stripShapes(n.comment);
@@ -1022,6 +1037,9 @@
     };
   });
   $("shapes-clear").onclick = function () { setShapes(sel(), { arrows: [], circles: [] }); };
+
+  $("nag-close").onclick = function () { $("nag-dlg").close(); };
+  $("nag-dlg").addEventListener("click", function (e) { if (e.target === this) this.close(); });
 
   /* ---------- Insert diagram ([D]) ---------- */
   var DIAGRAM_RE = /\[D\]\s*/g;
