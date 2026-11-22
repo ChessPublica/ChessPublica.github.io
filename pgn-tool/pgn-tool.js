@@ -400,6 +400,7 @@
 
   function render() {
     renderStatus();
+    renderPlay();
     renderChapters();
     updateBoard();
     engineAnalyze();
@@ -438,7 +439,7 @@
       else if (force) out += '<span class="num">' + parts[5] + "…</span>";
       out += escHtml(figurine(n.san)) + escHtml(nagStr(n)) + "</span> ";
       force = false;
-      if (n.comment) { out += '<span class="cm" data-id="' + n.id + '">' + escHtml(n.comment.replace(/\[%[^\]]*\]\s*/g, "").replace(/\[(?:D|#)\]/g, "▦")) + "</span> "; force = true; }
+      if (n.comment) { out += '<span class="cm" data-id="' + n.id + '">' + escHtml(n.comment.replace(/\[%[^\]]*\]\s*/g, "").replace(/\[(?:D|#)\]/g, "▦").replace(/\[P\d*\]/g, "🧩")) + "</span> "; force = true; }
       var p = n.parent;
       if (p.children[0] === n && p.children.length > 1) {
         for (var i = 1; i < p.children.length; i++) out += '<div class="var">' + treeHtml(p.children[i], true) + "</div>";
@@ -514,6 +515,7 @@
     var n = sel(), isRoot = !n.parent;
     var box = $("nags"); box.innerHTML = "";
     $("nag-open").disabled = isRoot;
+    syncPuzzleUi();
     $("rb-comment").disabled = false;
     var chips = el("span", { class: "nag-chips" });
     n.nags.forEach(function (g) { chips.appendChild(el("span", { class: "nag-chip", title: "$" + g }, NAG_SYMBOL[g] || "$" + g)); });
@@ -729,7 +731,8 @@
   document.querySelectorAll(".subtab").forEach(function (b) {
     b.onclick = function () {
       document.querySelectorAll(".subtab").forEach(function (x) { x.classList.toggle("active", x === b); });
-      ["moves", "headers", "pgn"].forEach(function (p) { $("pane-" + p).hidden = p !== b.dataset.pane; });
+      ["moves", "headers", "play", "pgn"].forEach(function (p) { $("pane-" + p).hidden = p !== b.dataset.pane; });
+      if (b.dataset.pane === "play") renderPlay(true); else stopPlay();
       if (b.dataset.pane === "pgn") renderPgnPane();
       if (b.dataset.pane === "headers") { $("headers-form").dataset.ci = ""; renderHeaders(); }
     };
@@ -871,6 +874,17 @@
         case "quote": insertAtCursor("> ", "", "quote"); break;
         case "fen": insertBlock("<fen>\n" + sel().fen + "\n</fen>"); break;
         case "pgn": insertBlock("<pgn>\n" + chapterPgn(chap()).trim() + "\n</pgn>"); break;
+        case "puzzle":
+          var pt = puzzleText(sel());
+          if (!pt) { toast("Add the solution moves after this position first."); break; }
+          insertBlock("<puzzle>\n" + pt.trim() + "\n</puzzle>"); break;
+        case "player": insertBlock("<pgn-player>\n" + chapterPgn(chap()).trim() + "\n</pgn-player>"); break;
+        case "playerLink":
+          openDialog("Paste a Lichess study, chapter, game or .pgn link", "", "Insert", function (txt) {
+            var u = txt.trim().replace(/"/g, "%22");
+            if (u) insertBlock('<pgn-player src="' + u + '"></pgn-player>');
+          }, { rows: 3, placeholder: "https://lichess.org/study/XXXXXXXX/YYYYYYYY" });
+          break;
       }
     };
   });
@@ -886,7 +900,7 @@
   /* <pgn>/<fen> blocks pass through as raw text; only markup outside a small
      safe allowlist is neutralised so a pasted .md can't inject scripts. */
   function safeRaw(raw) {
-    return raw.replace(/<(?!\/?(?:pgn|fen|br|strong|em|b|i|code)\b)/gi, "&lt;");
+    return raw.replace(/<(?!\/?(?:pgn-player|pgn|fen|puzzle|br|strong|em|b|i|code)\b)/gi, "&lt;");
   }
   function mdToHtml(src) {
     var lines = src.replace(/\r\n?/g, "\n").split("\n"), out = [], i = 0, para = [], list = null;
@@ -894,7 +908,7 @@
     function flushList() { if (list) { out.push("</" + list + ">"); list = null; } }
     while (i < lines.length) {
       var l = lines[i], m;
-      if ((m = /^\s*<(pgn|fen)(\s[^>]*)?>/i.exec(l))) {
+      if ((m = /^\s*<(pgn-player|pgn|fen|puzzle)(\s[^>]*)?>/i.exec(l))) {
         flushPara(); flushList();
         var tagName = m[1].toLowerCase(), closeRe = new RegExp("</" + tagName + "\\s*>", "i"), raw = l;
         while (!closeRe.test(raw) && i + 1 < lines.length) raw += "\n" + lines[++i];
@@ -1255,13 +1269,125 @@
   $("eng-depth").onchange = function () { engine.restart = true; engineAnalyze(); };
 
 
+
+  /* ================================================================
+     PUZZLES ([P] / [Pn]) and the PLAY PREVIEW (<pgn-player> / <puzzle>)
+  ================================================================ */
+  function isMainline(n) {
+    while (n.parent) { if (n.parent.children[0] !== n) return false; n = n.parent; }
+    return true;
+  }
+  function puzzleMarker(c) {
+    var m = /\[P(\d*)\]/.exec(stripShapes(c));
+    return m ? (m[1] ? parseInt(m[1], 10) : 1) : 0;
+  }
+  function setPuzzleMarker(n, plies) {
+    var pre = shapePrefix(n.comment), text = stripShapes(n.comment).replace(/\[P\d*\]\s*/g, "").trim();
+    if (plies) text = ((plies === 1 ? "[P]" : "[P" + plies + "]") + " " + text).trim();
+    n.comment = (pre && text ? pre + " " : pre) + text;
+    changed(); renderTree(); renderAnnot();
+  }
+  $("rb-puzzle").onclick = function () {
+    var n = sel();
+    if (!isMainline(n)) { toast("Puzzles can only be set on the main line."); return; }
+    if (puzzleMarker(n.comment)) setPuzzleMarker(n, 0);
+    else setPuzzleMarker(n, parseInt($("puzzle-plies").value, 10) || 1);
+  };
+  $("puzzle-plies").onchange = function () {
+    var n = sel();
+    if (puzzleMarker(n.comment)) setPuzzleMarker(n, parseInt(this.value, 10) || 1);
+  };
+  function syncPuzzleUi() {
+    var n = sel(), p = puzzleMarker(n.comment);
+    $("rb-puzzle").classList.toggle("on", p > 0);
+    $("rb-puzzle").disabled = !isMainline(n);
+    if (p) $("puzzle-plies").value = String(Math.min(p, 6));
+  }
+
+  /* A <puzzle> block: FEN = the current position, solution = the moves that follow (side lines included). */
+  function puzzleText(node) {
+    if (!node.children.length) return null;
+    var toks = [];
+    lineTokens(node.children[0], true, toks);
+    return '[FEN "' + node.fen + '"]\n\n' + wrapTokens(toks, 88) + "\n";
+  }
+
+  var playMode = "player", playKey = "";
+  function stopPlay() { var h = $("play-host"); if (h) h.innerHTML = ""; playKey = ""; }
+  function renderPlay(force) {
+    if ($("pane-play").hidden) return;
+    var host = $("play-host"), note = $("play-note"), src, key;
+    if (playMode === "player") {
+      src = chapterPgn(chap()); key = "p|" + study.cur + "|" + src;
+      var count = 0; (function walk(n) { if (puzzleMarker(n.comment)) count++; n.children.forEach(walk); })(chap().root);
+      note.textContent = count ? count + " puzzle" + (count > 1 ? "s" : "") + " in this game" : "No [P] puzzles in this game";
+    } else {
+      src = puzzleText(sel()); key = "q|" + sel().id + "|" + sel().fen + "|" + src;
+      note.textContent = "Puzzle from the current position";
+    }
+    if (!force && key === playKey) return;
+    playKey = key; host.innerHTML = "";
+    if (!src) { host.innerHTML = '<p class="msg">Go to a position and add the solution moves after it — they become the puzzle.</p>'; return; }
+    host.innerHTML = playMode === "player" ? "<pgn-player>" + safeRaw(src) + "</pgn-player>" : "<puzzle>" + safeRaw(src) + "</puzzle>";
+    try { if (window.ChessPublica && ChessPublica.initAll) ChessPublica.initAll(); } catch (e) { console.error(e); }
+  }
+  function setPlayMode(m) {
+    playMode = m;
+    $("play-mode-player").classList.toggle("on", m === "player");
+    $("play-mode-puzzle").classList.toggle("on", m === "puzzle");
+    renderPlay(true);
+  }
+  $("play-mode-player").onclick = function () { setPlayMode("player"); };
+  $("play-mode-puzzle").onclick = function () { setPlayMode("puzzle"); };
+  $("play-refresh").onclick = function () { renderPlay(true); };
+
   /* ================================================================
      APP SHELL — menu bar, ribbon, status bar, shortcuts
   ================================================================ */
   var UI_KEY = "chesspublica-pgn-tool-ui";
   function saveUi() {
-    try { localStorage.setItem(UI_KEY, JSON.stringify({ ribbon: $("ribbon").classList.contains("collapsed"), games: $("view-editor").classList.contains("no-games") })); } catch (e) { }
+    try { localStorage.setItem(UI_KEY, JSON.stringify({ ribbon: $("ribbon").classList.contains("collapsed"), games: $("view-editor").classList.contains("no-games"), board: boardSize, fen: !$("fen-row").hidden })); } catch (e) { }
   }
+
+  /* ---------- FEN bar (hidden behind a button) ---------- */
+  function setFenVisible(v) {
+    $("fen-row").hidden = !v;
+    var t = $("fen-toggle"); t.classList.toggle("on", v); t.setAttribute("aria-expanded", String(v));
+    t.title = v ? "Hide the FEN" : "Show the FEN of this position";
+    saveUi();
+  }
+  $("fen-toggle").onclick = function () { setFenVisible($("fen-row").hidden); };
+
+  /* ---------- Resizable board ---------- */
+  var BOARD_DEFAULT = 400, BOARD_MIN = 240, boardSize = BOARD_DEFAULT;
+  function setBoardSize(px, save) {
+    var max = Math.max(BOARD_MIN, Math.min(900, $("view-editor").clientWidth - 40));
+    boardSize = Math.round(Math.max(BOARD_MIN, Math.min(max, px)));
+    $("view-editor").style.setProperty("--bs", boardSize + "px");
+    if (board) { board.resize(); renderShapes(); }
+    if (save) saveUi();
+  }
+  (function () {
+    var grip = $("board-grip"), startX, startY, startW, raf = 0, next = 0;
+    grip.addEventListener("pointerdown", function (e) {
+      e.preventDefault(); grip.setPointerCapture(e.pointerId);
+      startX = e.clientX; startY = e.clientY; startW = boardSize;
+      grip.classList.add("drag"); document.body.classList.add("resizing");
+    });
+    grip.addEventListener("pointermove", function (e) {
+      if (!grip.hasPointerCapture(e.pointerId)) return;
+      next = startW + ((e.clientX - startX) + (e.clientY - startY)) / 2;
+      if (!raf) raf = requestAnimationFrame(function () { raf = 0; setBoardSize(next, false); });
+    });
+    function end(e) {
+      if (!grip.classList.contains("drag")) return;
+      grip.classList.remove("drag"); document.body.classList.remove("resizing");
+      try { grip.releasePointerCapture(e.pointerId); } catch (x) { }
+      saveUi();
+    }
+    grip.addEventListener("pointerup", end); grip.addEventListener("pointercancel", end);
+    grip.addEventListener("dblclick", function () { setBoardSize(BOARD_DEFAULT, true); });
+  })();
 
   /* ---------- Ribbon ---------- */
   var ribbon = $("ribbon");
@@ -1319,8 +1445,14 @@
     viewEditor: function () { showView("editor"); }, viewMarkdown: function () { showView("markdown"); },
     flip: clickId("nav-flip"), first: clickId("nav-start"), prev: clickId("nav-prev"), next: clickId("nav-next"), last: clickId("nav-end"),
     toggleRibbon: toggleRibbon,
+    toggleFen: function () { setFenVisible($("fen-row").hidden); },
     toggleGames: function () { setGamesHidden(!$("view-editor").classList.contains("no-games")); },
     insDiagram: clickId("insert-diagram"), glyphs: clickId("nag-open"), draw: clickId("draw-toggle"), clearDraw: clickId("shapes-clear"),
+    insPuzzleMark: clickId("rb-puzzle"),
+    insPuzzle: function () { showView("markdown"); document.querySelector('[data-md="puzzle"]').click(); },
+    insPlayer: function () { showView("markdown"); document.querySelector('[data-md="player"]').click(); },
+    insPlayerLink: function () { showView("markdown"); document.querySelector('[data-md="playerLink"]').click(); },
+    playPreview: function () { showView("editor"); document.querySelector('[data-pane="play"]').click(); },
     insFen: function () { showView("markdown"); document.querySelector('[data-md="fen"]').click(); },
     insPgn: function () { showView("markdown"); document.querySelector('[data-md="pgn"]').click(); },
     bold: function () { formatActive("bold"); }, italic: function () { formatActive("italic"); }, link: function () { formatActive("link"); },
@@ -1344,13 +1476,13 @@
     var view = document.body.dataset.view, n = sel(), isRoot = !n.parent;
     var on = {
       viewEditor: view === "editor", viewMarkdown: view === "markdown",
-      toggleRibbon: !ribbon.classList.contains("collapsed"), toggleGames: !$("view-editor").classList.contains("no-games"),
-      insDiagram: /\[D\]/.test(n.comment), draw: drawMode, engine: $("eng-on").checked
+      toggleFen: !$("fen-row").hidden, toggleRibbon: !ribbon.classList.contains("collapsed"), toggleGames: !$("view-editor").classList.contains("no-games"),
+      insDiagram: /\[D\]/.test(n.comment), insPuzzleMark: puzzleMarker(n.comment) > 0, draw: drawMode, engine: $("eng-on").checked
     };
     var off = {
       undo: histIdx <= 0, redo: histIdx >= hist.length - 1,
       promote: $("n-promote").disabled, mainLine: $("n-main").disabled, delFrom: $("n-del").disabled,
-      glyphs: isRoot, insDiagram: false
+      glyphs: isRoot, insPuzzleMark: !isMainline(n)
     };
     document.querySelectorAll(".mi").forEach(function (b) {
       var c = b.dataset.cmd, dis = !!off[c] || (b.dataset.only && b.dataset.only !== view);
@@ -1404,6 +1536,8 @@
     var ui = JSON.parse(localStorage.getItem(UI_KEY) || "{}");
     if (ui.ribbon) setRibbonCollapsed(true);
     if (ui.games) setGamesHidden(true);
+    if (ui.board) setBoardSize(ui.board, false);
+    if (ui.fen) setFenVisible(true);
   } catch (e) { }
   pushSnapshot();
   dirty = false; renderStatus();
